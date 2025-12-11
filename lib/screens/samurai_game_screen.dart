@@ -50,8 +50,8 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen> {
     _showExpandedBoard(board, row, col);
   }
 
-  void _showExpandedBoard(int board, int? row, int? col) {
-    Navigator.push(
+  void _showExpandedBoard(int board, int? row, int? col) async {
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => ExpandedBoardScreen(
@@ -60,32 +60,24 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen> {
           initialRow: row,
           initialCol: col,
           onValueChanged: (b, r, c, value) {
-            setState(() {
-              _gameState.currentBoards[b][r][c] = value;
-              _gameState.syncOverlapValue(b, r, c, value);
-              // 값 입력 시 해당 셀의 메모 삭제
-              if (value != 0) {
-                _gameState.clearNotes(b, r, c);
-              }
-            });
+            _gameState.currentBoards[b][r][c] = value;
+            _gameState.syncOverlapValue(b, r, c, value);
+            // 값 입력 시 해당 셀의 메모 삭제
+            if (value != 0) {
+              _gameState.clearNotes(b, r, c);
+            }
           },
           onHint: (b, r, c) {
             int correctValue = _gameState.solutions[b][r][c];
-            setState(() {
-              _gameState.currentBoards[b][r][c] = correctValue;
-              _gameState.syncOverlapValue(b, r, c, correctValue);
-              _gameState.clearNotes(b, r, c);
-            });
+            _gameState.currentBoards[b][r][c] = correctValue;
+            _gameState.syncOverlapValue(b, r, c, correctValue);
+            _gameState.clearNotes(b, r, c);
           },
           onNoteToggle: (b, r, c, number) {
-            setState(() {
-              _gameState.toggleNote(b, r, c, number);
-            });
+            _gameState.toggleNote(b, r, c, number);
           },
           onFillAllNotes: (b) {
-            setState(() {
-              _gameState.fillAllNotes(b);
-            });
+            _gameState.fillAllNotes(b);
           },
           onComplete: () {
             _showCompletionDialog();
@@ -93,6 +85,8 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen> {
         ),
       ),
     );
+    // ExpandedBoardScreen에서 돌아온 후 상태 갱신
+    setState(() {});
   }
 
   void _showCompletionDialog() {
