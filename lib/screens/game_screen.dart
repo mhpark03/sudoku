@@ -244,6 +244,9 @@ class _GameScreenState extends State<GameScreen> {
               case Difficulty.hard:
                 label = '어려움';
                 break;
+              case Difficulty.expert:
+                label = '달인';
+                break;
             }
             return ListTile(
               title: Text(label),
@@ -275,6 +278,8 @@ class _GameScreenState extends State<GameScreen> {
         return '보통';
       case Difficulty.hard:
         return '어려움';
+      case Difficulty.expert:
+        return '달인';
     }
   }
 

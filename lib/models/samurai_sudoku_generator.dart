@@ -95,7 +95,92 @@ class SamuraiSudokuGenerator {
     // 겹치는 영역 동기화 (난이도에 맞게 제한)
     _syncOverlapRegions(puzzles, minCellsToKeep);
 
+    // 모든 박스가 최소 셀 수를 만족하는지 확인하고 필요시 복원
+    _ensureMinCellsPerBox(puzzles, solvedBoards, minCellsToKeep);
+
     return puzzles;
+  }
+
+  /// 모든 3x3 박스가 최소 셀 수를 가지도록 보장
+  void _ensureMinCellsPerBox(
+    List<List<List<int>>> puzzles,
+    List<List<List<int>>> solutions,
+    int minCellsToKeep,
+  ) {
+    for (int b = 0; b < 5; b++) {
+      for (int boxNum = 0; boxNum < 9; boxNum++) {
+        int boxStartRow = (boxNum ~/ 3) * 3;
+        int boxStartCol = (boxNum % 3) * 3;
+
+        // 현재 박스의 노출된 셀 수 계산
+        int revealedCount = 0;
+        List<List<int>> emptyPositions = [];
+
+        for (int r = 0; r < 3; r++) {
+          for (int c = 0; c < 3; c++) {
+            int row = boxStartRow + r;
+            int col = boxStartCol + c;
+            if (puzzles[b][row][col] != 0) {
+              revealedCount++;
+            } else {
+              emptyPositions.add([row, col]);
+            }
+          }
+        }
+
+        // 최소 셀 수보다 적으면 솔루션에서 복원
+        while (revealedCount < minCellsToKeep && emptyPositions.isNotEmpty) {
+          emptyPositions.shuffle(_random);
+          List<int> pos = emptyPositions.removeLast();
+          int row = pos[0];
+          int col = pos[1];
+
+          // 솔루션 값으로 복원
+          puzzles[b][row][col] = solutions[b][row][col];
+          revealedCount++;
+
+          // 겹치는 영역이면 다른 보드에도 동기화
+          _syncRestoredCell(puzzles, b, row, col, solutions[b][row][col]);
+        }
+      }
+    }
+  }
+
+  /// 복원된 셀을 겹치는 보드에 동기화
+  void _syncRestoredCell(
+    List<List<List<int>>> puzzles,
+    int board,
+    int row,
+    int col,
+    int value,
+  ) {
+    // 보드 0 우하단 <-> 보드 2 좌상단
+    if (board == 0 && row >= 6 && col >= 6) {
+      puzzles[2][row - 6][col - 6] = value;
+    } else if (board == 2 && row < 3 && col < 3) {
+      puzzles[0][row + 6][col + 6] = value;
+    }
+
+    // 보드 1 좌하단 <-> 보드 2 우상단
+    if (board == 1 && row >= 6 && col < 3) {
+      puzzles[2][row - 6][col + 6] = value;
+    } else if (board == 2 && row < 3 && col >= 6) {
+      puzzles[1][row + 6][col - 6] = value;
+    }
+
+    // 보드 2 좌하단 <-> 보드 3 우상단
+    if (board == 2 && row >= 6 && col < 3) {
+      puzzles[3][row - 6][col + 6] = value;
+    } else if (board == 3 && row < 3 && col >= 6) {
+      puzzles[2][row + 6][col - 6] = value;
+    }
+
+    // 보드 2 우하단 <-> 보드 4 좌상단
+    if (board == 2 && row >= 6 && col >= 6) {
+      puzzles[4][row - 6][col - 6] = value;
+    } else if (board == 4 && row < 3 && col < 3) {
+      puzzles[2][row + 6][col + 6] = value;
+    }
   }
 
   bool _isOverlapCell(int boardIndex, int row, int col) {

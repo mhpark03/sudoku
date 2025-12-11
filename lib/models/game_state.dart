@@ -1,6 +1,6 @@
 import 'sudoku_generator.dart';
 
-enum Difficulty { easy, medium, hard }
+enum Difficulty { easy, medium, hard, expert }
 
 class GameState {
   final List<List<int>> solution;
@@ -43,6 +43,9 @@ class GameState {
         break;
       case Difficulty.hard:
         emptyCells = 55;
+        break;
+      case Difficulty.expert:
+        emptyCells = 64; // 박스당 1~2개만 노출
         break;
     }
 
