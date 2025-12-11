@@ -14,6 +14,7 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen> {
   late GameState _gameState;
   Difficulty _selectedDifficulty = Difficulty.medium;
+  bool _isNoteMode = false;
 
   @override
   void initState() {
@@ -99,6 +100,15 @@ class _GameScreenState extends State<GameScreen> {
 
       if (_gameState.isFixed[row][col]) return;
 
+      // 메모 모드일 때
+      if (_isNoteMode) {
+        if (_gameState.currentBoard[row][col] == 0) {
+          _gameState.toggleNote(row, col, number);
+        }
+        return;
+      }
+
+      // 일반 입력 모드
       List<List<int>> newBoard =
           _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
       newBoard[row][col] = number;
@@ -272,29 +282,50 @@ class _GameScreenState extends State<GameScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              alignment: WrapAlignment.center,
               children: [
-                ElevatedButton.icon(
-                  onPressed: _startNewGame,
-                  icon: const Icon(Icons.refresh, size: 16),
-                  label: const Text('새 게임', style: TextStyle(fontSize: 12)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  ),
+                _buildControlButton(
+                  icon: Icons.refresh,
+                  label: '새 게임',
+                  color: Colors.green,
+                  onTap: _startNewGame,
+                  compact: true,
                 ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  onPressed: _showHint,
-                  icon: const Icon(Icons.lightbulb, size: 16),
-                  label: const Text('힌트', style: TextStyle(fontSize: 12)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  ),
+                _buildControlButton(
+                  icon: Icons.lightbulb,
+                  label: '힌트',
+                  color: Colors.orange,
+                  onTap: _showHint,
+                  compact: true,
+                ),
+                _buildToggleButton(
+                  icon: Icons.edit_note,
+                  label: '메모',
+                  isActive: _isNoteMode,
+                  activeColor: Colors.amber,
+                  onTap: () {
+                    setState(() {
+                      _isNoteMode = !_isNoteMode;
+                      if (_isNoteMode && _gameState.isQuickInputMode) {
+                        _gameState = _gameState.copyWith(clearQuickInput: true);
+                      }
+                    });
+                  },
+                  compact: true,
+                ),
+                _buildControlButton(
+                  icon: Icons.grid_on,
+                  label: '모든 메모',
+                  color: Colors.blue,
+                  onTap: () {
+                    setState(() {
+                      _gameState.fillAllNotes();
+                    });
+                  },
+                  compact: true,
                 ),
               ],
             ),
@@ -312,26 +343,46 @@ class _GameScreenState extends State<GameScreen> {
     } else {
       return Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
             children: [
-              ElevatedButton.icon(
-                onPressed: _startNewGame,
-                icon: const Icon(Icons.refresh),
-                label: const Text('새 게임'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                ),
+              _buildControlButton(
+                icon: Icons.refresh,
+                label: '새 게임',
+                color: Colors.green,
+                onTap: _startNewGame,
               ),
-              ElevatedButton.icon(
-                onPressed: _showHint,
-                icon: const Icon(Icons.lightbulb),
-                label: const Text('힌트'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  foregroundColor: Colors.white,
-                ),
+              _buildControlButton(
+                icon: Icons.lightbulb,
+                label: '힌트',
+                color: Colors.orange,
+                onTap: _showHint,
+              ),
+              _buildToggleButton(
+                icon: Icons.edit_note,
+                label: '메모',
+                isActive: _isNoteMode,
+                activeColor: Colors.amber,
+                onTap: () {
+                  setState(() {
+                    _isNoteMode = !_isNoteMode;
+                    if (_isNoteMode && _gameState.isQuickInputMode) {
+                      _gameState = _gameState.copyWith(clearQuickInput: true);
+                    }
+                  });
+                },
+              ),
+              _buildControlButton(
+                icon: Icons.grid_on,
+                label: '모든 메모',
+                color: Colors.blue,
+                onTap: () {
+                  setState(() {
+                    _gameState.fillAllNotes();
+                  });
+                },
               ),
             ],
           ),
@@ -346,6 +397,51 @@ class _GameScreenState extends State<GameScreen> {
         ],
       );
     }
+  }
+
+  Widget _buildControlButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+    bool compact = false,
+  }) {
+    return ElevatedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: compact ? 16 : 20),
+      label: Text(label, style: TextStyle(fontSize: compact ? 12 : 14)),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        foregroundColor: Colors.white,
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 8 : 12,
+          vertical: compact ? 4 : 8,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildToggleButton({
+    required IconData icon,
+    required String label,
+    required bool isActive,
+    required Color activeColor,
+    required VoidCallback onTap,
+    bool compact = false,
+  }) {
+    return ElevatedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: compact ? 16 : 20),
+      label: Text(label, style: TextStyle(fontSize: compact ? 12 : 14)),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isActive ? activeColor : Colors.grey.shade400,
+        foregroundColor: Colors.white,
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 8 : 12,
+          vertical: compact ? 4 : 8,
+        ),
+      ),
+    );
   }
 
   @override

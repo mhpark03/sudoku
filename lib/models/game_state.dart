@@ -144,6 +144,22 @@ class GameState {
     notes[row][col].clear();
   }
 
+  /// 모든 빈 셀에 메모 자동 채우기
+  void fillAllNotes() {
+    for (int row = 0; row < 9; row++) {
+      for (int col = 0; col < 9; col++) {
+        if (currentBoard[row][col] == 0) {
+          notes[row][col].clear();
+          for (int num = 1; num <= 9; num++) {
+            if (SudokuGenerator.isValidMove(currentBoard, row, col, num)) {
+              notes[row][col].add(num);
+            }
+          }
+        }
+      }
+    }
+  }
+
   bool get isQuickInputMode => quickInputNumber != null;
 
   bool get hasSelection => selectedRow != null && selectedCol != null;

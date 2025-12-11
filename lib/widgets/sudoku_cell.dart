@@ -7,6 +7,7 @@ class SudokuCell extends StatelessWidget {
   final bool isHighlighted;
   final bool isSameValue;
   final bool hasError;
+  final Set<int> notes;
   final VoidCallback onTap;
 
   const SudokuCell({
@@ -17,6 +18,7 @@ class SudokuCell extends StatelessWidget {
     required this.isHighlighted,
     required this.isSameValue,
     required this.hasError,
+    required this.notes,
     required this.onTap,
   });
 
@@ -49,16 +51,44 @@ class SudokuCell extends StatelessWidget {
           color: backgroundColor,
           border: Border.all(color: Colors.grey.shade300, width: 0.5),
         ),
-        child: Center(
-          child: Text(
-            value == 0 ? '' : value.toString(),
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: isFixed ? FontWeight.bold : FontWeight.normal,
-              color: textColor,
+        child: value != 0
+            ? Center(
+                child: Text(
+                  value.toString(),
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: isFixed ? FontWeight.bold : FontWeight.normal,
+                    color: textColor,
+                  ),
+                ),
+              )
+            : notes.isNotEmpty
+                ? _buildNotesGrid()
+                : null,
+      ),
+    );
+  }
+
+  Widget _buildNotesGrid() {
+    return Padding(
+      padding: const EdgeInsets.all(1),
+      child: GridView.count(
+        crossAxisCount: 3,
+        physics: const NeverScrollableScrollPhysics(),
+        children: List.generate(9, (index) {
+          int num = index + 1;
+          bool hasNote = notes.contains(num);
+          return Center(
+            child: Text(
+              hasNote ? num.toString() : '',
+              style: TextStyle(
+                fontSize: 9,
+                color: Colors.grey.shade800,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-        ),
+          );
+        }),
       ),
     );
   }
