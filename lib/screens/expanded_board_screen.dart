@@ -574,7 +574,11 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
   Widget _buildNotesGrid(Set<int> cellNotes) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final cellSize = constraints.maxWidth / 3;
+        // 너비와 높이 중 작은 값을 사용하여 오버플로우 방지
+        final size = constraints.maxWidth < constraints.maxHeight
+            ? constraints.maxWidth
+            : constraints.maxHeight;
+        final cellSize = size / 3;
         final fontSize = (cellSize * 0.55).clamp(6.0, 12.0);
 
         return Column(
