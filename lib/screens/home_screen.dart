@@ -5,95 +5,88 @@ import '../services/game_storage.dart';
 import 'game_screen.dart';
 import 'samurai_game_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
-  /// 일반 스도쿠 시작 (저장된 게임 확인)
-  void _startRegularGame(BuildContext context) async {
-    final hasSavedGame = await GameStorage.hasRegularGame();
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
 
-    if (hasSavedGame && context.mounted) {
-      _showContinueOrNewDialog(
-        context,
-        title: '일반 스도쿠',
-        onContinue: () async {
-          final savedGame = await GameStorage.loadRegularGame();
-          if (savedGame != null && context.mounted) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => GameScreen(savedGameState: savedGame),
-              ),
-            );
-          }
-        },
-        onNewGame: () => _showRegularDifficultyDialog(context),
-      );
-    } else {
-      _showRegularDifficultyDialog(context);
+class _HomeScreenState extends State<HomeScreen> {
+  bool _hasRegularSavedGame = false;
+  bool _hasSamuraiSavedGame = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkSavedGames();
+  }
+
+  Future<void> _checkSavedGames() async {
+    final hasRegular = await GameStorage.hasRegularGame();
+    final hasSamurai = await GameStorage.hasSamuraiGame();
+
+    if (mounted) {
+      setState(() {
+        _hasRegularSavedGame = hasRegular;
+        _hasSamuraiSavedGame = hasSamurai;
+      });
     }
   }
 
-  /// 사무라이 스도쿠 시작 (저장된 게임 확인)
-  void _startSamuraiGame(BuildContext context) async {
-    final hasSavedGame = await GameStorage.hasSamuraiGame();
-
-    if (hasSavedGame && context.mounted) {
-      _showContinueOrNewDialog(
+  /// 저장된 일반 스도쿠 이어하기
+  void _continueRegularGame() async {
+    final savedGame = await GameStorage.loadRegularGame();
+    if (savedGame != null && mounted) {
+      await Navigator.push(
         context,
-        title: '사무라이 스도쿠',
-        onContinue: () async {
-          final savedGame = await GameStorage.loadSamuraiGame();
-          if (savedGame != null && context.mounted) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) =>
-                    SamuraiGameScreen(savedGameState: savedGame),
-              ),
-            );
-          }
-        },
-        onNewGame: () => _showSamuraiDifficultyDialog(context),
+        MaterialPageRoute(
+          builder: (context) => GameScreen(savedGameState: savedGame),
+        ),
       );
-    } else {
-      _showSamuraiDifficultyDialog(context);
+      // 게임에서 돌아온 후 저장된 게임 상태 다시 확인
+      _checkSavedGames();
     }
   }
 
-  /// 계속하기/새 게임 선택 다이얼로그
-  void _showContinueOrNewDialog(
-    BuildContext context, {
-    required String title,
-    required VoidCallback onContinue,
-    required VoidCallback onNewGame,
-  }) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: const Text('저장된 게임이 있습니다. 계속하시겠습니까?'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              onNewGame();
-            },
-            child: const Text('새 게임'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              onContinue();
-            },
-            child: const Text('계속하기'),
-          ),
-        ],
+  /// 저장된 사무라이 스도쿠 이어하기
+  void _continueSamuraiGame() async {
+    final savedGame = await GameStorage.loadSamuraiGame();
+    if (savedGame != null && mounted) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SamuraiGameScreen(savedGameState: savedGame),
+        ),
+      );
+      // 게임에서 돌아온 후 저장된 게임 상태 다시 확인
+      _checkSavedGames();
+    }
+  }
+
+  /// 일반 스도쿠 새 게임
+  void _startRegularGame() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => GameScreen(initialDifficulty: Difficulty.medium),
       ),
     );
+    _checkSavedGames();
   }
 
-  void _showRegularDifficultyDialog(BuildContext context) {
+  /// 사무라이 스도쿠 새 게임
+  void _startSamuraiGame() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SamuraiGameScreen(initialDifficulty: SamuraiDifficulty.medium),
+      ),
+    );
+    _checkSavedGames();
+  }
+
+  void _showRegularDifficultyDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -101,34 +94,34 @@ class HomeScreen extends StatelessWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildDifficultyTile(context, '쉬움', Difficulty.easy),
-            _buildDifficultyTile(context, '보통', Difficulty.medium),
-            _buildDifficultyTile(context, '어려움', Difficulty.hard),
-            _buildDifficultyTile(context, '달인', Difficulty.expert),
+            _buildDifficultyTile('쉬움', Difficulty.easy),
+            _buildDifficultyTile('보통', Difficulty.medium),
+            _buildDifficultyTile('어려움', Difficulty.hard),
+            _buildDifficultyTile('달인', Difficulty.expert),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildDifficultyTile(
-      BuildContext context, String label, Difficulty difficulty) {
+  Widget _buildDifficultyTile(String label, Difficulty difficulty) {
     return ListTile(
       title: Text(label),
       leading: const Icon(Icons.play_arrow, color: Colors.green),
-      onTap: () {
+      onTap: () async {
         Navigator.pop(context);
-        Navigator.push(
+        await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => GameScreen(initialDifficulty: difficulty),
           ),
         );
+        _checkSavedGames();
       },
     );
   }
 
-  void _showSamuraiDifficultyDialog(BuildContext context) {
+  void _showSamuraiDifficultyDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -136,38 +129,37 @@ class HomeScreen extends StatelessWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildSamuraiDifficultyTile(context, '쉬움', SamuraiDifficulty.easy),
-            _buildSamuraiDifficultyTile(
-                context, '보통', SamuraiDifficulty.medium),
-            _buildSamuraiDifficultyTile(context, '어려움', SamuraiDifficulty.hard),
-            _buildSamuraiDifficultyTile(
-                context, '달인', SamuraiDifficulty.expert),
+            _buildSamuraiDifficultyTile('쉬움', SamuraiDifficulty.easy),
+            _buildSamuraiDifficultyTile('보통', SamuraiDifficulty.medium),
+            _buildSamuraiDifficultyTile('어려움', SamuraiDifficulty.hard),
+            _buildSamuraiDifficultyTile('달인', SamuraiDifficulty.expert),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSamuraiDifficultyTile(
-      BuildContext context, String label, SamuraiDifficulty difficulty) {
+  Widget _buildSamuraiDifficultyTile(String label, SamuraiDifficulty difficulty) {
     return ListTile(
       title: Text(label),
       leading: const Icon(Icons.play_arrow, color: Colors.deepPurple),
-      onTap: () {
+      onTap: () async {
         Navigator.pop(context);
-        Navigator.push(
+        await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) =>
-                SamuraiGameScreen(initialDifficulty: difficulty),
+            builder: (context) => SamuraiGameScreen(initialDifficulty: difficulty),
           ),
         );
+        _checkSavedGames();
       },
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final hasSavedGame = _hasRegularSavedGame || _hasSamuraiSavedGame;
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -182,43 +174,103 @@ class HomeScreen extends StatelessWidget {
         ),
         child: SafeArea(
           child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text(
-                  '스도쿠',
-                  style: TextStyle(
-                    fontSize: 48,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    shadows: [
-                      Shadow(
-                        blurRadius: 10,
-                        color: Colors.black26,
-                        offset: Offset(2, 2),
-                      ),
-                    ],
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    '스도쿠',
+                    style: TextStyle(
+                      fontSize: 48,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      shadows: [
+                        Shadow(
+                          blurRadius: 10,
+                          color: Colors.black26,
+                          offset: Offset(2, 2),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 60),
-                _buildGameButton(
-                  context,
-                  title: '일반 스도쿠',
-                  subtitle: '9x9 클래식 스도쿠',
-                  icon: Icons.grid_3x3,
-                  color: Colors.green,
-                  onTap: () => _startRegularGame(context),
-                ),
-                const SizedBox(height: 20),
-                _buildGameButton(
-                  context,
-                  title: '사무라이 스도쿠',
-                  subtitle: '5개 보드가 겹친 스도쿠',
-                  icon: Icons.apps,
-                  color: Colors.deepPurple,
-                  onTap: () => _startSamuraiGame(context),
-                ),
-              ],
+                  const SizedBox(height: 40),
+
+                  // 이어하기 섹션 (저장된 게임이 있는 경우에만 표시)
+                  if (hasSavedGame) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Column(
+                        children: [
+                          const Text(
+                            '이어하기',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white70,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          if (_hasRegularSavedGame)
+                            _buildContinueButton(
+                              title: '일반 스도쿠',
+                              icon: Icons.grid_3x3,
+                              color: Colors.green,
+                              onTap: _continueRegularGame,
+                            ),
+                          if (_hasRegularSavedGame && _hasSamuraiSavedGame)
+                            const SizedBox(height: 12),
+                          if (_hasSamuraiSavedGame)
+                            _buildContinueButton(
+                              title: '사무라이 스도쿠',
+                              icon: Icons.apps,
+                              color: Colors.deepPurple,
+                              onTap: _continueSamuraiGame,
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 30),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Row(
+                        children: [
+                          Expanded(child: Divider(color: Colors.white38)),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              '새 게임',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.white70,
+                              ),
+                            ),
+                          ),
+                          Expanded(child: Divider(color: Colors.white38)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+
+                  // 새 게임 버튼들
+                  _buildGameButton(
+                    title: '일반 스도쿠',
+                    subtitle: '9x9 클래식 스도쿠',
+                    icon: Icons.grid_3x3,
+                    color: Colors.green,
+                    onTap: _showRegularDifficultyDialog,
+                  ),
+                  const SizedBox(height: 20),
+                  _buildGameButton(
+                    title: '사무라이 스도쿠',
+                    subtitle: '5개 보드가 겹친 스도쿠',
+                    icon: Icons.apps,
+                    color: Colors.deepPurple,
+                    onTap: _showSamuraiDifficultyDialog,
+                  ),
+                  const SizedBox(height: 40),
+                ],
+              ),
             ),
           ),
         ),
@@ -226,8 +278,53 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildGameButton(
-    BuildContext context, {
+  Widget _buildContinueButton({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      elevation: 8,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.play_circle_filled, size: 28, color: Colors.white),
+              const SizedBox(width: 12),
+              Icon(icon, size: 24, color: Colors.white),
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const Spacer(),
+              const Icon(
+                Icons.arrow_forward_ios,
+                color: Colors.white70,
+                size: 18,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGameButton({
     required String title,
     required String subtitle,
     required IconData icon,
