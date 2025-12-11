@@ -40,6 +40,9 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen> {
   }
 
   Future<void> _startNewGame() async {
+    // 새 게임 시작 시 모든 저장된 게임 삭제
+    await GameStorage.deleteAllGames();
+
     setState(() {
       _isLoading = true;
     });
