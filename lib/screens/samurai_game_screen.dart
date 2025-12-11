@@ -173,11 +173,12 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen> {
         foregroundColor: Colors.white,
         toolbarHeight: isLandscape ? 45 : kToolbarHeight,
         actions: [
-          TextButton(
+          TextButton.icon(
             onPressed: _showDifficultyDialog,
-            child: Text(
-              _getDifficultyText(),
-              style: const TextStyle(color: Colors.white),
+            icon: const Icon(Icons.refresh, color: Colors.white, size: 20),
+            label: const Text(
+              '새 게임',
+              style: TextStyle(color: Colors.white),
             ),
           ),
         ],
@@ -232,22 +233,6 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        // 컨트롤 버튼
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            ElevatedButton.icon(
-              onPressed: () => _startNewGame(),
-              icon: const Icon(Icons.refresh, size: 18),
-              label: const Text('새 게임'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
       ],
     );
   }
@@ -277,25 +262,6 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen> {
                       onBoardSelect: _onBoardSelect,
                     ),
                   ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 8),
-        // 컨트롤
-        Expanded(
-          flex: 1,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ElevatedButton.icon(
-                onPressed: () => _startNewGame(),
-                icon: const Icon(Icons.refresh, size: 16),
-                label: const Text('새 게임', style: TextStyle(fontSize: 12)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
                 ),
               ),
             ],

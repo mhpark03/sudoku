@@ -511,11 +511,12 @@ class _GameScreenState extends State<GameScreen> {
         foregroundColor: Colors.white,
         toolbarHeight: isLandscape ? 45 : kToolbarHeight,
         actions: [
-          TextButton(
+          TextButton.icon(
             onPressed: _showDifficultyDialog,
-            child: Text(
-              _getDifficultyText(),
-              style: const TextStyle(color: Colors.white),
+            icon: const Icon(Icons.refresh, color: Colors.white, size: 20),
+            label: const Text(
+              '새 게임',
+              style: TextStyle(color: Colors.white),
             ),
           ),
         ],
