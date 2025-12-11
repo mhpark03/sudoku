@@ -121,26 +121,39 @@ class MiniSudokuBoard extends StatelessWidget {
   }
 
   Widget _buildNotesGrid(Set<int> notes) {
-    return Padding(
-      padding: const EdgeInsets.all(0.5),
-      child: GridView.count(
-        crossAxisCount: 3,
-        physics: const NeverScrollableScrollPhysics(),
-        children: List.generate(9, (index) {
-          int num = index + 1;
-          bool hasNote = notes.contains(num);
-          return Center(
-            child: Text(
-              hasNote ? num.toString() : '',
-              style: TextStyle(
-                fontSize: 6,
-                color: Colors.grey.shade800,
-                fontWeight: FontWeight.bold,
+    // 미니 보드에서는 메모를 간단하게 표시
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        double cellSize = constraints.maxWidth / 3;
+        double fontSize = (cellSize * 0.6).clamp(4.0, 8.0);
+
+        return Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(3, (row) {
+            return Expanded(
+              child: Row(
+                children: List.generate(3, (col) {
+                  int num = row * 3 + col + 1;
+                  bool hasNote = notes.contains(num);
+                  return Expanded(
+                    child: Center(
+                      child: Text(
+                        hasNote ? num.toString() : '',
+                        style: TextStyle(
+                          fontSize: fontSize,
+                          color: Colors.grey.shade700,
+                          fontWeight: FontWeight.bold,
+                          height: 1.0,
+                        ),
+                      ),
+                    ),
+                  );
+                }),
               ),
-            ),
-          );
-        }),
-      ),
+            );
+          }),
+        );
+      },
     );
   }
 
