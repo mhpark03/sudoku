@@ -57,12 +57,76 @@ class SamuraiSudokuGenerator {
       }
     }
 
-    // 21x21 그리드의 모든 위치 생성 (0~440)
-    List<int> allPositions = List.generate(totalGridCells, (i) => i);
+    // 달인이 아닌 경우, 중앙 보드의 비겹침 영역에 최소 셀 보장
+    Set<int> preRevealedPositions = {};
+    bool isExpert = difficulty >= 75;
+
+    if (!isExpert) {
+      // 난이도별 중앙 비겹침 박스당 최소 노출 셀 수
+      int minCellsPerCenterBox;
+      if (difficulty >= 60) {
+        minCellsPerCenterBox = 1; // 어려움
+      } else if (difficulty >= 45) {
+        minCellsPerCenterBox = 2; // 보통
+      } else {
+        minCellsPerCenterBox = 3; // 쉬움
+      }
+
+      // 중앙 보드의 비겹침 박스들 (21x21 그리드 좌표)
+      // 박스 1: grid (6-8, 9-11), 박스 3: grid (9-11, 6-8)
+      // 박스 4: grid (9-11, 9-11), 박스 5: grid (9-11, 12-14)
+      // 박스 7: grid (12-14, 9-11)
+      List<List<int>> centerOnlyBoxes = [
+        [6, 9], // 박스 1
+        [9, 6], // 박스 3
+        [9, 9], // 박스 4
+        [9, 12], // 박스 5
+        [12, 9], // 박스 7
+      ];
+
+      for (var box in centerOnlyBoxes) {
+        int startRow = box[0];
+        int startCol = box[1];
+
+        // 해당 박스의 모든 셀 위치 수집
+        List<int> boxPositions = [];
+        for (int r = 0; r < 3; r++) {
+          for (int c = 0; c < 3; c++) {
+            int gridRow = startRow + r;
+            int gridCol = startCol + c;
+            boxPositions.add(gridRow * 21 + gridCol);
+          }
+        }
+        boxPositions.shuffle(_random);
+
+        // 최소 셀 수만큼 노출
+        for (int i = 0; i < minCellsPerCenterBox && i < boxPositions.length; i++) {
+          int pos = boxPositions[i];
+          preRevealedPositions.add(pos);
+
+          int gridRow = pos ~/ 21;
+          int gridCol = pos % 21;
+          // 보드 2의 좌표로 변환
+          int boardRow = gridRow - 6;
+          int boardCol = gridCol - 6;
+          puzzles[2][boardRow][boardCol] = solvedBoards[2][boardRow][boardCol];
+        }
+      }
+    }
+
+    // 21x21 그리드의 모든 위치 생성 (이미 노출된 위치 제외)
+    List<int> allPositions = [];
+    for (int i = 0; i < totalGridCells; i++) {
+      if (!preRevealedPositions.contains(i)) {
+        allPositions.add(i);
+      }
+    }
     allPositions.shuffle(_random);
 
-    // 선택된 위치의 셀을 노출
-    for (int i = 0; i < cellsToReveal && i < allPositions.length; i++) {
+    // 남은 셀 수만큼 추가 노출
+    int remainingToReveal = cellsToReveal - preRevealedPositions.length;
+
+    for (int i = 0; i < remainingToReveal && i < allPositions.length; i++) {
       int pos = allPositions[i];
       int gridRow = pos ~/ 21;
       int gridCol = pos % 21;
