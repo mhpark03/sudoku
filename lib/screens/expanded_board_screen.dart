@@ -160,6 +160,7 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
             isCompact: false,
             quickInputNumber: isQuickInputMode ? quickInputNumber : null,
             onQuickInputToggle: null, // AppBar에서 토글하므로 여기서는 null
+            disabledNumbers: widget.gameState.getCompletedNumbers(widget.boardIndex),
           ),
         ],
       ),
@@ -271,6 +272,7 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
                     isCompact: true,
                     quickInputNumber: isQuickInputMode ? quickInputNumber : null,
                     onQuickInputToggle: null,
+                    disabledNumbers: widget.gameState.getCompletedNumbers(widget.boardIndex),
                   ),
                 ],
               ),
