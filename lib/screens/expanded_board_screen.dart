@@ -572,26 +572,38 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
   }
 
   Widget _buildNotesGrid(Set<int> cellNotes) {
-    return Padding(
-      padding: const EdgeInsets.all(1),
-      child: GridView.count(
-        crossAxisCount: 3,
-        physics: const NeverScrollableScrollPhysics(),
-        children: List.generate(9, (index) {
-          int num = index + 1;
-          bool hasNote = cellNotes.contains(num);
-          return Center(
-            child: Text(
-              hasNote ? num.toString() : '',
-              style: TextStyle(
-                fontSize: 10,
-                color: Colors.grey.shade800,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          );
-        }),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cellSize = constraints.maxWidth / 3;
+        final fontSize = (cellSize * 0.55).clamp(6.0, 12.0);
+
+        return Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(3, (row) {
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(3, (col) {
+                int num = row * 3 + col + 1;
+                bool hasNote = cellNotes.contains(num);
+                return SizedBox(
+                  width: cellSize,
+                  height: cellSize,
+                  child: Center(
+                    child: Text(
+                      hasNote ? num.toString() : '',
+                      style: TextStyle(
+                        fontSize: fontSize,
+                        color: Colors.grey.shade800,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            );
+          }),
+        );
+      },
     );
   }
 

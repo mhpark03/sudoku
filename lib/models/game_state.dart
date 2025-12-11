@@ -2,6 +2,36 @@ import 'sudoku_generator.dart';
 
 enum Difficulty { easy, medium, hard, expert }
 
+/// Isolate에서 실행할 퍼즐 생성 함수 (top-level 함수)
+Map<String, dynamic> generatePuzzleInIsolate(Difficulty difficulty) {
+  final generator = SudokuGenerator();
+  final solution = generator.generateSolvedBoard();
+
+  int emptyCells;
+  switch (difficulty) {
+    case Difficulty.easy:
+      emptyCells = 30;
+      break;
+    case Difficulty.medium:
+      emptyCells = 45;
+      break;
+    case Difficulty.hard:
+      emptyCells = 60;
+      break;
+    case Difficulty.expert:
+      emptyCells = 70;
+      break;
+  }
+
+  final puzzle = generator.generatePuzzle(solution, emptyCells);
+
+  return {
+    'solution': solution,
+    'puzzle': puzzle,
+    'difficulty': difficulty.index,
+  };
+}
+
 class GameState {
   final List<List<int>> solution;
   final List<List<int>> puzzle;
@@ -29,27 +59,22 @@ class GameState {
     this.isCompleted = false,
   });
 
+  /// 동기적으로 새 게임 생성 (메인 스레드에서 실행, UI 블로킹 가능)
   factory GameState.newGame(Difficulty difficulty) {
-    final generator = SudokuGenerator();
-    final solution = generator.generateSolvedBoard();
+    final data = generatePuzzleInIsolate(difficulty);
+    return GameState.fromGeneratedData(data);
+  }
 
-    int emptyCells;
-    switch (difficulty) {
-      case Difficulty.easy:
-        emptyCells = 30;
-        break;
-      case Difficulty.medium:
-        emptyCells = 45;
-        break;
-      case Difficulty.hard:
-        emptyCells = 60;
-        break;
-      case Difficulty.expert:
-        emptyCells = 70;
-        break;
-    }
+  /// 생성된 데이터로부터 GameState 생성 (isolate에서 생성된 데이터 사용)
+  factory GameState.fromGeneratedData(Map<String, dynamic> data) {
+    final solution = (data['solution'] as List)
+        .map((row) => List<int>.from(row as List))
+        .toList();
+    final puzzle = (data['puzzle'] as List)
+        .map((row) => List<int>.from(row as List))
+        .toList();
+    final difficulty = Difficulty.values[data['difficulty'] as int];
 
-    final puzzle = generator.generatePuzzle(solution, emptyCells);
     final currentBoard = puzzle.map((row) => List<int>.from(row)).toList();
     final isFixed = puzzle
         .map((row) => row.map((cell) => cell != 0).toList())

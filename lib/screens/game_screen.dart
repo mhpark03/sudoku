@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../models/game_state.dart';
 import '../models/sudoku_generator.dart';
@@ -23,6 +24,7 @@ class _GameScreenState extends State<GameScreen> {
   late GameState _gameState;
   late Difficulty _selectedDifficulty;
   bool _isNoteMode = false;
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -31,6 +33,7 @@ class _GameScreenState extends State<GameScreen> {
       // 저장된 게임 불러오기
       _gameState = widget.savedGameState!;
       _selectedDifficulty = _gameState.difficulty;
+      _isLoading = false;
     } else {
       // 새 게임 시작
       _selectedDifficulty = widget.initialDifficulty ?? Difficulty.medium;
@@ -38,13 +41,27 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
-  void _startNewGame() {
+  Future<void> _startNewGame() async {
     // 새 게임 시작 시 모든 저장된 게임 삭제
-    GameStorage.deleteAllGames();
+    await GameStorage.deleteAllGames();
+
     setState(() {
-      _gameState = GameState.newGame(_selectedDifficulty);
-      _saveGame();
+      _isLoading = true;
     });
+
+    // 별도 isolate에서 퍼즐 생성 (메인 스레드 블로킹 방지)
+    final data = await compute(
+      generatePuzzleInIsolate,
+      _selectedDifficulty,
+    );
+
+    if (mounted) {
+      setState(() {
+        _gameState = GameState.fromGeneratedData(data);
+        _isLoading = false;
+      });
+      _saveGame();
+    }
   }
 
   /// 게임 상태 저장
@@ -561,7 +578,18 @@ class _GameScreenState extends State<GameScreen> {
           ),
         ],
       ),
-      body: SafeArea(
+      body: _isLoading
+          ? const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('퍼즐 생성 중...'),
+                ],
+              ),
+            )
+          : SafeArea(
         child: Padding(
           padding: EdgeInsets.all(isLandscape ? 8.0 : 16.0),
           child: isLandscape
