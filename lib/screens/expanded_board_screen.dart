@@ -478,10 +478,15 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
     setState(() {
       if (isQuickInputMode && quickInputNumber != null) {
         if (!isFixed) {
-          final solution = widget.gameState.solutions[widget.boardIndex];
-          bool isCorrect = solution[row][col] == quickInputNumber;
+          // 현재 보드를 복사하여 유효성 검사
+          final board = widget.gameState.currentBoards[widget.boardIndex];
+          final testBoard = board.map((r) => List<int>.from(r)).toList();
+          testBoard[row][col] = quickInputNumber!;
 
-          if (isCorrect) {
+          bool isValid = SamuraiSudokuGenerator.isValidMove(
+              testBoard, row, col, quickInputNumber!);
+
+          if (isValid) {
             widget.onValueChanged(
                 widget.boardIndex, row, col, quickInputNumber!);
             _showFeedback(true);
