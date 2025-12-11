@@ -38,13 +38,13 @@ class SamuraiGameState {
         emptyCells = 30;
         break;
       case SamuraiDifficulty.medium:
-        emptyCells = 40;
+        emptyCells = 45;
         break;
       case SamuraiDifficulty.hard:
-        emptyCells = 50;
+        emptyCells = 60;
         break;
       case SamuraiDifficulty.expert:
-        emptyCells = 63; // 박스당 1~2개만 노출
+        emptyCells = 75;
         break;
     }
 
