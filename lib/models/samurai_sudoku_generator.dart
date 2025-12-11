@@ -17,19 +17,57 @@ class SamuraiSudokuGenerator {
 
   /// 5개의 연결된 스도쿠 보드 생성
   List<List<List<int>>> generateSolvedBoards() {
-    List<List<List<int>>> boards = List.generate(
+    // 생성 실패 시 재시도 (최대 100회)
+    for (int attempt = 0; attempt < 100; attempt++) {
+      List<List<List<int>>> boards = List.generate(
+        5,
+        (_) => List.generate(9, (_) => List.filled(9, 0)),
+      );
+
+      // 순서대로 보드 생성 (겹치는 영역 고려)
+      if (!_fillBoard(boards[0])) continue;
+      if (!_fillBoard(boards[1])) continue;
+      if (!_fillCenterBoard(boards[2], boards[0], boards[1])) continue;
+      if (!_fillBoardWithOverlap(boards[3], boards[2], 3)) continue;
+      if (!_fillBoardWithOverlap(boards[4], boards[2], 4)) continue;
+
+      // 모든 보드가 유효한지 검증
+      if (_verifyAllBoards(boards)) {
+        return boards;
+      }
+    }
+
+    // 실패 시 빈 보드 반환 (거의 발생하지 않음)
+    return List.generate(
       5,
       (_) => List.generate(9, (_) => List.filled(9, 0)),
     );
+  }
 
-    // 순서대로 보드 생성 (겹치는 영역 고려)
-    _fillBoard(boards[0]);
-    _fillBoardWithConstraint(boards[1], null, null);
-    _fillCenterBoard(boards[2], boards[0], boards[1]);
-    _fillBoardWithOverlap(boards[3], boards[2], 3); // 보드2의 좌하단과 보드3의 우상단
-    _fillBoardWithOverlap(boards[4], boards[2], 4); // 보드2의 우하단과 보드4의 좌상단
-
-    return boards;
+  /// 모든 보드가 완전하고 유효한지 검증
+  bool _verifyAllBoards(List<List<List<int>>> boards) {
+    for (int b = 0; b < 5; b++) {
+      for (int row = 0; row < 9; row++) {
+        for (int col = 0; col < 9; col++) {
+          int value = boards[b][row][col];
+          if (value == 0) return false; // 빈 셀이 있으면 실패
+          if (value < 1 || value > 9) return false; // 유효하지 않은 값
+        }
+      }
+      // 각 3x3 박스에 1-9가 모두 있는지 확인
+      for (int boxRow = 0; boxRow < 3; boxRow++) {
+        for (int boxCol = 0; boxCol < 3; boxCol++) {
+          Set<int> boxNums = {};
+          for (int r = 0; r < 3; r++) {
+            for (int c = 0; c < 3; c++) {
+              boxNums.add(boards[b][boxRow * 3 + r][boxCol * 3 + c]);
+            }
+          }
+          if (boxNums.length != 9) return false; // 박스에 중복이 있거나 누락
+        }
+      }
+    }
+    return true;
   }
 
   /// 퍼즐 생성 - 21x21 그리드 기준 비율 적용
@@ -204,12 +242,7 @@ class SamuraiSudokuGenerator {
     return true;
   }
 
-  void _fillBoardWithConstraint(
-      List<List<int>> board, List<List<int>>? constraint, String? position) {
-    _fillBoard(board);
-  }
-
-  void _fillCenterBoard(List<List<int>> center, List<List<int>> topLeft,
+  bool _fillCenterBoard(List<List<int>> center, List<List<int>> topLeft,
       List<List<int>> topRight) {
     // 좌상단 3x3을 topLeft의 우하단에서 복사
     for (int i = 0; i < 3; i++) {
@@ -226,10 +259,10 @@ class SamuraiSudokuGenerator {
     }
 
     // 나머지 채우기
-    _fillBoardPartial(center);
+    return _fillBoardPartial(center);
   }
 
-  void _fillBoardWithOverlap(
+  bool _fillBoardWithOverlap(
       List<List<int>> board, List<List<int>> centerBoard, int boardIndex) {
     if (boardIndex == 3) {
       // 보드 3: 우상단 3x3을 center의 좌하단에서 복사
@@ -247,7 +280,7 @@ class SamuraiSudokuGenerator {
       }
     }
 
-    _fillBoardPartial(board);
+    return _fillBoardPartial(board);
   }
 
   bool _fillBoardPartial(List<List<int>> board) {
