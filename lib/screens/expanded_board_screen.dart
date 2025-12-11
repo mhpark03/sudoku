@@ -550,9 +550,9 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
             child: Text(
               hasNote ? num.toString() : '',
               style: TextStyle(
-                fontSize: 9,
-                color: Colors.blue.shade600,
-                fontWeight: FontWeight.w500,
+                fontSize: 10,
+                color: Colors.grey.shade800,
+                fontWeight: FontWeight.bold,
               ),
             ),
           );
