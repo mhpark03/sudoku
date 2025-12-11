@@ -16,6 +16,7 @@ class SamuraiSudokuGenerator {
   final Random _random = Random();
 
   /// 5개의 연결된 스도쿠 보드 생성
+  /// 생성 순서: B2(중앙) → B0, B1, B3, B4
   List<List<List<int>>> generateSolvedBoards() {
     // 생성 실패 시 재시도 (최대 100회)
     for (int attempt = 0; attempt < 100; attempt++) {
@@ -24,12 +25,20 @@ class SamuraiSudokuGenerator {
         (_) => List.generate(9, (_) => List.filled(9, 0)),
       );
 
-      // 순서대로 보드 생성 (겹치는 영역 고려)
-      if (!_fillBoard(boards[0])) continue;
-      if (!_fillBoard(boards[1])) continue;
-      if (!_fillCenterBoard(boards[2], boards[0], boards[1])) continue;
-      if (!_fillBoardWithOverlap(boards[3], boards[2], 3)) continue;
-      if (!_fillBoardWithOverlap(boards[4], boards[2], 4)) continue;
+      // 1. 중앙 보드(B2)를 먼저 생성 - 제약 없이 완전한 보드 생성
+      if (!_fillBoard(boards[2])) continue;
+
+      // 2. B0: 우하단을 B2의 좌상단에서 복사 후 나머지 채우기
+      if (!_fillBoardFromCenter(boards[0], boards[2], 0)) continue;
+
+      // 3. B1: 좌하단을 B2의 우상단에서 복사 후 나머지 채우기
+      if (!_fillBoardFromCenter(boards[1], boards[2], 1)) continue;
+
+      // 4. B3: 우상단을 B2의 좌하단에서 복사 후 나머지 채우기
+      if (!_fillBoardFromCenter(boards[3], boards[2], 3)) continue;
+
+      // 5. B4: 좌상단을 B2의 우하단에서 복사 후 나머지 채우기
+      if (!_fillBoardFromCenter(boards[4], boards[2], 4)) continue;
 
       // 모든 보드가 유효한지 검증
       if (_verifyAllBoards(boards)) {
@@ -42,6 +51,42 @@ class SamuraiSudokuGenerator {
       5,
       (_) => List.generate(9, (_) => List.filled(9, 0)),
     );
+  }
+
+  /// 중앙 보드(B2)를 기준으로 코너 보드 생성
+  bool _fillBoardFromCenter(
+      List<List<int>> board, List<List<int>> centerBoard, int boardIndex) {
+    if (boardIndex == 0) {
+      // B0: 우하단 3x3을 B2의 좌상단 3x3에서 복사
+      for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+          board[6 + i][6 + j] = centerBoard[i][j];
+        }
+      }
+    } else if (boardIndex == 1) {
+      // B1: 좌하단 3x3을 B2의 우상단 3x3에서 복사
+      for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+          board[6 + i][j] = centerBoard[i][6 + j];
+        }
+      }
+    } else if (boardIndex == 3) {
+      // B3: 우상단 3x3을 B2의 좌하단 3x3에서 복사
+      for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+          board[i][6 + j] = centerBoard[6 + i][j];
+        }
+      }
+    } else if (boardIndex == 4) {
+      // B4: 좌상단 3x3을 B2의 우하단 3x3에서 복사
+      for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+          board[i][j] = centerBoard[6 + i][6 + j];
+        }
+      }
+    }
+
+    return _fillBoardPartial(board);
   }
 
   /// 모든 보드가 완전하고 유효한지 검증
@@ -240,47 +285,6 @@ class SamuraiSudokuGenerator {
       }
     }
     return true;
-  }
-
-  bool _fillCenterBoard(List<List<int>> center, List<List<int>> topLeft,
-      List<List<int>> topRight) {
-    // 좌상단 3x3을 topLeft의 우하단에서 복사
-    for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 3; j++) {
-        center[i][j] = topLeft[6 + i][6 + j];
-      }
-    }
-
-    // 우상단 3x3을 topRight의 좌하단에서 복사
-    for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 3; j++) {
-        center[i][6 + j] = topRight[6 + i][j];
-      }
-    }
-
-    // 나머지 채우기
-    return _fillBoardPartial(center);
-  }
-
-  bool _fillBoardWithOverlap(
-      List<List<int>> board, List<List<int>> centerBoard, int boardIndex) {
-    if (boardIndex == 3) {
-      // 보드 3: 우상단 3x3을 center의 좌하단에서 복사
-      for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-          board[i][6 + j] = centerBoard[6 + i][j];
-        }
-      }
-    } else if (boardIndex == 4) {
-      // 보드 4: 좌상단 3x3을 center의 우하단에서 복사
-      for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-          board[i][j] = centerBoard[6 + i][6 + j];
-        }
-      }
-    }
-
-    return _fillBoardPartial(board);
   }
 
   bool _fillBoardPartial(List<List<int>> board) {
