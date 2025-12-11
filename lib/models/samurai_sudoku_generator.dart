@@ -92,8 +92,8 @@ class SamuraiSudokuGenerator {
       }
     }
 
-    // 겹치는 영역 동기화
-    _syncOverlapRegions(puzzles);
+    // 겹치는 영역 동기화 (난이도에 맞게 제한)
+    _syncOverlapRegions(puzzles, minCellsToKeep);
 
     return puzzles;
   }
@@ -118,48 +118,68 @@ class SamuraiSudokuGenerator {
     }
   }
 
-  void _syncOverlapRegions(List<List<List<int>>> boards) {
-    // 보드 0 우하단 <-> 보드 2 좌상단
+  void _syncOverlapRegions(List<List<List<int>>> boards, int minCellsToKeep) {
+    // 겹치는 영역을 동기화하되, 노출 셀 수를 제한
+    _syncOverlapPair(boards, 0, 6, 6, 2, 0, 0, minCellsToKeep); // 보드0 우하단 <-> 보드2 좌상단
+    _syncOverlapPair(boards, 1, 6, 0, 2, 0, 6, minCellsToKeep); // 보드1 좌하단 <-> 보드2 우상단
+    _syncOverlapPair(boards, 2, 6, 0, 3, 0, 6, minCellsToKeep); // 보드2 좌하단 <-> 보드3 우상단
+    _syncOverlapPair(boards, 2, 6, 6, 4, 0, 0, minCellsToKeep); // 보드2 우하단 <-> 보드4 좌상단
+  }
+
+  void _syncOverlapPair(
+    List<List<List<int>>> boards,
+    int board1,
+    int row1Start,
+    int col1Start,
+    int board2,
+    int row2Start,
+    int col2Start,
+    int minCellsToKeep,
+  ) {
+    // 1. 두 보드에서 노출된 셀 위치 수집
+    List<List<int>> revealedPositions = [];
+
     for (int i = 0; i < 3; i++) {
       for (int j = 0; j < 3; j++) {
-        int val = boards[0][6 + i][6 + j] != 0
-            ? boards[0][6 + i][6 + j]
-            : boards[2][i][j];
-        boards[0][6 + i][6 + j] = val;
-        boards[2][i][j] = val;
+        int val1 = boards[board1][row1Start + i][col1Start + j];
+        int val2 = boards[board2][row2Start + i][col2Start + j];
+
+        // 둘 중 하나라도 노출되어 있으면 해당 위치 기록
+        if (val1 != 0 || val2 != 0) {
+          revealedPositions.add([i, j]);
+        }
       }
     }
 
-    // 보드 1 좌하단 <-> 보드 2 우상단
-    for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 3; j++) {
-        int val = boards[1][6 + i][j] != 0
-            ? boards[1][6 + i][j]
-            : boards[2][i][6 + j];
-        boards[1][6 + i][j] = val;
-        boards[2][i][6 + j] = val;
-      }
+    // 2. 노출할 셀 수 결정 (minCellsToKeep ~ minCellsToKeep+1)
+    int targetRevealed = minCellsToKeep + (_random.nextDouble() > 0.5 ? 1 : 0);
+    targetRevealed = targetRevealed.clamp(minCellsToKeep, revealedPositions.length);
+
+    // 3. 노출할 셀 무작위 선택
+    revealedPositions.shuffle(_random);
+    Set<String> keepPositions = {};
+    for (int k = 0; k < targetRevealed && k < revealedPositions.length; k++) {
+      keepPositions.add('${revealedPositions[k][0]},${revealedPositions[k][1]}');
     }
 
-    // 보드 2 좌하단 <-> 보드 3 우상단
+    // 4. 동기화: 선택된 셀만 노출, 나머지는 0으로
     for (int i = 0; i < 3; i++) {
       for (int j = 0; j < 3; j++) {
-        int val = boards[2][6 + i][j] != 0
-            ? boards[2][6 + i][j]
-            : boards[3][i][6 + j];
-        boards[2][6 + i][j] = val;
-        boards[3][i][6 + j] = val;
-      }
-    }
+        String key = '$i,$j';
+        int val1 = boards[board1][row1Start + i][col1Start + j];
+        int val2 = boards[board2][row2Start + i][col2Start + j];
 
-    // 보드 2 우하단 <-> 보드 4 좌상단
-    for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 3; j++) {
-        int val = boards[2][6 + i][6 + j] != 0
-            ? boards[2][6 + i][6 + j]
-            : boards[4][i][j];
-        boards[2][6 + i][6 + j] = val;
-        boards[4][i][j] = val;
+        int finalVal;
+        if (keepPositions.contains(key)) {
+          // 노출 유지 (둘 중 0이 아닌 값 사용)
+          finalVal = val1 != 0 ? val1 : val2;
+        } else {
+          // 숨김 처리
+          finalVal = 0;
+        }
+
+        boards[board1][row1Start + i][col1Start + j] = finalVal;
+        boards[board2][row2Start + i][col2Start + j] = finalVal;
       }
     }
   }
