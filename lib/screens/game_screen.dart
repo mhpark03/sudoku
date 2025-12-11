@@ -40,7 +40,14 @@ class _GameScreenState extends State<GameScreen> {
           if (newBoard[row][col] == _gameState.quickInputNumber) {
             newBoard[row][col] = 0;
           } else {
-            newBoard[row][col] = _gameState.quickInputNumber!;
+            int number = _gameState.quickInputNumber!;
+            newBoard[row][col] = number;
+
+            // 유효한 입력이면 같은 행/열/박스의 메모에서 해당 숫자 삭제
+            if (SudokuGenerator.isValidMove(newBoard, row, col, number)) {
+              _gameState.removeNumberFromRelatedNotes(row, col, number);
+              _gameState.clearNotes(row, col);
+            }
           }
 
           bool isComplete = SudokuGenerator.isBoardComplete(newBoard);
@@ -95,6 +102,12 @@ class _GameScreenState extends State<GameScreen> {
       List<List<int>> newBoard =
           _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
       newBoard[row][col] = number;
+
+      // 유효한 입력이면 같은 행/열/박스의 메모에서 해당 숫자 삭제
+      if (SudokuGenerator.isValidMove(newBoard, row, col, number)) {
+        _gameState.removeNumberFromRelatedNotes(row, col, number);
+        _gameState.clearNotes(row, col);
+      }
 
       bool isComplete = SudokuGenerator.isBoardComplete(newBoard);
 
@@ -162,6 +175,10 @@ class _GameScreenState extends State<GameScreen> {
       List<List<int>> newBoard =
           _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
       newBoard[row][col] = correctValue;
+
+      // 같은 행/열/박스의 메모에서 해당 숫자 삭제
+      _gameState.removeNumberFromRelatedNotes(row, col, correctValue);
+      _gameState.clearNotes(row, col);
 
       bool isComplete = SudokuGenerator.isBoardComplete(newBoard);
 
