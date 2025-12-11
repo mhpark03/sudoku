@@ -474,7 +474,7 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
               )
             : cellNotes.isNotEmpty
                 ? _buildNotesGrid(cellNotes)
-                : const SizedBox(),
+                : null,
       ),
     );
   }
