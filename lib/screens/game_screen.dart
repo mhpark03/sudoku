@@ -86,8 +86,11 @@ class _GameScreenState extends State<GameScreen> {
           // 같은 숫자를 다시 탭하면 빠른 입력 모드 해제
           _gameState = _gameState.copyWith(clearQuickInput: true);
         } else {
-          // 다른 숫자 선택
-          _gameState = _gameState.copyWith(quickInputNumber: number);
+          // 다른 숫자 선택 + 셀 선택 해제
+          _gameState = _gameState.copyWith(
+            quickInputNumber: number,
+            clearSelection: true,
+          );
         }
         return;
       }
