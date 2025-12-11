@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import '../models/samurai_game_state.dart';
 import '../models/samurai_sudoku_generator.dart';
+import '../services/game_storage.dart';
 import '../widgets/samurai_board.dart';
 import 'expanded_board_screen.dart';
 
 class SamuraiGameScreen extends StatefulWidget {
   final SamuraiDifficulty? initialDifficulty;
+  final SamuraiGameState? savedGameState;
 
-  const SamuraiGameScreen({super.key, this.initialDifficulty});
+  const SamuraiGameScreen({
+    super.key,
+    this.initialDifficulty,
+    this.savedGameState,
+  });
 
   @override
   State<SamuraiGameScreen> createState() => _SamuraiGameScreenState();
@@ -21,8 +27,16 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedDifficulty = widget.initialDifficulty ?? SamuraiDifficulty.medium;
-    _startNewGame();
+    if (widget.savedGameState != null) {
+      // 저장된 게임 불러오기
+      _gameState = widget.savedGameState!;
+      _selectedDifficulty = _gameState.difficulty;
+      _isLoading = false;
+    } else {
+      // 새 게임 시작
+      _selectedDifficulty = widget.initialDifficulty ?? SamuraiDifficulty.medium;
+      _startNewGame();
+    }
   }
 
   Future<void> _startNewGame() async {
@@ -37,6 +51,17 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen> {
       _gameState = SamuraiGameState.newGame(_selectedDifficulty);
       _isLoading = false;
     });
+    _saveGame();
+  }
+
+  /// 게임 상태 저장
+  void _saveGame() {
+    if (!_gameState.isCompleted) {
+      GameStorage.saveSamuraiGame(_gameState);
+    } else {
+      // 게임 완료 시 저장된 게임 삭제
+      GameStorage.deleteSamuraiGame();
+    }
   }
 
   void _onBoardSelect(int boardIndex) {
@@ -88,8 +113,9 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen> {
         ),
       ),
     );
-    // ExpandedBoardScreen에서 돌아온 후 상태 갱신
+    // ExpandedBoardScreen에서 돌아온 후 상태 갱신 및 저장
     setState(() {});
+    _saveGame();
   }
 
   void _showCompletionDialog() {

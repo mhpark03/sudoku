@@ -1,11 +1,97 @@
 import 'package:flutter/material.dart';
 import '../models/game_state.dart';
 import '../models/samurai_game_state.dart';
+import '../services/game_storage.dart';
 import 'game_screen.dart';
 import 'samurai_game_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
+
+  /// 일반 스도쿠 시작 (저장된 게임 확인)
+  void _startRegularGame(BuildContext context) async {
+    final hasSavedGame = await GameStorage.hasRegularGame();
+
+    if (hasSavedGame && context.mounted) {
+      _showContinueOrNewDialog(
+        context,
+        title: '일반 스도쿠',
+        onContinue: () async {
+          final savedGame = await GameStorage.loadRegularGame();
+          if (savedGame != null && context.mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => GameScreen(savedGameState: savedGame),
+              ),
+            );
+          }
+        },
+        onNewGame: () => _showRegularDifficultyDialog(context),
+      );
+    } else {
+      _showRegularDifficultyDialog(context);
+    }
+  }
+
+  /// 사무라이 스도쿠 시작 (저장된 게임 확인)
+  void _startSamuraiGame(BuildContext context) async {
+    final hasSavedGame = await GameStorage.hasSamuraiGame();
+
+    if (hasSavedGame && context.mounted) {
+      _showContinueOrNewDialog(
+        context,
+        title: '사무라이 스도쿠',
+        onContinue: () async {
+          final savedGame = await GameStorage.loadSamuraiGame();
+          if (savedGame != null && context.mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    SamuraiGameScreen(savedGameState: savedGame),
+              ),
+            );
+          }
+        },
+        onNewGame: () => _showSamuraiDifficultyDialog(context),
+      );
+    } else {
+      _showSamuraiDifficultyDialog(context);
+    }
+  }
+
+  /// 계속하기/새 게임 선택 다이얼로그
+  void _showContinueOrNewDialog(
+    BuildContext context, {
+    required String title,
+    required VoidCallback onContinue,
+    required VoidCallback onNewGame,
+  }) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: const Text('저장된 게임이 있습니다. 계속하시겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              onNewGame();
+            },
+            child: const Text('새 게임'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              onContinue();
+            },
+            child: const Text('계속하기'),
+          ),
+        ],
+      ),
+    );
+  }
 
   void _showRegularDifficultyDialog(BuildContext context) {
     showDialog(
@@ -121,7 +207,7 @@ class HomeScreen extends StatelessWidget {
                   subtitle: '9x9 클래식 스도쿠',
                   icon: Icons.grid_3x3,
                   color: Colors.green,
-                  onTap: () => _showRegularDifficultyDialog(context),
+                  onTap: () => _startRegularGame(context),
                 ),
                 const SizedBox(height: 20),
                 _buildGameButton(
@@ -130,7 +216,7 @@ class HomeScreen extends StatelessWidget {
                   subtitle: '5개 보드가 겹친 스도쿠',
                   icon: Icons.apps,
                   color: Colors.deepPurple,
-                  onTap: () => _showSamuraiDifficultyDialog(context),
+                  onTap: () => _startSamuraiGame(context),
                 ),
               ],
             ),
