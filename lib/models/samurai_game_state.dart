@@ -403,4 +403,30 @@ class SamuraiGameState {
       notes[2][row + 6][col + 6].remove(number);
     }
   }
+
+  /// 특정 보드에서 각 숫자가 몇 번 사용되었는지 카운트
+  Map<int, int> getNumberCounts(int boardIndex) {
+    final counts = <int, int>{};
+    for (int num = 1; num <= 9; num++) {
+      counts[num] = 0;
+    }
+    for (int row = 0; row < 9; row++) {
+      for (int col = 0; col < 9; col++) {
+        int value = currentBoards[boardIndex][row][col];
+        if (value != 0) {
+          counts[value] = (counts[value] ?? 0) + 1;
+        }
+      }
+    }
+    return counts;
+  }
+
+  /// 특정 보드에서 모두 채워진 숫자들 (9번 사용된 숫자)
+  Set<int> getCompletedNumbers(int boardIndex) {
+    final counts = getNumberCounts(boardIndex);
+    return counts.entries
+        .where((entry) => entry.value >= 9)
+        .map((entry) => entry.key)
+        .toSet();
+  }
 }

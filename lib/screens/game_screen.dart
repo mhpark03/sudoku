@@ -418,6 +418,7 @@ class _GameScreenState extends State<GameScreen> {
               isCompact: true,
               quickInputNumber: _gameState.quickInputNumber,
               onQuickInputToggle: null,
+              disabledNumbers: _gameState.getCompletedNumbers(),
             ),
           ],
         ),
@@ -486,6 +487,7 @@ class _GameScreenState extends State<GameScreen> {
             isCompact: false,
             quickInputNumber: _gameState.quickInputNumber,
             onQuickInputToggle: null,
+            disabledNumbers: _gameState.getCompletedNumbers(),
           ),
         ],
       );
