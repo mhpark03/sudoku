@@ -64,7 +64,7 @@ class SudokuCell extends StatelessWidget {
               )
             : notes.isNotEmpty
                 ? _buildNotesGrid()
-                : null,
+                : const SizedBox.expand(),
       ),
     );
   }
