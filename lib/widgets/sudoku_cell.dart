@@ -9,6 +9,8 @@ class SudokuCell extends StatelessWidget {
   final bool hasError;
   final Set<int> notes;
   final VoidCallback onTap;
+  final bool isQuickInputHighlight;
+  final bool isQuickInputNoteHighlight;
 
   const SudokuCell({
     super.key,
@@ -20,6 +22,8 @@ class SudokuCell extends StatelessWidget {
     required this.hasError,
     required this.notes,
     required this.onTap,
+    this.isQuickInputHighlight = false,
+    this.isQuickInputNoteHighlight = false,
   });
 
   @override
@@ -27,6 +31,10 @@ class SudokuCell extends StatelessWidget {
     Color backgroundColor;
     if (isSelected) {
       backgroundColor = Colors.blue.shade300;
+    } else if (isQuickInputHighlight) {
+      backgroundColor = Colors.blue.shade200;
+    } else if (isQuickInputNoteHighlight) {
+      backgroundColor = Colors.blue.shade100;
     } else if (isSameValue && value != 0) {
       backgroundColor = Colors.blue.shade100;
     } else if (isHighlighted) {

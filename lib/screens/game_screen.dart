@@ -276,29 +276,63 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildControls({required bool isLandscape}) {
+    final quickInputGuide = _gameState.isQuickInputMode
+        ? Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.orange.shade200),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.info_outline,
+                    size: 16, color: Colors.orange.shade700),
+                const SizedBox(width: 6),
+                Text(
+                  _gameState.quickInputNumber != null
+                      ? '숫자 ${_gameState.quickInputNumber} 선택됨 - 셀을 탭하여 입력'
+                      : '아래에서 숫자를 먼저 선택하세요',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.orange.shade700,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          )
+        : const SizedBox.shrink();
+
     if (isLandscape) {
       return SingleChildScrollView(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
+            quickInputGuide,
             Wrap(
               spacing: 6,
               runSpacing: 6,
               alignment: WrapAlignment.center,
               children: [
-                _buildControlButton(
-                  icon: Icons.refresh,
-                  label: '새 게임',
-                  color: Colors.green,
-                  onTap: _startNewGame,
-                  compact: true,
-                ),
-                _buildControlButton(
-                  icon: Icons.lightbulb,
-                  label: '힌트',
-                  color: Colors.orange,
-                  onTap: _showHint,
+                _buildToggleButton(
+                  icon: Icons.flash_on,
+                  label: '빠른',
+                  isActive: _gameState.isQuickInputMode,
+                  activeColor: Colors.orange,
+                  onTap: () {
+                    setState(() {
+                      if (_gameState.isQuickInputMode) {
+                        _gameState = _gameState.copyWith(clearQuickInput: true);
+                      } else {
+                        _gameState = _gameState.copyWith(quickInputNumber: 1);
+                        _isNoteMode = false;
+                      }
+                    });
+                  },
                   compact: true,
                 ),
                 _buildToggleButton(
@@ -327,6 +361,13 @@ class _GameScreenState extends State<GameScreen> {
                   },
                   compact: true,
                 ),
+                _buildControlButton(
+                  icon: Icons.lightbulb,
+                  label: '힌트',
+                  color: Colors.deepOrange,
+                  onTap: _showHint,
+                  compact: true,
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -335,7 +376,7 @@ class _GameScreenState extends State<GameScreen> {
               onErase: _onErase,
               isCompact: true,
               quickInputNumber: _gameState.quickInputNumber,
-              onQuickInputToggle: _onQuickInputToggle,
+              onQuickInputToggle: null,
             ),
           ],
         ),
@@ -343,22 +384,27 @@ class _GameScreenState extends State<GameScreen> {
     } else {
       return Column(
         children: [
+          quickInputGuide,
           Wrap(
             spacing: 8,
             runSpacing: 8,
             alignment: WrapAlignment.center,
             children: [
-              _buildControlButton(
-                icon: Icons.refresh,
-                label: '새 게임',
-                color: Colors.green,
-                onTap: _startNewGame,
-              ),
-              _buildControlButton(
-                icon: Icons.lightbulb,
-                label: '힌트',
-                color: Colors.orange,
-                onTap: _showHint,
+              _buildToggleButton(
+                icon: Icons.flash_on,
+                label: '빠른',
+                isActive: _gameState.isQuickInputMode,
+                activeColor: Colors.orange,
+                onTap: () {
+                  setState(() {
+                    if (_gameState.isQuickInputMode) {
+                      _gameState = _gameState.copyWith(clearQuickInput: true);
+                    } else {
+                      _gameState = _gameState.copyWith(quickInputNumber: 1);
+                      _isNoteMode = false;
+                    }
+                  });
+                },
               ),
               _buildToggleButton(
                 icon: Icons.edit_note,
@@ -384,6 +430,12 @@ class _GameScreenState extends State<GameScreen> {
                   });
                 },
               ),
+              _buildControlButton(
+                icon: Icons.lightbulb,
+                label: '힌트',
+                color: Colors.deepOrange,
+                onTap: _showHint,
+              ),
             ],
           ),
           const SizedBox(height: 20),
@@ -392,7 +444,7 @@ class _GameScreenState extends State<GameScreen> {
             onErase: _onErase,
             isCompact: false,
             quickInputNumber: _gameState.quickInputNumber,
-            onQuickInputToggle: _onQuickInputToggle,
+            onQuickInputToggle: null,
           ),
         ],
       );

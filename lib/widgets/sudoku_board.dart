@@ -47,12 +47,24 @@ class SudokuBoard extends StatelessWidget {
                         value: gameState.currentBoard[row][col],
                         isFixed: gameState.isFixed[row][col],
                         isSelected: gameState.isSelected(row, col),
-                        isHighlighted: gameState.isSameRowOrCol(row, col) ||
-                            gameState.isSameBox(row, col),
-                        isSameValue: gameState.isSameValue(row, col),
+                        isHighlighted: !gameState.isQuickInputMode &&
+                            (gameState.isSameRowOrCol(row, col) ||
+                                gameState.isSameBox(row, col)),
+                        isSameValue: !gameState.isQuickInputMode &&
+                            gameState.isSameValue(row, col),
                         hasError: gameState.hasError(row, col),
                         notes: gameState.notes[row][col],
                         onTap: () => onCellTap(row, col),
+                        isQuickInputHighlight: gameState.isQuickInputMode &&
+                            gameState.quickInputNumber != null &&
+                            gameState.currentBoard[row][col] != 0 &&
+                            gameState.currentBoard[row][col] ==
+                                gameState.quickInputNumber,
+                        isQuickInputNoteHighlight: gameState.isQuickInputMode &&
+                            gameState.quickInputNumber != null &&
+                            gameState.currentBoard[row][col] == 0 &&
+                            gameState.notes[row][col]
+                                .contains(gameState.quickInputNumber),
                       ),
                     ),
                   );
