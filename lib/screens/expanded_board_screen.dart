@@ -308,7 +308,7 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
     List<List<Set<int>>> notes,
   ) {
     return Container(
-      color: Colors.grey.shade400,
+      color: Colors.grey.shade800,
       child: Column(
         children: List.generate(9, (row) {
           return Expanded(
