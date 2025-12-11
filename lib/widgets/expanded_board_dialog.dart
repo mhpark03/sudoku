@@ -31,7 +31,9 @@ class ExpandedBoardDialog extends StatefulWidget {
 class _ExpandedBoardDialogState extends State<ExpandedBoardDialog> {
   int? selectedRow;
   int? selectedCol;
-  bool isNoteMode = false; // 빠른 입력 모드 (메모 모드)
+  bool isNoteMode = false; // 메모 모드
+  bool isQuickInputMode = false; // 빠른 입력 모드
+  int? quickInputNumber; // 빠른 입력에서 선택된 숫자
 
   @override
   void initState() {
@@ -81,37 +83,41 @@ class _ExpandedBoardDialogState extends State<ExpandedBoardDialog> {
                   Row(
                     children: [
                       // 빠른 입력 토글
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: isNoteMode ? Colors.orange : Colors.white24,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              isNoteMode = !isNoteMode;
-                            });
-                          },
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.edit_note,
-                                color: isNoteMode ? Colors.white : Colors.white70,
-                                size: 18,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '메모',
-                                style: TextStyle(
-                                  color: isNoteMode ? Colors.white : Colors.white70,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                      _buildHeaderToggle(
+                        icon: Icons.flash_on,
+                        label: '빠른',
+                        isActive: isQuickInputMode,
+                        activeColor: Colors.orange,
+                        onTap: () {
+                          setState(() {
+                            isQuickInputMode = !isQuickInputMode;
+                            if (!isQuickInputMode) {
+                              quickInputNumber = null;
+                            }
+                            // 빠른 입력 모드 활성화 시 메모 모드 비활성화
+                            if (isQuickInputMode) {
+                              isNoteMode = false;
+                            }
+                          });
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      // 메모 모드 토글
+                      _buildHeaderToggle(
+                        icon: Icons.edit_note,
+                        label: '메모',
+                        isActive: isNoteMode,
+                        activeColor: Colors.orange,
+                        onTap: () {
+                          setState(() {
+                            isNoteMode = !isNoteMode;
+                            // 메모 모드 활성화 시 빠른 입력 모드 비활성화
+                            if (isNoteMode) {
+                              isQuickInputMode = false;
+                              quickInputNumber = null;
+                            }
+                          });
+                        },
                       ),
                       const SizedBox(width: 12),
                       IconButton(
@@ -138,6 +144,37 @@ class _ExpandedBoardDialogState extends State<ExpandedBoardDialog> {
                 ),
               ),
             ),
+            // 빠른 입력 모드 안내
+            if (isQuickInputMode)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.shade200),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.info_outline, size: 16, color: Colors.orange.shade700),
+                      const SizedBox(width: 6),
+                      Text(
+                        quickInputNumber != null
+                            ? '숫자 $quickInputNumber 선택됨 - 셀을 탭하여 입력'
+                            : '아래에서 숫자를 먼저 선택하세요',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.orange.shade700,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            const SizedBox(height: 8),
             // 기능 버튼들
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -173,13 +210,50 @@ class _ExpandedBoardDialogState extends State<ExpandedBoardDialog> {
     );
   }
 
+  Widget _buildHeaderToggle({
+    required IconData icon,
+    required String label,
+    required bool isActive,
+    required Color activeColor,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: isActive ? activeColor : Colors.white24,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: isActive ? Colors.white : Colors.white70,
+              size: 18,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: isActive ? Colors.white : Colors.white70,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildGrid(
     List<List<int>> board,
     List<List<bool>> isFixed,
     List<List<Set<int>>> notes,
   ) {
     return Container(
-      color: Colors.grey.shade600,
+      color: Colors.black,
       child: Column(
         children: List.generate(9, (row) {
           return Expanded(
@@ -260,6 +334,8 @@ class _ExpandedBoardDialogState extends State<ExpandedBoardDialog> {
         selectedCol != null &&
         value != 0 &&
         value == board[selectedRow!][selectedCol!];
+    // 빠른 입력 모드에서 선택된 숫자와 같은 값 하이라이트
+    bool isQuickInputValue = isQuickInputMode && quickInputNumber != null && value == quickInputNumber;
     bool hasError = value != 0 &&
         !SamuraiSudokuGenerator.isValidMove(board, row, col, value);
 
@@ -267,6 +343,8 @@ class _ExpandedBoardDialogState extends State<ExpandedBoardDialog> {
     Color backgroundColor;
     if (isSelected) {
       backgroundColor = Colors.blue.shade300;
+    } else if (isQuickInputValue) {
+      backgroundColor = Colors.orange.shade200;
     } else if (isSameValue) {
       backgroundColor = Colors.blue.shade200;
     } else if (isSameRowOrCol || isSameBox) {
@@ -285,17 +363,7 @@ class _ExpandedBoardDialogState extends State<ExpandedBoardDialog> {
     }
 
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          if (selectedRow == row && selectedCol == col) {
-            selectedRow = null;
-            selectedCol = null;
-          } else {
-            selectedRow = row;
-            selectedCol = col;
-          }
-        });
-      },
+      onTap: () => _onCellTap(row, col, fixed),
       child: Container(
         color: backgroundColor,
         child: value != 0
@@ -312,6 +380,68 @@ class _ExpandedBoardDialogState extends State<ExpandedBoardDialog> {
             : cellNotes.isNotEmpty
                 ? _buildNotesGrid(cellNotes)
                 : const SizedBox(),
+      ),
+    );
+  }
+
+  void _onCellTap(int row, int col, bool isFixed) {
+    setState(() {
+      // 빠른 입력 모드일 때
+      if (isQuickInputMode && quickInputNumber != null) {
+        if (!isFixed) {
+          final board = widget.gameState.currentBoards[widget.boardIndex];
+          final solution = widget.gameState.solutions[widget.boardIndex];
+
+          // 정답 확인
+          bool isCorrect = solution[row][col] == quickInputNumber;
+
+          if (isCorrect) {
+            // 정답: 숫자 입력
+            widget.onValueChanged(widget.boardIndex, row, col, quickInputNumber!);
+            _showFeedback(true);
+          } else {
+            // 오답: 피드백만 표시
+            _showFeedback(false);
+          }
+
+          selectedRow = row;
+          selectedCol = col;
+        } else {
+          // 고정 셀 탭: 선택만
+          selectedRow = row;
+          selectedCol = col;
+        }
+      } else {
+        // 일반 모드 또는 메모 모드: 셀 선택/해제
+        if (selectedRow == row && selectedCol == col) {
+          selectedRow = null;
+          selectedCol = null;
+        } else {
+          selectedRow = row;
+          selectedCol = col;
+        }
+      }
+    });
+  }
+
+  void _showFeedback(bool isCorrect) {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              isCorrect ? Icons.check_circle : Icons.cancel,
+              color: Colors.white,
+            ),
+            const SizedBox(width: 8),
+            Text(isCorrect ? '정답입니다!' : '틀렸습니다!'),
+          ],
+        ),
+        backgroundColor: isCorrect ? Colors.green : Colors.red,
+        duration: const Duration(milliseconds: 800),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
       ),
     );
   }
@@ -369,15 +499,36 @@ class _ExpandedBoardDialogState extends State<ExpandedBoardDialog> {
   }
 
   Widget _buildNumberButton(int number) {
+    // 빠른 입력 모드에서 선택된 숫자인지 확인
+    bool isSelectedQuickInput = isQuickInputMode && quickInputNumber == number;
+
+    Color bgColor;
+    Color fgColor;
+
+    if (isSelectedQuickInput) {
+      bgColor = Colors.orange;
+      fgColor = Colors.white;
+    } else if (isQuickInputMode) {
+      bgColor = Colors.orange.shade50;
+      fgColor = Colors.orange.shade700;
+    } else if (isNoteMode) {
+      bgColor = Colors.amber.shade50;
+      fgColor = Colors.amber.shade700;
+    } else {
+      bgColor = Colors.blue.shade50;
+      fgColor = Colors.blue.shade700;
+    }
+
     return SizedBox(
       width: 48,
       height: 48,
       child: ElevatedButton(
         onPressed: () => _onNumberTap(number),
         style: ElevatedButton.styleFrom(
-          backgroundColor: isNoteMode ? Colors.orange.shade50 : Colors.blue.shade50,
-          foregroundColor: isNoteMode ? Colors.orange.shade700 : Colors.blue.shade700,
+          backgroundColor: bgColor,
+          foregroundColor: fgColor,
           padding: EdgeInsets.zero,
+          elevation: isSelectedQuickInput ? 4 : 1,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
@@ -410,6 +561,19 @@ class _ExpandedBoardDialogState extends State<ExpandedBoardDialog> {
   }
 
   void _onNumberTap(int number) {
+    // 빠른 입력 모드: 숫자 선택/해제
+    if (isQuickInputMode) {
+      setState(() {
+        if (quickInputNumber == number) {
+          quickInputNumber = null; // 같은 숫자 탭하면 해제
+        } else {
+          quickInputNumber = number; // 다른 숫자 선택
+        }
+      });
+      return;
+    }
+
+    // 일반 모드 또는 메모 모드: 기존 로직
     if (selectedRow == null || selectedCol == null) return;
     if (widget.gameState.isFixed[widget.boardIndex][selectedRow!][selectedCol!]) {
       return;
@@ -426,6 +590,14 @@ class _ExpandedBoardDialogState extends State<ExpandedBoardDialog> {
   }
 
   void _onErase() {
+    // 빠른 입력 모드에서는 숫자 선택 해제
+    if (isQuickInputMode) {
+      setState(() {
+        quickInputNumber = null;
+      });
+      return;
+    }
+
     if (selectedRow == null || selectedCol == null) return;
     if (widget.gameState.isFixed[widget.boardIndex][selectedRow!][selectedCol!]) {
       return;
