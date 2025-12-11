@@ -148,13 +148,16 @@ class GameState {
   void fillAllNotes() {
     for (int row = 0; row < 9; row++) {
       for (int col = 0; col < 9; col++) {
+        // 빈 셀(값이 0)에만 메모 적용
         if (currentBoard[row][col] == 0) {
-          notes[row][col].clear();
+          // 기존 메모 완전히 지우고 새로 계산
+          Set<int> newNotes = <int>{};
           for (int num = 1; num <= 9; num++) {
             if (SudokuGenerator.isValidMove(currentBoard, row, col, num)) {
-              notes[row][col].add(num);
+              newNotes.add(num);
             }
           }
+          notes[row][col] = newNotes;
         }
       }
     }
