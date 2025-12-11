@@ -59,84 +59,11 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
         toolbarHeight: isLandscape ? 45 : kToolbarHeight,
-        actions: [
-          // 빠른 입력 토글
-          _buildAppBarToggle(
-            icon: Icons.flash_on,
-            label: '빠른',
-            isActive: isQuickInputMode,
-            onTap: () {
-              setState(() {
-                isQuickInputMode = !isQuickInputMode;
-                if (!isQuickInputMode) {
-                  quickInputNumber = null;
-                }
-                if (isQuickInputMode) {
-                  isNoteMode = false;
-                }
-              });
-            },
-          ),
-          const SizedBox(width: 4),
-          // 메모 모드 토글
-          _buildAppBarToggle(
-            icon: Icons.edit_note,
-            label: '메모',
-            isActive: isNoteMode,
-            onTap: () {
-              setState(() {
-                isNoteMode = !isNoteMode;
-                if (isNoteMode) {
-                  isQuickInputMode = false;
-                  quickInputNumber = null;
-                }
-              });
-            },
-          ),
-          const SizedBox(width: 8),
-        ],
       ),
       body: SafeArea(
         child: isLandscape
             ? _buildLandscapeLayout(board, isFixed, notes)
             : _buildPortraitLayout(board, isFixed, notes),
-      ),
-    );
-  }
-
-  Widget _buildAppBarToggle({
-    required IconData icon,
-    required String label,
-    required bool isActive,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        margin: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: isActive ? Colors.orange : Colors.white24,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: isActive ? Colors.white : Colors.white70,
-              size: 18,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: isActive ? Colors.white : Colors.white70,
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -167,10 +94,44 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          // 기능 버튼들
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          // 기능 버튼들 (빠른, 메모, 모든 메모, 힌트)
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
             children: [
+              _buildToggleButton(
+                icon: Icons.flash_on,
+                label: '빠른',
+                isActive: isQuickInputMode,
+                activeColor: Colors.orange,
+                onTap: () {
+                  setState(() {
+                    isQuickInputMode = !isQuickInputMode;
+                    if (!isQuickInputMode) {
+                      quickInputNumber = null;
+                    }
+                    if (isQuickInputMode) {
+                      isNoteMode = false;
+                    }
+                  });
+                },
+              ),
+              _buildToggleButton(
+                icon: Icons.edit_note,
+                label: '메모',
+                isActive: isNoteMode,
+                activeColor: Colors.amber,
+                onTap: () {
+                  setState(() {
+                    isNoteMode = !isNoteMode;
+                    if (isNoteMode) {
+                      isQuickInputMode = false;
+                      quickInputNumber = null;
+                    }
+                  });
+                },
+              ),
               _buildFeatureButton(
                 icon: Icons.grid_on,
                 label: '모든 메모',
@@ -183,7 +144,7 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
                 icon: Icons.lightbulb_outline,
                 label: '힌트',
                 onTap: _onHint,
-                color: Colors.orange,
+                color: Colors.deepOrange,
               ),
             ],
           ),
@@ -236,10 +197,46 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
                   // 빠른 입력 모드 안내
                   if (isQuickInputMode) _buildQuickInputGuide(),
                   const SizedBox(height: 8),
-                  // 기능 버튼들
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  // 기능 버튼들 (빠른, 메모, 모든 메모, 힌트)
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    alignment: WrapAlignment.center,
                     children: [
+                      _buildToggleButton(
+                        icon: Icons.flash_on,
+                        label: '빠른',
+                        isActive: isQuickInputMode,
+                        activeColor: Colors.orange,
+                        compact: true,
+                        onTap: () {
+                          setState(() {
+                            isQuickInputMode = !isQuickInputMode;
+                            if (!isQuickInputMode) {
+                              quickInputNumber = null;
+                            }
+                            if (isQuickInputMode) {
+                              isNoteMode = false;
+                            }
+                          });
+                        },
+                      ),
+                      _buildToggleButton(
+                        icon: Icons.edit_note,
+                        label: '메모',
+                        isActive: isNoteMode,
+                        activeColor: Colors.amber,
+                        compact: true,
+                        onTap: () {
+                          setState(() {
+                            isNoteMode = !isNoteMode;
+                            if (isNoteMode) {
+                              isQuickInputMode = false;
+                              quickInputNumber = null;
+                            }
+                          });
+                        },
+                      ),
                       _buildFeatureButton(
                         icon: Icons.grid_on,
                         label: '모든 메모',
@@ -249,12 +246,11 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
                         },
                         compact: true,
                       ),
-                      const SizedBox(width: 8),
                       _buildFeatureButton(
                         icon: Icons.lightbulb_outline,
                         label: '힌트',
                         onTap: _onHint,
-                        color: Colors.orange,
+                        color: Colors.deepOrange,
                         compact: true,
                       ),
                     ],
@@ -312,7 +308,7 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
     List<List<Set<int>>> notes,
   ) {
     return Container(
-      color: Colors.black,
+      color: Colors.grey.shade400,
       child: Column(
         children: List.generate(9, (row) {
           return Expanded(
@@ -367,6 +363,48 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
               label,
               style: TextStyle(
                 color: color ?? Colors.blue,
+                fontWeight: FontWeight.w500,
+                fontSize: compact ? 12 : 14,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildToggleButton({
+    required IconData icon,
+    required String label,
+    required bool isActive,
+    required Color activeColor,
+    required VoidCallback onTap,
+    bool compact = false,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 12 : 16,
+          vertical: compact ? 6 : 8,
+        ),
+        decoration: BoxDecoration(
+          color: isActive ? activeColor : Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: compact ? 16 : 18,
+              color: isActive ? Colors.white : Colors.grey.shade600,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: isActive ? Colors.white : Colors.grey.shade600,
                 fontWeight: FontWeight.w500,
                 fontSize: compact ? 12 : 14,
               ),
