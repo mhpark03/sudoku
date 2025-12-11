@@ -150,13 +150,14 @@ class GameState {
       for (int col = 0; col < 9; col++) {
         // 빈 셀(값이 0)에만 메모 적용
         if (currentBoard[row][col] == 0) {
-          // 기존 메모 완전히 지우고 새로 계산
-          Set<int> newNotes = <int>{};
+          // 새로운 Set 생성하여 유효한 숫자 추가
+          final Set<int> newNotes = <int>{};
           for (int num = 1; num <= 9; num++) {
             if (SudokuGenerator.isValidMove(currentBoard, row, col, num)) {
               newNotes.add(num);
             }
           }
+          // 무조건 새 Set으로 교체 (기존 메모 무시)
           notes[row][col] = newNotes;
         }
       }
