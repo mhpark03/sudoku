@@ -44,7 +44,7 @@ class SamuraiGameState {
         emptyCells = 60;
         break;
       case SamuraiDifficulty.expert:
-        emptyCells = 75;
+        emptyCells = 70;
         break;
     }
 
