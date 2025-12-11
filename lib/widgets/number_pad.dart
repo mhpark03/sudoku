@@ -4,13 +4,19 @@ class NumberPad extends StatelessWidget {
   final Function(int) onNumberTap;
   final VoidCallback onErase;
   final bool isCompact;
+  final int? quickInputNumber; // 빠른 입력 모드에서 선택된 숫자
+  final VoidCallback? onQuickInputToggle; // 빠른 입력 모드 토글
 
   const NumberPad({
     super.key,
     required this.onNumberTap,
     required this.onErase,
     this.isCompact = false,
+    this.quickInputNumber,
+    this.onQuickInputToggle,
   });
+
+  bool get isQuickInputMode => quickInputNumber != null;
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +30,12 @@ class NumberPad extends StatelessWidget {
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // 빠른 입력 모드 토글 버튼
+          if (onQuickInputToggle != null)
+            Padding(
+              padding: EdgeInsets.only(bottom: spacing),
+              child: _buildQuickInputToggle(buttonSize, fontSize),
+            ),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(3, (index) {
@@ -58,9 +70,15 @@ class NumberPad extends StatelessWidget {
         ],
       );
     } else {
-      // 세로 모드: 기존 레이아웃
+      // 세로 모드: 기존 레이아웃 + 빠른 입력 토글
       return Column(
         children: [
+          // 빠른 입력 모드 토글 버튼
+          if (onQuickInputToggle != null)
+            Padding(
+              padding: EdgeInsets.only(bottom: spacing),
+              child: _buildQuickInputToggle(buttonSize, fontSize),
+            ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: List.generate(5, (index) {
@@ -82,23 +100,80 @@ class NumberPad extends StatelessWidget {
     }
   }
 
+  Widget _buildQuickInputToggle(double buttonSize, double fontSize) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isQuickInputMode ? Colors.orange.shade100 : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isQuickInputMode ? Colors.orange : Colors.grey.shade400,
+          width: isQuickInputMode ? 2 : 1,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: onQuickInputToggle,
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: isCompact ? 12 : 16,
+              vertical: isCompact ? 6 : 10,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isQuickInputMode ? Icons.flash_on : Icons.flash_off,
+                  color: isQuickInputMode ? Colors.orange : Colors.grey.shade600,
+                  size: isCompact ? 18 : 22,
+                ),
+                SizedBox(width: isCompact ? 4 : 8),
+                Text(
+                  isQuickInputMode
+                    ? '빠른 입력: ${quickInputNumber!}'
+                    : '빠른 입력',
+                  style: TextStyle(
+                    fontSize: isCompact ? 12 : 14,
+                    fontWeight: isQuickInputMode ? FontWeight.bold : FontWeight.normal,
+                    color: isQuickInputMode ? Colors.orange.shade700 : Colors.grey.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildNumberButton(int number, double size, double fontSize) {
+    final isSelected = quickInputNumber == number;
+
     return SizedBox(
       width: size,
       height: size,
       child: ElevatedButton(
         onPressed: () => onNumberTap(number),
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.blue.shade50,
-          foregroundColor: Colors.blue.shade700,
+          backgroundColor: isSelected
+            ? Colors.orange.shade400
+            : Colors.blue.shade50,
+          foregroundColor: isSelected
+            ? Colors.white
+            : Colors.blue.shade700,
           padding: EdgeInsets.zero,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
+          elevation: isSelected ? 4 : 1,
         ),
         child: Text(
           number.toString(),
-          style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: fontSize,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );

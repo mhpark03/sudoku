@@ -10,6 +10,7 @@ class GameState {
   final Difficulty difficulty;
   int? selectedRow;
   int? selectedCol;
+  int? quickInputNumber; // 빠른 입력 모드에서 선택된 숫자
   int mistakes;
   bool isCompleted;
 
@@ -21,6 +22,7 @@ class GameState {
     required this.difficulty,
     this.selectedRow,
     this.selectedCol,
+    this.quickInputNumber,
     this.mistakes = 0,
     this.isCompleted = false,
   });
@@ -65,9 +67,11 @@ class GameState {
     Difficulty? difficulty,
     int? selectedRow,
     int? selectedCol,
+    int? quickInputNumber,
     int? mistakes,
     bool? isCompleted,
     bool clearSelection = false,
+    bool clearQuickInput = false,
   }) {
     return GameState(
       solution: solution ?? this.solution,
@@ -77,10 +81,13 @@ class GameState {
       difficulty: difficulty ?? this.difficulty,
       selectedRow: clearSelection ? null : (selectedRow ?? this.selectedRow),
       selectedCol: clearSelection ? null : (selectedCol ?? this.selectedCol),
+      quickInputNumber: clearQuickInput ? null : (quickInputNumber ?? this.quickInputNumber),
       mistakes: mistakes ?? this.mistakes,
       isCompleted: isCompleted ?? this.isCompleted,
     );
   }
+
+  bool get isQuickInputMode => quickInputNumber != null;
 
   bool get hasSelection => selectedRow != null && selectedCol != null;
 
