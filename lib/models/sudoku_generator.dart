@@ -15,7 +15,7 @@ class SudokuGenerator {
     List<List<int>> puzzle =
         solvedBoard.map((row) => List<int>.from(row)).toList();
 
-    int cellsToRemove = difficulty.clamp(20, 72);
+    int cellsToRemove = difficulty.clamp(20, 75);
 
     // 각 3x3 박스당 제거할 셀 수 계산
     int cellsPerBox = cellsToRemove ~/ 9;
