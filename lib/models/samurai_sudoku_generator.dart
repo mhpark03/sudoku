@@ -32,7 +32,7 @@ class SamuraiSudokuGenerator {
     return boards;
   }
 
-  /// 퍼즐 생성 (각 보드에서 셀 제거)
+  /// 퍼즐 생성 (각 보드에서 셀 제거) - 3x3 박스별 균등 분포
   List<List<List<int>>> generatePuzzles(
       List<List<List<int>>> solvedBoards, int difficulty) {
     List<List<List<int>>> puzzles = solvedBoards
@@ -41,23 +41,50 @@ class SamuraiSudokuGenerator {
 
     int cellsToRemove = difficulty.clamp(25, 50);
 
+    // 각 3x3 박스당 제거할 셀 수 계산 (9개 박스에 균등 분배)
+    int cellsPerBox = cellsToRemove ~/ 9;
+    int extraCells = cellsToRemove % 9;
+
     for (int b = 0; b < 5; b++) {
-      List<int> positions = List.generate(81, (i) => i)..shuffle(_random);
-      int removed = 0;
+      // 각 3x3 박스별로 균등하게 셀 제거
+      List<int> boxOrder = List.generate(9, (i) => i)..shuffle(_random);
 
-      for (int pos in positions) {
-        if (removed >= cellsToRemove) break;
+      for (int boxIdx = 0; boxIdx < 9; boxIdx++) {
+        int boxNum = boxOrder[boxIdx];
+        int boxStartRow = (boxNum ~/ 3) * 3;
+        int boxStartCol = (boxNum % 3) * 3;
 
-        int row = pos ~/ 9;
-        int col = pos % 9;
-
-        // 겹치는 영역은 제거 확률을 낮춤
-        if (_isOverlapCell(b, row, col) && _random.nextDouble() > 0.5) {
-          continue;
+        // 해당 박스 내 셀 위치들
+        List<int> boxPositions = [];
+        for (int r = 0; r < 3; r++) {
+          for (int c = 0; c < 3; c++) {
+            int row = boxStartRow + r;
+            int col = boxStartCol + c;
+            boxPositions.add(row * 9 + col);
+          }
         }
+        boxPositions.shuffle(_random);
 
-        puzzles[b][row][col] = 0;
-        removed++;
+        // 이 박스에서 제거할 셀 수
+        int toRemoveInBox = cellsPerBox + (boxIdx < extraCells ? 1 : 0);
+        int removed = 0;
+
+        for (int pos in boxPositions) {
+          if (removed >= toRemoveInBox) break;
+
+          int row = pos ~/ 9;
+          int col = pos % 9;
+
+          // 겹치는 영역은 제거 확률을 낮춤 (최소 1개는 유지)
+          if (_isOverlapCell(b, row, col) &&
+              removed > 0 &&
+              _random.nextDouble() > 0.6) {
+            continue;
+          }
+
+          puzzles[b][row][col] = 0;
+          removed++;
+        }
       }
     }
 
