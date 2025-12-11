@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../models/samurai_game_state.dart';
 import '../models/samurai_sudoku_generator.dart';
@@ -47,14 +48,19 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen> {
       _isLoading = true;
     });
 
-    // 생성이 무거우므로 비동기 처리
-    await Future.delayed(const Duration(milliseconds: 100));
+    // 별도 isolate에서 퍼즐 생성 (메인 스레드 블로킹 방지)
+    final data = await compute(
+      generateSamuraiPuzzleInIsolate,
+      _selectedDifficulty,
+    );
 
-    setState(() {
-      _gameState = SamuraiGameState.newGame(_selectedDifficulty);
-      _isLoading = false;
-    });
-    _saveGame();
+    if (mounted) {
+      setState(() {
+        _gameState = SamuraiGameState.fromGeneratedData(data);
+        _isLoading = false;
+      });
+      _saveGame();
+    }
   }
 
   /// 게임 상태 저장
