@@ -65,6 +65,13 @@ class GameStorage {
     await prefs.remove(_samuraiGameKey);
   }
 
+  /// 모든 저장된 게임 삭제
+  static Future<void> deleteAllGames() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_regularGameKey);
+    await prefs.remove(_samuraiGameKey);
+  }
+
   /// 저장된 게임이 있는지 확인
   static Future<bool> hasRegularGame() async {
     final prefs = await SharedPreferences.getInstance();

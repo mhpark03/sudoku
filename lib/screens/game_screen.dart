@@ -39,6 +39,8 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _startNewGame() {
+    // 새 게임 시작 시 모든 저장된 게임 삭제
+    GameStorage.deleteAllGames();
     setState(() {
       _gameState = GameState.newGame(_selectedDifficulty);
       _saveGame();
