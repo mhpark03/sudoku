@@ -1,6 +1,6 @@
 import 'samurai_sudoku_generator.dart';
 
-enum SamuraiDifficulty { easy, medium, hard }
+enum SamuraiDifficulty { easy, medium, hard, expert }
 
 class SamuraiGameState {
   final List<List<List<int>>> solutions;
@@ -42,6 +42,9 @@ class SamuraiGameState {
         break;
       case SamuraiDifficulty.hard:
         emptyCells = 50;
+        break;
+      case SamuraiDifficulty.expert:
+        emptyCells = 63; // 박스당 1~2개만 노출
         break;
     }
 

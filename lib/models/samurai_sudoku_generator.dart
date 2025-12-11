@@ -39,15 +39,16 @@ class SamuraiSudokuGenerator {
         .map((board) => board.map((row) => List<int>.from(row)).toList())
         .toList();
 
-    int cellsToRemove = difficulty.clamp(25, 50);
+    int cellsToRemove = difficulty.clamp(25, 72);
 
     // 각 3x3 박스당 제거할 셀 수 계산 (9개 박스에 균등 분배)
     int cellsPerBox = cellsToRemove ~/ 9;
     int extraCells = cellsToRemove % 9;
 
-    // 각 박스에서 최소 유지할 셀 수 (최소 3개는 보이도록)
-    int minCellsToKeep = 3;
-    int maxRemovePerBox = 9 - minCellsToKeep; // 최대 6개만 제거 가능
+    // 난이도에 따른 최소 유지 셀 수
+    // 달인(63+): 박스당 1~2개, 그 외: 박스당 3개
+    int minCellsToKeep = cellsToRemove >= 63 ? 1 : 3;
+    int maxRemovePerBox = 9 - minCellsToKeep;
 
     for (int b = 0; b < 5; b++) {
       // 각 3x3 박스별로 균등하게 셀 제거
