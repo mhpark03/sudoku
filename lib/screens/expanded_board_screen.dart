@@ -430,7 +430,9 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
         selectedCol != null &&
         (selectedRow == row || selectedCol == col);
     bool isSameBox = _isSameBox(row, col);
-    bool isSameValue = selectedRow != null &&
+    // 빠른 입력 모드에서는 같은 숫자 하이라이트 비활성화
+    bool isSameValue = !isQuickInputMode &&
+        selectedRow != null &&
         selectedCol != null &&
         value != 0 &&
         value == board[selectedRow!][selectedCol!];
