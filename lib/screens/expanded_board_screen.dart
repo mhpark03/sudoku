@@ -510,6 +510,8 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
           if (isValid) {
             widget.onValueChanged(
                 widget.boardIndex, row, col, quickInputNumber!);
+            // 같은 행/열/박스의 메모에서 해당 숫자 삭제
+            _removeNumberFromRelatedNotes(row, col, quickInputNumber!);
             _showFeedback(true);
             _checkCompletion();
           } else {
@@ -596,6 +598,38 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
     int cellBoxRow = (row ~/ 3) * 3;
     int cellBoxCol = (col ~/ 3) * 3;
     return selectedBoxRow == cellBoxRow && selectedBoxCol == cellBoxCol;
+  }
+
+  /// 같은 행/열/박스의 메모에서 해당 숫자 삭제
+  void _removeNumberFromRelatedNotes(int row, int col, int number) {
+    final notes = widget.gameState.notes[widget.boardIndex];
+
+    // 같은 행의 메모에서 삭제
+    for (int c = 0; c < 9; c++) {
+      if (c != col) {
+        notes[row][c].remove(number);
+      }
+    }
+
+    // 같은 열의 메모에서 삭제
+    for (int r = 0; r < 9; r++) {
+      if (r != row) {
+        notes[r][col].remove(number);
+      }
+    }
+
+    // 같은 3x3 박스의 메모에서 삭제
+    int boxRow = (row ~/ 3) * 3;
+    int boxCol = (col ~/ 3) * 3;
+    for (int r = 0; r < 3; r++) {
+      for (int c = 0; c < 3; c++) {
+        int targetRow = boxRow + r;
+        int targetCol = boxCol + c;
+        if (targetRow != row || targetCol != col) {
+          notes[targetRow][targetCol].remove(number);
+        }
+      }
+    }
   }
 
   void _onNumberTap(int number) {
