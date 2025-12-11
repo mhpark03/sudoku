@@ -430,7 +430,9 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
         selectedCol != null &&
         (selectedRow == row || selectedCol == col);
     bool isSameBox = _isSameBox(row, col);
-    bool isSameValue = selectedRow != null &&
+    // 빠른 입력 모드에서는 같은 숫자 하이라이트 비활성화
+    bool isSameValue = !isQuickInputMode &&
+        selectedRow != null &&
         selectedCol != null &&
         value != 0 &&
         value == board[selectedRow!][selectedCol!];
@@ -550,9 +552,9 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
             child: Text(
               hasNote ? num.toString() : '',
               style: TextStyle(
-                fontSize: 9,
-                color: Colors.blue.shade600,
-                fontWeight: FontWeight.w500,
+                fontSize: 10,
+                color: Colors.grey.shade800,
+                fontWeight: FontWeight.bold,
               ),
             ),
           );
