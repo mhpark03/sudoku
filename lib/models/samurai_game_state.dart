@@ -244,15 +244,17 @@ class SamuraiGameState {
   void fillAllNotes(int board) {
     for (int row = 0; row < 9; row++) {
       for (int col = 0; col < 9; col++) {
-        // 빈 셀에만 메모 추가 (값이 0인 셀)
+        // 빈 셀(값이 0)에만 메모 적용
         if (currentBoards[board][row][col] == 0) {
-          notes[board][row][col].clear();
+          // 기존 메모 완전히 지우고 새로 계산
+          Set<int> newNotes = <int>{};
           for (int num = 1; num <= 9; num++) {
             if (SamuraiSudokuGenerator.isValidMove(
                 currentBoards[board], row, col, num)) {
-              notes[board][row][col].add(num);
+              newNotes.add(num);
             }
           }
+          notes[board][row][col] = newNotes;
           syncOverlapNotes(board, row, col, notes[board][row][col]);
         }
       }
