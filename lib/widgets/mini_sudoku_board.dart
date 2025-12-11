@@ -46,10 +46,15 @@ class MiniSudokuBoard extends StatelessWidget {
     bool isSameValue = gameState.isSameValue(boardIndex, row, col);
     bool hasError = gameState.hasError(boardIndex, row, col);
     bool isOverlap = gameState.isOverlapRegion(boardIndex, row, col);
+    Set<int> notes = gameState.notes[boardIndex][row][col];
+    bool isNoteHighlight = _shouldHighlightNote(row, col);
 
     Color backgroundColor;
     if (isSelected) {
       backgroundColor = Colors.blue.shade300;
+    } else if (isNoteHighlight) {
+      // 선택된 셀의 숫자가 메모에 포함된 경우
+      backgroundColor = Colors.green.shade100;
     } else if (isSameValue && value != 0) {
       backgroundColor = Colors.blue.shade100;
     } else if (isHighlighted) {
@@ -91,23 +96,74 @@ class MiniSudokuBoard extends StatelessWidget {
             top: BorderSide(color: Colors.grey.shade300, width: 0.5),
           ),
         ),
-        child: Center(
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Padding(
-              padding: const EdgeInsets.all(1),
-              child: Text(
-                value == 0 ? '' : value.toString(),
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: fixed ? FontWeight.bold : FontWeight.normal,
-                  color: textColor,
+        child: value != 0
+            ? Center(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Padding(
+                    padding: const EdgeInsets.all(1),
+                    child: Text(
+                      value.toString(),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: fixed ? FontWeight.bold : FontWeight.normal,
+                        color: textColor,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ),
-        ),
+              )
+            : notes.isNotEmpty
+                ? _buildNotesGrid(notes)
+                : const SizedBox.expand(),
       ),
     );
+  }
+
+  Widget _buildNotesGrid(Set<int> notes) {
+    return Padding(
+      padding: const EdgeInsets.all(0.5),
+      child: GridView.count(
+        crossAxisCount: 3,
+        physics: const NeverScrollableScrollPhysics(),
+        children: List.generate(9, (index) {
+          int num = index + 1;
+          bool hasNote = notes.contains(num);
+          return Center(
+            child: Text(
+              hasNote ? num.toString() : '',
+              style: TextStyle(
+                fontSize: 6,
+                color: Colors.grey.shade800,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  /// 메모 하이라이트 여부 판단 (선택된 셀의 숫자가 메모에 포함된 경우)
+  bool _shouldHighlightNote(int row, int col) {
+    // 현재 셀에 값이 있으면 하이라이트 안함
+    if (board[row][col] != 0) return false;
+
+    // 메모가 없으면 하이라이트 안함
+    Set<int> notes = gameState.notes[boardIndex][row][col];
+    if (notes.isEmpty) return false;
+
+    // 선택된 셀이 없으면 하이라이트 안함
+    if (gameState.selectedRow == null || gameState.selectedCol == null) {
+      return false;
+    }
+
+    // 선택된 셀의 값 가져오기
+    int selectedValue = gameState
+        .currentBoards[gameState.selectedBoard][gameState.selectedRow!]
+            [gameState.selectedCol!];
+    if (selectedValue == 0) return false;
+
+    return notes.contains(selectedValue);
   }
 }
