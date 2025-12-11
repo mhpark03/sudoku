@@ -22,7 +22,17 @@ class SudokuGenerator {
     int extraCells = cellsToRemove % 9;
 
     // 난이도에 따른 최소 유지 셀 수
-    int minCellsToKeep = cellsToRemove >= 64 ? 1 : 3;
+    // 쉬움(30): 5개, 보통(45): 4개, 어려움(55): 3개, 달인(64+): 1개
+    int minCellsToKeep;
+    if (cellsToRemove >= 64) {
+      minCellsToKeep = 1; // 달인
+    } else if (cellsToRemove >= 55) {
+      minCellsToKeep = 3; // 어려움
+    } else if (cellsToRemove >= 45) {
+      minCellsToKeep = 4; // 보통
+    } else {
+      minCellsToKeep = 5; // 쉬움
+    }
     int maxRemovePerBox = 9 - minCellsToKeep;
 
     // 각 3x3 박스별로 균등하게 셀 제거
