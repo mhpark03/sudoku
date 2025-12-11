@@ -132,21 +132,9 @@ class _ExpandedBoardDialogState extends State<ExpandedBoardDialog> {
                 aspectRatio: 1,
                 child: Container(
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.black, width: 2),
+                    border: Border.all(color: Colors.black, width: 3),
                   ),
-                  child: Column(
-                    children: List.generate(9, (row) {
-                      return Expanded(
-                        child: Row(
-                          children: List.generate(9, (col) {
-                            return Expanded(
-                              child: _buildCell(board, isFixed, notes, row, col),
-                            );
-                          }),
-                        ),
-                      );
-                    }),
-                  ),
+                  child: _buildGrid(board, isFixed, notes),
                 ),
               ),
             ),
@@ -181,6 +169,43 @@ class _ExpandedBoardDialogState extends State<ExpandedBoardDialog> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildGrid(
+    List<List<int>> board,
+    List<List<bool>> isFixed,
+    List<List<Set<int>>> notes,
+  ) {
+    return Container(
+      color: Colors.grey.shade600,
+      child: Column(
+        children: List.generate(9, (row) {
+          return Expanded(
+            child: Row(
+              children: List.generate(9, (col) {
+                // 셀 오른쪽 간격 (3, 6번째 열 뒤에 두꺼운 선)
+                double rightPadding = (col == 2 || col == 5) ? 2 : 1;
+                // 셀 아래쪽 간격 (3, 6번째 행 뒤에 두꺼운 선)
+                double bottomPadding = (row == 2 || row == 5) ? 2 : 1;
+                // 마지막 열/행은 간격 없음
+                if (col == 8) rightPadding = 0;
+                if (row == 8) bottomPadding = 0;
+
+                return Expanded(
+                  child: Container(
+                    margin: EdgeInsets.only(
+                      right: rightPadding,
+                      bottom: bottomPadding,
+                    ),
+                    child: _buildCell(board, isFixed, notes, row, col),
+                  ),
+                );
+              }),
+            ),
+          );
+        }),
       ),
     );
   }
@@ -228,26 +253,24 @@ class _ExpandedBoardDialogState extends State<ExpandedBoardDialog> {
     bool fixed = isFixed[row][col];
     Set<int> cellNotes = notes[row][col];
     bool isSelected = selectedRow == row && selectedCol == col;
-    bool isHighlighted = (selectedRow == row || selectedCol == col) ||
-        _isSameBox(row, col);
+    bool isSameRowOrCol = selectedRow != null && selectedCol != null &&
+        (selectedRow == row || selectedCol == col);
+    bool isSameBox = _isSameBox(row, col);
     bool isSameValue = selectedRow != null &&
         selectedCol != null &&
         value != 0 &&
         value == board[selectedRow!][selectedCol!];
     bool hasError = value != 0 &&
         !SamuraiSudokuGenerator.isValidMove(board, row, col, value);
-    bool isOverlap =
-        widget.gameState.isOverlapRegion(widget.boardIndex, row, col);
 
+    // 배경색: 기본 흰색, 선택된 행/열/박스는 연한 파란색
     Color backgroundColor;
     if (isSelected) {
       backgroundColor = Colors.blue.shade300;
     } else if (isSameValue) {
-      backgroundColor = Colors.blue.shade100;
-    } else if (isHighlighted) {
+      backgroundColor = Colors.blue.shade200;
+    } else if (isSameRowOrCol || isSameBox) {
       backgroundColor = Colors.blue.shade50;
-    } else if (isOverlap) {
-      backgroundColor = Colors.yellow.shade100;
     } else {
       backgroundColor = Colors.white;
     }
@@ -260,9 +283,6 @@ class _ExpandedBoardDialogState extends State<ExpandedBoardDialog> {
     } else {
       textColor = Colors.blue.shade700;
     }
-
-    bool rightBorder = (col + 1) % 3 == 0 && col != 8;
-    bool bottomBorder = (row + 1) % 3 == 0 && row != 8;
 
     return GestureDetector(
       onTap: () {
@@ -277,21 +297,7 @@ class _ExpandedBoardDialogState extends State<ExpandedBoardDialog> {
         });
       },
       child: Container(
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          border: Border(
-            right: BorderSide(
-              color: rightBorder ? Colors.black : Colors.grey.shade300,
-              width: rightBorder ? 2 : 0.5,
-            ),
-            bottom: BorderSide(
-              color: bottomBorder ? Colors.black : Colors.grey.shade300,
-              width: bottomBorder ? 2 : 0.5,
-            ),
-            left: BorderSide(color: Colors.grey.shade300, width: 0.5),
-            top: BorderSide(color: Colors.grey.shade300, width: 0.5),
-          ),
-        ),
+        color: backgroundColor,
         child: value != 0
             ? Center(
                 child: Text(
