@@ -32,276 +32,88 @@ class SamuraiSudokuGenerator {
     return boards;
   }
 
-  /// 퍼즐 생성 (각 보드에서 셀 제거) - 3x3 박스별 균등 분포
+  /// 퍼즐 생성 - 21x21 그리드 기준 비율 적용
   List<List<List<int>>> generatePuzzles(
       List<List<List<int>>> solvedBoards, int difficulty) {
+    // 솔루션 복사
     List<List<List<int>>> puzzles = solvedBoards
         .map((board) => board.map((row) => List<int>.from(row)).toList())
         .toList();
 
-    int cellsToRemove = difficulty.clamp(25, 72);
+    // 난이도를 비율로 변환 (difficulty는 81셀 기준 제거할 셀 수)
+    // revealPercentage = (81 - difficulty) / 81
+    double revealPercentage = (81 - difficulty.clamp(0, 81)) / 81.0;
 
-    // 각 3x3 박스당 제거할 셀 수 계산 (9개 박스에 균등 분배)
-    int cellsPerBox = cellsToRemove ~/ 9;
-    int extraCells = cellsToRemove % 9;
+    // 21x21 그리드 기준 노출할 셀 수 계산
+    int totalGridCells = 21 * 21; // 441
+    int cellsToReveal = (totalGridCells * revealPercentage).round();
 
-    // 난이도에 따른 최소 유지 셀 수
-    // 쉬움(30): 5개, 보통(45): 4개, 어려움(60): 2개, 달인(75): 1개
-    int minCellsToKeep;
-    if (cellsToRemove >= 75) {
-      minCellsToKeep = 1; // 달인
-    } else if (cellsToRemove >= 60) {
-      minCellsToKeep = 2; // 어려움
-    } else if (cellsToRemove >= 45) {
-      minCellsToKeep = 4; // 보통
-    } else {
-      minCellsToKeep = 5; // 쉬움
-    }
-    int maxRemovePerBox = 9 - minCellsToKeep;
-
-    // 1단계: 코너 보드들(0, 1, 3, 4)의 퍼즐 생성
-    for (int b in [0, 1, 3, 4]) {
-      _generateBoardPuzzle(puzzles, b, cellsPerBox, extraCells, maxRemovePerBox);
-    }
-
-    // 2단계: 보드 2(중앙) 초기화 - 모든 셀을 0으로
-    for (int row = 0; row < 9; row++) {
-      for (int col = 0; col < 9; col++) {
-        puzzles[2][row][col] = 0;
+    // 모든 보드의 모든 셀을 0으로 초기화
+    for (int b = 0; b < 5; b++) {
+      for (int r = 0; r < 9; r++) {
+        for (int c = 0; c < 9; c++) {
+          puzzles[b][r][c] = 0;
+        }
       }
     }
 
-    // 3단계: 코너 보드들의 겹치는 영역을 보드 2로 복사
-    _copyOverlapToCenter(puzzles);
+    // 21x21 그리드의 모든 위치 생성 (0~440)
+    List<int> allPositions = List.generate(totalGridCells, (i) => i);
+    allPositions.shuffle(_random);
 
-    // 4단계: 보드 2의 비겹침 영역(중앙 5개 박스) 퍼즐 생성
-    _generateCenterNonOverlapPuzzle(
-        puzzles, solvedBoards, cellsPerBox, extraCells, maxRemovePerBox);
+    // 선택된 위치의 셀을 노출
+    for (int i = 0; i < cellsToReveal && i < allPositions.length; i++) {
+      int pos = allPositions[i];
+      int gridRow = pos ~/ 21;
+      int gridCol = pos % 21;
 
-    // 5단계: 모든 박스가 최소 셀 수를 만족하는지 확인
-    _ensureMinCellsPerBox(puzzles, solvedBoards, minCellsToKeep);
+      // 21x21 위치를 보드 위치로 매핑
+      List<List<int>> mappings = _mapGridToBoards(gridRow, gridCol);
+
+      // 매핑된 모든 보드에 셀 노출
+      for (var mapping in mappings) {
+        int board = mapping[0];
+        int row = mapping[1];
+        int col = mapping[2];
+        puzzles[board][row][col] = solvedBoards[board][row][col];
+      }
+    }
 
     return puzzles;
   }
 
-  /// 단일 보드의 퍼즐 생성
-  void _generateBoardPuzzle(
-    List<List<List<int>>> puzzles,
-    int boardIndex,
-    int cellsPerBox,
-    int extraCells,
-    int maxRemovePerBox,
-  ) {
-    List<int> boxOrder = List.generate(9, (i) => i)..shuffle(_random);
+  /// 21x21 그리드 위치를 보드 위치로 매핑
+  /// 빈 영역이면 빈 리스트 반환
+  /// 겹치는 영역이면 여러 보드 위치 반환
+  List<List<int>> _mapGridToBoards(int gridRow, int gridCol) {
+    List<List<int>> result = [];
 
-    for (int boxIdx = 0; boxIdx < 9; boxIdx++) {
-      int boxNum = boxOrder[boxIdx];
-      int boxStartRow = (boxNum ~/ 3) * 3;
-      int boxStartCol = (boxNum % 3) * 3;
-
-      List<int> boxPositions = [];
-      for (int r = 0; r < 3; r++) {
-        for (int c = 0; c < 3; c++) {
-          boxPositions.add((boxStartRow + r) * 9 + (boxStartCol + c));
-        }
-      }
-      boxPositions.shuffle(_random);
-
-      int toRemoveInBox = cellsPerBox + (boxIdx < extraCells ? 1 : 0);
-      toRemoveInBox = toRemoveInBox.clamp(0, maxRemovePerBox);
-      int removed = 0;
-
-      for (int pos in boxPositions) {
-        if (removed >= toRemoveInBox) break;
-        int row = pos ~/ 9;
-        int col = pos % 9;
-        puzzles[boardIndex][row][col] = 0;
-        removed++;
-      }
-    }
-  }
-
-  /// 코너 보드들의 겹치는 영역을 중앙 보드로 복사
-  void _copyOverlapToCenter(List<List<List<int>>> puzzles) {
-    // 보드 0 우하단 -> 보드 2 좌상단
-    for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 3; j++) {
-        puzzles[2][i][j] = puzzles[0][6 + i][6 + j];
-      }
+    // 보드 0: 그리드 (0-8, 0-8) -> 보드0 (0-8, 0-8)
+    if (gridRow >= 0 && gridRow < 9 && gridCol >= 0 && gridCol < 9) {
+      result.add([0, gridRow, gridCol]);
     }
 
-    // 보드 1 좌하단 -> 보드 2 우상단
-    for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 3; j++) {
-        puzzles[2][i][6 + j] = puzzles[1][6 + i][j];
-      }
+    // 보드 1: 그리드 (0-8, 12-20) -> 보드1 (0-8, 0-8)
+    if (gridRow >= 0 && gridRow < 9 && gridCol >= 12 && gridCol < 21) {
+      result.add([1, gridRow, gridCol - 12]);
     }
 
-    // 보드 3 우상단 -> 보드 2 좌하단
-    for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 3; j++) {
-        puzzles[2][6 + i][j] = puzzles[3][i][6 + j];
-      }
+    // 보드 2: 그리드 (6-14, 6-14) -> 보드2 (0-8, 0-8)
+    if (gridRow >= 6 && gridRow < 15 && gridCol >= 6 && gridCol < 15) {
+      result.add([2, gridRow - 6, gridCol - 6]);
     }
 
-    // 보드 4 좌상단 -> 보드 2 우하단
-    for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 3; j++) {
-        puzzles[2][6 + i][6 + j] = puzzles[4][i][j];
-      }
-    }
-  }
-
-  /// 보드 2의 비겹침 영역(중앙 5개 박스) 퍼즐 생성
-  void _generateCenterNonOverlapPuzzle(
-    List<List<List<int>>> puzzles,
-    List<List<List<int>>> solutions,
-    int cellsPerBox,
-    int extraCells,
-    int maxRemovePerBox,
-  ) {
-    // 비겹침 박스: 1(상단중앙), 3(중앙좌), 4(중앙), 5(중앙우), 7(하단중앙)
-    // 박스 번호: 0 1 2
-    //           3 4 5
-    //           6 7 8
-    // 겹침 박스: 0(좌상단), 2(우상단), 6(좌하단), 8(우하단)
-
-    // 노출할 최소 셀 수 (maxRemovePerBox의 반대)
-    int minCellsToReveal = 9 - maxRemovePerBox;
-
-    // 모든 비겹침 박스 처리
-    List<int> nonOverlapBoxes = [1, 3, 4, 5, 7];
-
-    for (int boxNum in nonOverlapBoxes) {
-      int boxStartRow = (boxNum ~/ 3) * 3;
-      int boxStartCol = (boxNum % 3) * 3;
-
-      // 1. 먼저 솔루션 값으로 전체 박스를 채움 (9개 셀 모두)
-      for (int r = 0; r < 3; r++) {
-        for (int c = 0; c < 3; c++) {
-          int row = boxStartRow + r;
-          int col = boxStartCol + c;
-          puzzles[2][row][col] = solutions[2][row][col];
-        }
-      }
-
-      // 2. 노출할 셀 수 결정
-      int cellsToReveal;
-      if (boxNum == 4) {
-        // 중앙 박스는 +1개 더 노출
-        cellsToReveal = minCellsToReveal + 1;
-      } else {
-        cellsToReveal = minCellsToReveal + (_random.nextInt(2));
-      }
-      cellsToReveal = cellsToReveal.clamp(minCellsToReveal, 9);
-
-      // 3. 제거할 셀 수 계산
-      int cellsToRemove = 9 - cellsToReveal;
-
-      // 4. 셀 위치 수집 (중앙 박스는 정중앙 제외)
-      List<List<int>> removablePositions = [];
-      for (int r = 0; r < 3; r++) {
-        for (int c = 0; c < 3; c++) {
-          int row = boxStartRow + r;
-          int col = boxStartCol + c;
-          // 중앙 박스(4)의 정중앙(4,4)은 제거 대상에서 제외
-          if (boxNum == 4 && row == 4 && col == 4) {
-            continue;
-          }
-          removablePositions.add([row, col]);
-        }
-      }
-      removablePositions.shuffle(_random);
-
-      // 5. 선택된 셀만 0으로 설정 (제거)
-      for (int i = 0; i < cellsToRemove && i < removablePositions.length; i++) {
-        int row = removablePositions[i][0];
-        int col = removablePositions[i][1];
-        puzzles[2][row][col] = 0;
-      }
-    }
-  }
-
-  /// 모든 3x3 박스가 최소 셀 수를 가지도록 보장
-  void _ensureMinCellsPerBox(
-    List<List<List<int>>> puzzles,
-    List<List<List<int>>> solutions,
-    int minCellsToKeep,
-  ) {
-    for (int b = 0; b < 5; b++) {
-      for (int boxNum = 0; boxNum < 9; boxNum++) {
-        int boxStartRow = (boxNum ~/ 3) * 3;
-        int boxStartCol = (boxNum % 3) * 3;
-
-        // 현재 박스의 노출된 셀 수 계산
-        int revealedCount = 0;
-        List<List<int>> emptyPositions = [];
-
-        for (int r = 0; r < 3; r++) {
-          for (int c = 0; c < 3; c++) {
-            int row = boxStartRow + r;
-            int col = boxStartCol + c;
-            if (puzzles[b][row][col] != 0) {
-              revealedCount++;
-            } else {
-              emptyPositions.add([row, col]);
-            }
-          }
-        }
-
-        // 최소 셀 수보다 적으면 솔루션에서 복원
-        while (revealedCount < minCellsToKeep && emptyPositions.isNotEmpty) {
-          emptyPositions.shuffle(_random);
-          List<int> pos = emptyPositions.removeLast();
-          int row = pos[0];
-          int col = pos[1];
-
-          // 솔루션 값으로 복원
-          puzzles[b][row][col] = solutions[b][row][col];
-          revealedCount++;
-
-          // 겹치는 영역이면 다른 보드에도 동기화
-          _syncRestoredCell(puzzles, b, row, col, solutions[b][row][col]);
-        }
-      }
-    }
-  }
-
-  /// 복원된 셀을 겹치는 보드에 동기화
-  void _syncRestoredCell(
-    List<List<List<int>>> puzzles,
-    int board,
-    int row,
-    int col,
-    int value,
-  ) {
-    // 보드 0 우하단 <-> 보드 2 좌상단
-    if (board == 0 && row >= 6 && col >= 6) {
-      puzzles[2][row - 6][col - 6] = value;
-    } else if (board == 2 && row < 3 && col < 3) {
-      puzzles[0][row + 6][col + 6] = value;
+    // 보드 3: 그리드 (12-20, 0-8) -> 보드3 (0-8, 0-8)
+    if (gridRow >= 12 && gridRow < 21 && gridCol >= 0 && gridCol < 9) {
+      result.add([3, gridRow - 12, gridCol]);
     }
 
-    // 보드 1 좌하단 <-> 보드 2 우상단
-    if (board == 1 && row >= 6 && col < 3) {
-      puzzles[2][row - 6][col + 6] = value;
-    } else if (board == 2 && row < 3 && col >= 6) {
-      puzzles[1][row + 6][col - 6] = value;
+    // 보드 4: 그리드 (12-20, 12-20) -> 보드4 (0-8, 0-8)
+    if (gridRow >= 12 && gridRow < 21 && gridCol >= 12 && gridCol < 21) {
+      result.add([4, gridRow - 12, gridCol - 12]);
     }
 
-    // 보드 2 좌하단 <-> 보드 3 우상단
-    if (board == 2 && row >= 6 && col < 3) {
-      puzzles[3][row - 6][col + 6] = value;
-    } else if (board == 3 && row < 3 && col >= 6) {
-      puzzles[2][row + 6][col - 6] = value;
-    }
-
-    // 보드 2 우하단 <-> 보드 4 좌상단
-    if (board == 2 && row >= 6 && col >= 6) {
-      puzzles[4][row - 6][col - 6] = value;
-    } else if (board == 4 && row < 3 && col < 3) {
-      puzzles[2][row + 6][col + 6] = value;
-    }
+    return result;
   }
 
   bool _fillBoard(List<List<int>> board) {
