@@ -271,4 +271,104 @@ class SamuraiGameState {
     notes[board][row][col].clear();
     syncOverlapNotes(board, row, col, notes[board][row][col]);
   }
+
+  /// 값 입력 시 모든 관련 보드의 메모에서 해당 숫자 제거
+  void removeNumberFromAllRelatedNotes(int board, int row, int col, int number) {
+    // 1. 현재 보드의 같은 행/열/박스에서 제거
+    _removeFromBoard(board, row, col, number);
+
+    // 2. 겹치는 영역인 경우 다른 보드에서도 제거
+    // 보드 0 우하단 <-> 보드 2 좌상단
+    if (board == 0 && row >= 6 && col >= 6) {
+      _removeFromBoard(2, row - 6, col - 6, number);
+    } else if (board == 2 && row < 3 && col < 3) {
+      _removeFromBoard(0, row + 6, col + 6, number);
+    }
+
+    // 보드 1 좌하단 <-> 보드 2 우상단
+    if (board == 1 && row >= 6 && col < 3) {
+      _removeFromBoard(2, row - 6, col + 6, number);
+    } else if (board == 2 && row < 3 && col >= 6) {
+      _removeFromBoard(1, row + 6, col - 6, number);
+    }
+
+    // 보드 2 좌하단 <-> 보드 3 우상단
+    if (board == 2 && row >= 6 && col < 3) {
+      _removeFromBoard(3, row - 6, col + 6, number);
+    } else if (board == 3 && row < 3 && col >= 6) {
+      _removeFromBoard(2, row + 6, col - 6, number);
+    }
+
+    // 보드 2 우하단 <-> 보드 4 좌상단
+    if (board == 2 && row >= 6 && col >= 6) {
+      _removeFromBoard(4, row - 6, col - 6, number);
+    } else if (board == 4 && row < 3 && col < 3) {
+      _removeFromBoard(2, row + 6, col + 6, number);
+    }
+  }
+
+  /// 특정 보드의 같은 행/열/박스에서 숫자 제거
+  void _removeFromBoard(int board, int row, int col, int number) {
+    // 같은 행에서 제거
+    for (int c = 0; c < 9; c++) {
+      if (c != col) {
+        notes[board][row][c].remove(number);
+        // 해당 셀이 겹치는 영역이면 동기화
+        _syncNoteRemovalToOverlap(board, row, c, number);
+      }
+    }
+
+    // 같은 열에서 제거
+    for (int r = 0; r < 9; r++) {
+      if (r != row) {
+        notes[board][r][col].remove(number);
+        _syncNoteRemovalToOverlap(board, r, col, number);
+      }
+    }
+
+    // 같은 3x3 박스에서 제거
+    int boxRow = (row ~/ 3) * 3;
+    int boxCol = (col ~/ 3) * 3;
+    for (int r = 0; r < 3; r++) {
+      for (int c = 0; c < 3; c++) {
+        int targetRow = boxRow + r;
+        int targetCol = boxCol + c;
+        if (targetRow != row || targetCol != col) {
+          notes[board][targetRow][targetCol].remove(number);
+          _syncNoteRemovalToOverlap(board, targetRow, targetCol, number);
+        }
+      }
+    }
+  }
+
+  /// 메모 제거를 겹치는 보드에 동기화
+  void _syncNoteRemovalToOverlap(int board, int row, int col, int number) {
+    // 보드 0 우하단 <-> 보드 2 좌상단
+    if (board == 0 && row >= 6 && col >= 6) {
+      notes[2][row - 6][col - 6].remove(number);
+    } else if (board == 2 && row < 3 && col < 3) {
+      notes[0][row + 6][col + 6].remove(number);
+    }
+
+    // 보드 1 좌하단 <-> 보드 2 우상단
+    if (board == 1 && row >= 6 && col < 3) {
+      notes[2][row - 6][col + 6].remove(number);
+    } else if (board == 2 && row < 3 && col >= 6) {
+      notes[1][row + 6][col - 6].remove(number);
+    }
+
+    // 보드 2 좌하단 <-> 보드 3 우상단
+    if (board == 2 && row >= 6 && col < 3) {
+      notes[3][row - 6][col + 6].remove(number);
+    } else if (board == 3 && row < 3 && col >= 6) {
+      notes[2][row + 6][col - 6].remove(number);
+    }
+
+    // 보드 2 우하단 <-> 보드 4 좌상단
+    if (board == 2 && row >= 6 && col >= 6) {
+      notes[4][row - 6][col - 6].remove(number);
+    } else if (board == 4 && row < 3 && col < 3) {
+      notes[2][row + 6][col + 6].remove(number);
+    }
+  }
 }
