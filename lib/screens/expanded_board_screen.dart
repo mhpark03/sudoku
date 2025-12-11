@@ -599,6 +599,9 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
         } else {
           quickInputNumber = number;
         }
+        // 빠른 입력 모드에서 숫자 선택 시 셀 선택 해제
+        selectedRow = null;
+        selectedCol = null;
       });
       return;
     }
