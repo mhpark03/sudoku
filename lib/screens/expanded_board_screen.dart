@@ -449,7 +449,8 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
       backgroundColor = Colors.blue.shade200;
     } else if (isSameValue) {
       backgroundColor = Colors.blue.shade200;
-    } else if (isSameRowOrCol || isSameBox) {
+    } else if (!isQuickInputMode && (isSameRowOrCol || isSameBox)) {
+      // 빠른 입력 모드에서는 행/열/박스 하이라이트 비활성화
       backgroundColor = Colors.blue.shade50;
     } else {
       backgroundColor = Colors.white;
