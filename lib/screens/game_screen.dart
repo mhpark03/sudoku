@@ -29,23 +29,69 @@ class _GameScreenState extends State<GameScreen> {
 
   void _onCellTap(int row, int col) {
     setState(() {
-      if (_gameState.selectedRow == row && _gameState.selectedCol == col) {
-        _gameState = _gameState.copyWith(clearSelection: true);
+      // 빠른 입력 모드일 때
+      if (_gameState.isQuickInputMode) {
+        // 고정 셀이 아니면 빠른 입력 숫자로 입력
+        if (!_gameState.isFixed[row][col]) {
+          List<List<int>> newBoard =
+              _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
+
+          // 같은 숫자면 지우고, 다른 숫자면 입력
+          if (newBoard[row][col] == _gameState.quickInputNumber) {
+            newBoard[row][col] = 0;
+          } else {
+            newBoard[row][col] = _gameState.quickInputNumber!;
+          }
+
+          bool isComplete = SudokuGenerator.isBoardComplete(newBoard);
+
+          _gameState = _gameState.copyWith(
+            currentBoard: newBoard,
+            selectedRow: row,
+            selectedCol: col,
+            isCompleted: isComplete,
+          );
+
+          if (isComplete) {
+            _showCompletionDialog();
+          }
+        } else {
+          // 고정 셀을 탭하면 선택만
+          _gameState = _gameState.copyWith(selectedRow: row, selectedCol: col);
+        }
       } else {
-        _gameState = _gameState.copyWith(selectedRow: row, selectedCol: col);
+        // 일반 모드: 기존 로직
+        if (_gameState.selectedRow == row && _gameState.selectedCol == col) {
+          _gameState = _gameState.copyWith(clearSelection: true);
+        } else {
+          _gameState = _gameState.copyWith(selectedRow: row, selectedCol: col);
+        }
       }
     });
   }
 
   void _onNumberTap(int number) {
-    if (!_gameState.hasSelection) return;
-
-    int row = _gameState.selectedRow!;
-    int col = _gameState.selectedCol!;
-
-    if (_gameState.isFixed[row][col]) return;
-
     setState(() {
+      // 빠른 입력 모드일 때: 숫자 선택/해제
+      if (_gameState.isQuickInputMode) {
+        if (_gameState.quickInputNumber == number) {
+          // 같은 숫자를 다시 탭하면 빠른 입력 모드 해제
+          _gameState = _gameState.copyWith(clearQuickInput: true);
+        } else {
+          // 다른 숫자 선택
+          _gameState = _gameState.copyWith(quickInputNumber: number);
+        }
+        return;
+      }
+
+      // 일반 모드: 기존 로직
+      if (!_gameState.hasSelection) return;
+
+      int row = _gameState.selectedRow!;
+      int col = _gameState.selectedCol!;
+
+      if (_gameState.isFixed[row][col]) return;
+
       List<List<int>> newBoard =
           _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
       newBoard[row][col] = number;
@@ -59,6 +105,18 @@ class _GameScreenState extends State<GameScreen> {
 
       if (isComplete) {
         _showCompletionDialog();
+      }
+    });
+  }
+
+  void _onQuickInputToggle() {
+    setState(() {
+      if (_gameState.isQuickInputMode) {
+        // 빠른 입력 모드 해제
+        _gameState = _gameState.copyWith(clearQuickInput: true);
+      } else {
+        // 빠른 입력 모드 진입 (기본값 1)
+        _gameState = _gameState.copyWith(quickInputNumber: 1);
       }
     });
   }
@@ -228,6 +286,8 @@ class _GameScreenState extends State<GameScreen> {
               onNumberTap: _onNumberTap,
               onErase: _onErase,
               isCompact: true,
+              quickInputNumber: _gameState.quickInputNumber,
+              onQuickInputToggle: _onQuickInputToggle,
             ),
           ],
         ),
@@ -263,6 +323,8 @@ class _GameScreenState extends State<GameScreen> {
             onNumberTap: _onNumberTap,
             onErase: _onErase,
             isCompact: false,
+            quickInputNumber: _gameState.quickInputNumber,
+            onQuickInputToggle: _onQuickInputToggle,
           ),
         ],
       );
