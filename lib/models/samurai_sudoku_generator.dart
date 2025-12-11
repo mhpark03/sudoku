@@ -45,6 +45,10 @@ class SamuraiSudokuGenerator {
     int cellsPerBox = cellsToRemove ~/ 9;
     int extraCells = cellsToRemove % 9;
 
+    // 각 박스에서 최소 유지할 셀 수 (최소 3개는 보이도록)
+    int minCellsToKeep = 3;
+    int maxRemovePerBox = 9 - minCellsToKeep; // 최대 6개만 제거 가능
+
     for (int b = 0; b < 5; b++) {
       // 각 3x3 박스별로 균등하게 셀 제거
       List<int> boxOrder = List.generate(9, (i) => i)..shuffle(_random);
@@ -65,8 +69,9 @@ class SamuraiSudokuGenerator {
         }
         boxPositions.shuffle(_random);
 
-        // 이 박스에서 제거할 셀 수
+        // 이 박스에서 제거할 셀 수 (최대 제한 적용)
         int toRemoveInBox = cellsPerBox + (boxIdx < extraCells ? 1 : 0);
+        toRemoveInBox = toRemoveInBox.clamp(0, maxRemovePerBox);
         int removed = 0;
 
         for (int pos in boxPositions) {
@@ -75,10 +80,8 @@ class SamuraiSudokuGenerator {
           int row = pos ~/ 9;
           int col = pos % 9;
 
-          // 겹치는 영역은 제거 확률을 낮춤 (최소 1개는 유지)
-          if (_isOverlapCell(b, row, col) &&
-              removed > 0 &&
-              _random.nextDouble() > 0.6) {
+          // 겹치는 영역은 제거 확률을 낮춤
+          if (_isOverlapCell(b, row, col) && _random.nextDouble() > 0.5) {
             continue;
           }
 
