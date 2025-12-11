@@ -169,58 +169,54 @@ class SamuraiSudokuGenerator {
     // 노출할 최소 셀 수 (maxRemovePerBox의 반대)
     int minCellsToReveal = 9 - maxRemovePerBox;
 
-    // 중앙 박스(4)를 먼저 처리 - 항상 최소값+1개 이상 노출
-    _revealBoxCells(puzzles, solutions, 4, minCellsToReveal + 1);
+    // 모든 비겹침 박스 처리
+    List<int> nonOverlapBoxes = [1, 3, 4, 5, 7];
 
-    // 나머지 박스들 처리
-    List<int> otherBoxes = [1, 3, 5, 7];
-    otherBoxes.shuffle(_random);
-    for (int boxNum in otherBoxes) {
-      int cellsToReveal = minCellsToReveal + (_random.nextInt(2));
-      _revealBoxCells(puzzles, solutions, boxNum, cellsToReveal);
-    }
-  }
+    for (int boxNum in nonOverlapBoxes) {
+      int boxStartRow = (boxNum ~/ 3) * 3;
+      int boxStartCol = (boxNum % 3) * 3;
 
-  /// 특정 박스에 지정된 수의 셀을 노출
-  void _revealBoxCells(
-    List<List<List<int>>> puzzles,
-    List<List<List<int>>> solutions,
-    int boxNum,
-    int cellsToReveal,
-  ) {
-    int boxStartRow = (boxNum ~/ 3) * 3;
-    int boxStartCol = (boxNum % 3) * 3;
-
-    // 박스 내 모든 위치를 수집
-    List<List<int>> allPositions = [];
-    for (int r = 0; r < 3; r++) {
-      for (int c = 0; c < 3; c++) {
-        allPositions.add([boxStartRow + r, boxStartCol + c]);
+      // 1. 먼저 솔루션 값으로 전체 박스를 채움 (9개 셀 모두)
+      for (int r = 0; r < 3; r++) {
+        for (int c = 0; c < 3; c++) {
+          int row = boxStartRow + r;
+          int col = boxStartCol + c;
+          puzzles[2][row][col] = solutions[2][row][col];
+        }
       }
-    }
 
-    // 중앙 박스(4)인 경우, 정중앙 셀(4,4)을 항상 포함
-    if (boxNum == 4) {
-      // 정중앙(4,4)을 맨 앞으로 이동
-      allPositions.removeWhere((pos) => pos[0] == 4 && pos[1] == 4);
-      allPositions.insert(0, [4, 4]);
-      // 나머지만 셔플
-      List<List<int>> rest = allPositions.sublist(1);
-      rest.shuffle(_random);
-      allPositions = [[4, 4], ...rest];
-    } else {
-      allPositions.shuffle(_random);
-    }
-
-    cellsToReveal = cellsToReveal.clamp(1, 9);
-
-    // 선택된 셀만 솔루션 값으로 설정, 나머지는 0
-    for (int i = 0; i < allPositions.length; i++) {
-      int row = allPositions[i][0];
-      int col = allPositions[i][1];
-      if (i < cellsToReveal) {
-        puzzles[2][row][col] = solutions[2][row][col];
+      // 2. 노출할 셀 수 결정
+      int cellsToReveal;
+      if (boxNum == 4) {
+        // 중앙 박스는 +1개 더 노출
+        cellsToReveal = minCellsToReveal + 1;
       } else {
+        cellsToReveal = minCellsToReveal + (_random.nextInt(2));
+      }
+      cellsToReveal = cellsToReveal.clamp(minCellsToReveal, 9);
+
+      // 3. 제거할 셀 수 계산
+      int cellsToRemove = 9 - cellsToReveal;
+
+      // 4. 셀 위치 수집 (중앙 박스는 정중앙 제외)
+      List<List<int>> removablePositions = [];
+      for (int r = 0; r < 3; r++) {
+        for (int c = 0; c < 3; c++) {
+          int row = boxStartRow + r;
+          int col = boxStartCol + c;
+          // 중앙 박스(4)의 정중앙(4,4)은 제거 대상에서 제외
+          if (boxNum == 4 && row == 4 && col == 4) {
+            continue;
+          }
+          removablePositions.add([row, col]);
+        }
+      }
+      removablePositions.shuffle(_random);
+
+      // 5. 선택된 셀만 0으로 설정 (제거)
+      for (int i = 0; i < cellsToRemove && i < removablePositions.length; i++) {
+        int row = removablePositions[i][0];
+        int col = removablePositions[i][1];
         puzzles[2][row][col] = 0;
       }
     }
