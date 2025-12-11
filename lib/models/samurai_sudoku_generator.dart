@@ -46,59 +46,150 @@ class SamuraiSudokuGenerator {
     int extraCells = cellsToRemove % 9;
 
     // 난이도에 따른 최소 유지 셀 수
-    // 달인(63+): 박스당 1~2개, 그 외: 박스당 3개
     int minCellsToKeep = cellsToRemove >= 63 ? 1 : 3;
     int maxRemovePerBox = 9 - minCellsToKeep;
 
-    for (int b = 0; b < 5; b++) {
-      // 각 3x3 박스별로 균등하게 셀 제거
-      List<int> boxOrder = List.generate(9, (i) => i)..shuffle(_random);
+    // 1단계: 코너 보드들(0, 1, 3, 4)의 퍼즐 생성
+    for (int b in [0, 1, 3, 4]) {
+      _generateBoardPuzzle(puzzles, b, cellsPerBox, extraCells, maxRemovePerBox);
+    }
 
-      for (int boxIdx = 0; boxIdx < 9; boxIdx++) {
-        int boxNum = boxOrder[boxIdx];
-        int boxStartRow = (boxNum ~/ 3) * 3;
-        int boxStartCol = (boxNum % 3) * 3;
-
-        // 해당 박스 내 셀 위치들
-        List<int> boxPositions = [];
-        for (int r = 0; r < 3; r++) {
-          for (int c = 0; c < 3; c++) {
-            int row = boxStartRow + r;
-            int col = boxStartCol + c;
-            boxPositions.add(row * 9 + col);
-          }
-        }
-        boxPositions.shuffle(_random);
-
-        // 이 박스에서 제거할 셀 수 (최대 제한 적용)
-        int toRemoveInBox = cellsPerBox + (boxIdx < extraCells ? 1 : 0);
-        toRemoveInBox = toRemoveInBox.clamp(0, maxRemovePerBox);
-        int removed = 0;
-
-        for (int pos in boxPositions) {
-          if (removed >= toRemoveInBox) break;
-
-          int row = pos ~/ 9;
-          int col = pos % 9;
-
-          // 겹치는 영역은 제거 확률을 낮춤
-          if (_isOverlapCell(b, row, col) && _random.nextDouble() > 0.5) {
-            continue;
-          }
-
-          puzzles[b][row][col] = 0;
-          removed++;
-        }
+    // 2단계: 보드 2(중앙) 초기화 - 모든 셀을 0으로
+    for (int row = 0; row < 9; row++) {
+      for (int col = 0; col < 9; col++) {
+        puzzles[2][row][col] = 0;
       }
     }
 
-    // 겹치는 영역 동기화 (난이도에 맞게 제한)
-    _syncOverlapRegions(puzzles, minCellsToKeep);
+    // 3단계: 코너 보드들의 겹치는 영역을 보드 2로 복사
+    _copyOverlapToCenter(puzzles);
 
-    // 모든 박스가 최소 셀 수를 만족하는지 확인하고 필요시 복원
+    // 4단계: 보드 2의 비겹침 영역(중앙 5개 박스) 퍼즐 생성
+    _generateCenterNonOverlapPuzzle(
+        puzzles, solvedBoards, cellsPerBox, extraCells, maxRemovePerBox);
+
+    // 5단계: 모든 박스가 최소 셀 수를 만족하는지 확인
     _ensureMinCellsPerBox(puzzles, solvedBoards, minCellsToKeep);
 
     return puzzles;
+  }
+
+  /// 단일 보드의 퍼즐 생성
+  void _generateBoardPuzzle(
+    List<List<List<int>>> puzzles,
+    int boardIndex,
+    int cellsPerBox,
+    int extraCells,
+    int maxRemovePerBox,
+  ) {
+    List<int> boxOrder = List.generate(9, (i) => i)..shuffle(_random);
+
+    for (int boxIdx = 0; boxIdx < 9; boxIdx++) {
+      int boxNum = boxOrder[boxIdx];
+      int boxStartRow = (boxNum ~/ 3) * 3;
+      int boxStartCol = (boxNum % 3) * 3;
+
+      List<int> boxPositions = [];
+      for (int r = 0; r < 3; r++) {
+        for (int c = 0; c < 3; c++) {
+          boxPositions.add((boxStartRow + r) * 9 + (boxStartCol + c));
+        }
+      }
+      boxPositions.shuffle(_random);
+
+      int toRemoveInBox = cellsPerBox + (boxIdx < extraCells ? 1 : 0);
+      toRemoveInBox = toRemoveInBox.clamp(0, maxRemovePerBox);
+      int removed = 0;
+
+      for (int pos in boxPositions) {
+        if (removed >= toRemoveInBox) break;
+        int row = pos ~/ 9;
+        int col = pos % 9;
+        puzzles[boardIndex][row][col] = 0;
+        removed++;
+      }
+    }
+  }
+
+  /// 코너 보드들의 겹치는 영역을 중앙 보드로 복사
+  void _copyOverlapToCenter(List<List<List<int>>> puzzles) {
+    // 보드 0 우하단 -> 보드 2 좌상단
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 3; j++) {
+        puzzles[2][i][j] = puzzles[0][6 + i][6 + j];
+      }
+    }
+
+    // 보드 1 좌하단 -> 보드 2 우상단
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 3; j++) {
+        puzzles[2][i][6 + j] = puzzles[1][6 + i][j];
+      }
+    }
+
+    // 보드 3 우상단 -> 보드 2 좌하단
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 3; j++) {
+        puzzles[2][6 + i][j] = puzzles[3][i][6 + j];
+      }
+    }
+
+    // 보드 4 좌상단 -> 보드 2 우하단
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 3; j++) {
+        puzzles[2][6 + i][6 + j] = puzzles[4][i][j];
+      }
+    }
+  }
+
+  /// 보드 2의 비겹침 영역(중앙 5개 박스) 퍼즐 생성
+  void _generateCenterNonOverlapPuzzle(
+    List<List<List<int>>> puzzles,
+    List<List<List<int>>> solutions,
+    int cellsPerBox,
+    int extraCells,
+    int maxRemovePerBox,
+  ) {
+    // 비겹침 박스: 1(상단중앙), 3(중앙좌), 4(중앙), 5(중앙우), 7(하단중앙)
+    // 박스 번호: 0 1 2
+    //           3 4 5
+    //           6 7 8
+    // 겹침 박스: 0(좌상단), 2(우상단), 6(좌하단), 8(우하단)
+    List<int> nonOverlapBoxes = [1, 3, 4, 5, 7];
+    nonOverlapBoxes.shuffle(_random);
+
+    for (int idx = 0; idx < nonOverlapBoxes.length; idx++) {
+      int boxNum = nonOverlapBoxes[idx];
+      int boxStartRow = (boxNum ~/ 3) * 3;
+      int boxStartCol = (boxNum % 3) * 3;
+
+      // 먼저 솔루션 값으로 채움
+      for (int r = 0; r < 3; r++) {
+        for (int c = 0; c < 3; c++) {
+          puzzles[2][boxStartRow + r][boxStartCol + c] =
+              solutions[2][boxStartRow + r][boxStartCol + c];
+        }
+      }
+
+      // 난이도에 맞게 셀 제거
+      List<int> boxPositions = [];
+      for (int r = 0; r < 3; r++) {
+        for (int c = 0; c < 3; c++) {
+          boxPositions.add((boxStartRow + r) * 9 + (boxStartCol + c));
+        }
+      }
+      boxPositions.shuffle(_random);
+
+      int toRemoveInBox = cellsPerBox + (idx < extraCells ? 1 : 0);
+      toRemoveInBox = toRemoveInBox.clamp(0, maxRemovePerBox);
+
+      for (int i = 0; i < toRemoveInBox && i < boxPositions.length; i++) {
+        int pos = boxPositions[i];
+        int row = pos ~/ 9;
+        int col = pos % 9;
+        puzzles[2][row][col] = 0;
+      }
+    }
   }
 
   /// 모든 3x3 박스가 최소 셀 수를 가지도록 보장
@@ -180,99 +271,6 @@ class SamuraiSudokuGenerator {
       puzzles[4][row - 6][col - 6] = value;
     } else if (board == 4 && row < 3 && col < 3) {
       puzzles[2][row + 6][col + 6] = value;
-    }
-  }
-
-  bool _isOverlapCell(int boardIndex, int row, int col) {
-    switch (boardIndex) {
-      case 0:
-        return row >= 6 && col >= 6; // 우하단
-      case 1:
-        return row >= 6 && col < 3; // 좌하단
-      case 2:
-        return (row < 3 && col < 3) || // 좌상단
-            (row < 3 && col >= 6) || // 우상단
-            (row >= 6 && col < 3) || // 좌하단
-            (row >= 6 && col >= 6); // 우하단
-      case 3:
-        return row < 3 && col >= 6; // 우상단
-      case 4:
-        return row < 3 && col < 3; // 좌상단
-      default:
-        return false;
-    }
-  }
-
-  void _syncOverlapRegions(List<List<List<int>>> boards, int minCellsToKeep) {
-    // 겹치는 영역을 동기화하되, 노출 셀 수를 제한
-    _syncOverlapPair(boards, 0, 6, 6, 2, 0, 0, minCellsToKeep); // 보드0 우하단 <-> 보드2 좌상단
-    _syncOverlapPair(boards, 1, 6, 0, 2, 0, 6, minCellsToKeep); // 보드1 좌하단 <-> 보드2 우상단
-    _syncOverlapPair(boards, 2, 6, 0, 3, 0, 6, minCellsToKeep); // 보드2 좌하단 <-> 보드3 우상단
-    _syncOverlapPair(boards, 2, 6, 6, 4, 0, 0, minCellsToKeep); // 보드2 우하단 <-> 보드4 좌상단
-  }
-
-  void _syncOverlapPair(
-    List<List<List<int>>> boards,
-    int board1,
-    int row1Start,
-    int col1Start,
-    int board2,
-    int row2Start,
-    int col2Start,
-    int minCellsToKeep,
-  ) {
-    // 1. 두 보드에서 노출된 셀 위치 수집
-    List<List<int>> revealedPositions = [];
-
-    for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 3; j++) {
-        int val1 = boards[board1][row1Start + i][col1Start + j];
-        int val2 = boards[board2][row2Start + i][col2Start + j];
-
-        // 둘 중 하나라도 노출되어 있으면 해당 위치 기록
-        if (val1 != 0 || val2 != 0) {
-          revealedPositions.add([i, j]);
-        }
-      }
-    }
-
-    // 2. 노출할 셀 수 결정
-    int targetRevealed;
-    if (revealedPositions.length <= minCellsToKeep) {
-      // 이미 노출된 셀이 최소값 이하면 모두 유지 (나중에 _ensureMinCellsPerBox에서 보충)
-      targetRevealed = revealedPositions.length;
-    } else {
-      // 노출된 셀이 충분하면 minCellsToKeep ~ minCellsToKeep+1개만 유지
-      targetRevealed = minCellsToKeep + (_random.nextDouble() > 0.5 ? 1 : 0);
-      targetRevealed = targetRevealed.clamp(minCellsToKeep, revealedPositions.length);
-    }
-
-    // 3. 노출할 셀 무작위 선택
-    revealedPositions.shuffle(_random);
-    Set<String> keepPositions = {};
-    for (int k = 0; k < targetRevealed && k < revealedPositions.length; k++) {
-      keepPositions.add('${revealedPositions[k][0]},${revealedPositions[k][1]}');
-    }
-
-    // 4. 동기화: 선택된 셀만 노출, 나머지는 0으로
-    for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 3; j++) {
-        String key = '$i,$j';
-        int val1 = boards[board1][row1Start + i][col1Start + j];
-        int val2 = boards[board2][row2Start + i][col2Start + j];
-
-        int finalVal;
-        if (keepPositions.contains(key)) {
-          // 노출 유지 (둘 중 0이 아닌 값 사용)
-          finalVal = val1 != 0 ? val1 : val2;
-        } else {
-          // 숨김 처리
-          finalVal = 0;
-        }
-
-        boards[board1][row1Start + i][col1Start + j] = finalVal;
-        boards[board2][row2Start + i][col2Start + j] = finalVal;
-      }
     }
   }
 
