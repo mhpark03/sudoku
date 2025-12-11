@@ -7,6 +7,7 @@ class GameState {
   final List<List<int>> puzzle;
   final List<List<int>> currentBoard;
   final List<List<bool>> isFixed;
+  final List<List<Set<int>>> notes; // 메모 기능
   final Difficulty difficulty;
   int? selectedRow;
   int? selectedCol;
@@ -19,6 +20,7 @@ class GameState {
     required this.puzzle,
     required this.currentBoard,
     required this.isFixed,
+    required this.notes,
     required this.difficulty,
     this.selectedRow,
     this.selectedCol,
@@ -49,12 +51,18 @@ class GameState {
     final isFixed = puzzle
         .map((row) => row.map((cell) => cell != 0).toList())
         .toList();
+    // 메모 초기화: 9x9 각각 빈 Set
+    final notes = List.generate(
+      9,
+      (_) => List.generate(9, (_) => <int>{}),
+    );
 
     return GameState(
       solution: solution,
       puzzle: puzzle,
       currentBoard: currentBoard,
       isFixed: isFixed,
+      notes: notes,
       difficulty: difficulty,
     );
   }
@@ -64,6 +72,7 @@ class GameState {
     List<List<int>>? puzzle,
     List<List<int>>? currentBoard,
     List<List<bool>>? isFixed,
+    List<List<Set<int>>>? notes,
     Difficulty? difficulty,
     int? selectedRow,
     int? selectedCol,
@@ -78,6 +87,7 @@ class GameState {
       puzzle: puzzle ?? this.puzzle,
       currentBoard: currentBoard ?? this.currentBoard,
       isFixed: isFixed ?? this.isFixed,
+      notes: notes ?? this.notes,
       difficulty: difficulty ?? this.difficulty,
       selectedRow: clearSelection ? null : (selectedRow ?? this.selectedRow),
       selectedCol: clearSelection ? null : (selectedCol ?? this.selectedCol),
@@ -85,6 +95,53 @@ class GameState {
       mistakes: mistakes ?? this.mistakes,
       isCompleted: isCompleted ?? this.isCompleted,
     );
+  }
+
+  /// 메모 토글
+  void toggleNote(int row, int col, int number) {
+    if (currentBoard[row][col] != 0) return;
+    if (isFixed[row][col]) return;
+
+    if (notes[row][col].contains(number)) {
+      notes[row][col].remove(number);
+    } else {
+      notes[row][col].add(number);
+    }
+  }
+
+  /// 같은 행/열/박스의 메모에서 해당 숫자 삭제
+  void removeNumberFromRelatedNotes(int row, int col, int number) {
+    // 같은 행의 메모에서 삭제
+    for (int c = 0; c < 9; c++) {
+      if (c != col) {
+        notes[row][c].remove(number);
+      }
+    }
+
+    // 같은 열의 메모에서 삭제
+    for (int r = 0; r < 9; r++) {
+      if (r != row) {
+        notes[r][col].remove(number);
+      }
+    }
+
+    // 같은 3x3 박스의 메모에서 삭제
+    int boxRow = (row ~/ 3) * 3;
+    int boxCol = (col ~/ 3) * 3;
+    for (int r = 0; r < 3; r++) {
+      for (int c = 0; c < 3; c++) {
+        int targetRow = boxRow + r;
+        int targetCol = boxCol + c;
+        if (targetRow != row || targetCol != col) {
+          notes[targetRow][targetCol].remove(number);
+        }
+      }
+    }
+  }
+
+  /// 셀의 메모 지우기
+  void clearNotes(int row, int col) {
+    notes[row][col].clear();
   }
 
   bool get isQuickInputMode => quickInputNumber != null;
