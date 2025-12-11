@@ -434,16 +434,12 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
         selectedCol != null &&
         value != 0 &&
         value == board[selectedRow!][selectedCol!];
-    bool isQuickInputValue =
-        isQuickInputMode && quickInputNumber != null && value == quickInputNumber;
     bool hasError =
         value != 0 && !SamuraiSudokuGenerator.isValidMove(board, row, col, value);
 
     Color backgroundColor;
     if (isSelected) {
       backgroundColor = Colors.blue.shade300;
-    } else if (isQuickInputValue) {
-      backgroundColor = Colors.orange.shade200;
     } else if (isSameValue) {
       backgroundColor = Colors.blue.shade200;
     } else if (isSameRowOrCol || isSameBox) {
