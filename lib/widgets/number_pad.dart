@@ -6,6 +6,7 @@ class NumberPad extends StatelessWidget {
   final bool isCompact;
   final int? quickInputNumber; // 빠른 입력 모드에서 선택된 숫자
   final VoidCallback? onQuickInputToggle; // 빠른 입력 모드 토글
+  final Set<int> disabledNumbers; // 비활성화된 숫자들 (모두 채워진 숫자)
 
   const NumberPad({
     super.key,
@@ -14,6 +15,7 @@ class NumberPad extends StatelessWidget {
     this.isCompact = false,
     this.quickInputNumber,
     this.onQuickInputToggle,
+    this.disabledNumbers = const {},
   });
 
   bool get isQuickInputMode => quickInputNumber != null;
@@ -149,24 +151,31 @@ class NumberPad extends StatelessWidget {
 
   Widget _buildNumberButton(int number, double size, double fontSize) {
     final isSelected = quickInputNumber == number;
+    final isDisabled = disabledNumbers.contains(number);
 
     return SizedBox(
       width: size,
       height: size,
       child: ElevatedButton(
-        onPressed: () => onNumberTap(number),
+        onPressed: isDisabled ? null : () => onNumberTap(number),
         style: ElevatedButton.styleFrom(
-          backgroundColor: isSelected
-            ? Colors.orange.shade400
-            : Colors.blue.shade50,
-          foregroundColor: isSelected
-            ? Colors.white
-            : Colors.blue.shade700,
+          backgroundColor: isDisabled
+            ? Colors.grey.shade300
+            : isSelected
+              ? Colors.orange.shade400
+              : Colors.blue.shade50,
+          foregroundColor: isDisabled
+            ? Colors.grey.shade500
+            : isSelected
+              ? Colors.white
+              : Colors.blue.shade700,
           padding: EdgeInsets.zero,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
-          elevation: isSelected ? 4 : 1,
+          elevation: isDisabled ? 0 : isSelected ? 4 : 1,
+          disabledBackgroundColor: Colors.grey.shade300,
+          disabledForegroundColor: Colors.grey.shade500,
         ),
         child: Text(
           number.toString(),

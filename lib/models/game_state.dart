@@ -205,4 +205,30 @@ class GameState {
     if (value == 0) return false;
     return !SudokuGenerator.isValidMove(currentBoard, row, col, value);
   }
+
+  /// 각 숫자가 보드에서 몇 번 사용되었는지 카운트
+  Map<int, int> getNumberCounts() {
+    final counts = <int, int>{};
+    for (int num = 1; num <= 9; num++) {
+      counts[num] = 0;
+    }
+    for (int row = 0; row < 9; row++) {
+      for (int col = 0; col < 9; col++) {
+        int value = currentBoard[row][col];
+        if (value != 0) {
+          counts[value] = (counts[value] ?? 0) + 1;
+        }
+      }
+    }
+    return counts;
+  }
+
+  /// 모두 채워진 숫자들 (9번 사용된 숫자)
+  Set<int> getCompletedNumbers() {
+    final counts = getNumberCounts();
+    return counts.entries
+        .where((entry) => entry.value >= 9)
+        .map((entry) => entry.key)
+        .toSet();
+  }
 }
