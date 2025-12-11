@@ -139,8 +139,9 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
                 icon: Icons.grid_on,
                 label: '모든 메모',
                 onTap: () {
-                  widget.onFillAllNotes(widget.boardIndex);
-                  setState(() {});
+                  setState(() {
+                    widget.gameState.fillAllNotes(widget.boardIndex);
+                  });
                 },
               ),
               _buildFeatureButton(
@@ -247,8 +248,9 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
                         icon: Icons.grid_on,
                         label: '모든 메모',
                         onTap: () {
-                          widget.onFillAllNotes(widget.boardIndex);
-                          setState(() {});
+                          setState(() {
+                            widget.gameState.fillAllNotes(widget.boardIndex);
+                          });
                         },
                         compact: true,
                       ),
