@@ -2,6 +2,36 @@ import 'samurai_sudoku_generator.dart';
 
 enum SamuraiDifficulty { easy, medium, hard, expert }
 
+/// Isolate에서 실행할 퍼즐 생성 함수 (top-level 함수)
+Map<String, dynamic> generateSamuraiPuzzleInIsolate(SamuraiDifficulty difficulty) {
+  final generator = SamuraiSudokuGenerator();
+  final solutions = generator.generateSolvedBoards();
+
+  int emptyCells;
+  switch (difficulty) {
+    case SamuraiDifficulty.easy:
+      emptyCells = 30;
+      break;
+    case SamuraiDifficulty.medium:
+      emptyCells = 45;
+      break;
+    case SamuraiDifficulty.hard:
+      emptyCells = 60;
+      break;
+    case SamuraiDifficulty.expert:
+      emptyCells = 70;
+      break;
+  }
+
+  final puzzles = generator.generatePuzzles(solutions, emptyCells);
+
+  return {
+    'solutions': solutions,
+    'puzzles': puzzles,
+    'difficulty': difficulty.index,
+  };
+}
+
 class SamuraiGameState {
   final List<List<List<int>>> solutions;
   final List<List<List<int>>> puzzles;
@@ -28,27 +58,26 @@ class SamuraiGameState {
     this.isCompleted = false,
   });
 
+  /// 동기적으로 새 게임 생성 (메인 스레드에서 실행, UI 블로킹 가능)
   factory SamuraiGameState.newGame(SamuraiDifficulty difficulty) {
-    final generator = SamuraiSudokuGenerator();
-    final solutions = generator.generateSolvedBoards();
+    final data = generateSamuraiPuzzleInIsolate(difficulty);
+    return SamuraiGameState.fromGeneratedData(data);
+  }
 
-    int emptyCells;
-    switch (difficulty) {
-      case SamuraiDifficulty.easy:
-        emptyCells = 30;
-        break;
-      case SamuraiDifficulty.medium:
-        emptyCells = 45;
-        break;
-      case SamuraiDifficulty.hard:
-        emptyCells = 60;
-        break;
-      case SamuraiDifficulty.expert:
-        emptyCells = 70;
-        break;
-    }
+  /// 생성된 데이터로부터 GameState 생성 (isolate에서 생성된 데이터 사용)
+  factory SamuraiGameState.fromGeneratedData(Map<String, dynamic> data) {
+    final solutions = (data['solutions'] as List)
+        .map((board) => (board as List)
+            .map((row) => List<int>.from(row as List))
+            .toList())
+        .toList();
+    final puzzles = (data['puzzles'] as List)
+        .map((board) => (board as List)
+            .map((row) => List<int>.from(row as List))
+            .toList())
+        .toList();
+    final difficulty = SamuraiDifficulty.values[data['difficulty'] as int];
 
-    final puzzles = generator.generatePuzzles(solutions, emptyCells);
     final currentBoards = puzzles
         .map((board) => board.map((row) => List<int>.from(row)).toList())
         .toList();
