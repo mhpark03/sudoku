@@ -459,9 +459,11 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
     if (isSelected) {
       backgroundColor = Colors.blue.shade300;
     } else if (isQuickInputHighlight) {
+      // 숫자가 결정된 셀: 진한 파란색
       backgroundColor = Colors.blue.shade200;
     } else if (isQuickInputNoteHighlight) {
-      backgroundColor = Colors.blue.shade100;
+      // 메모에 포함된 셀: 연한 녹색
+      backgroundColor = Colors.green.shade100;
     } else if (isSameValue) {
       backgroundColor = Colors.blue.shade200;
     } else if (!isQuickInputMode && (isSameRowOrCol || isSameBox)) {
