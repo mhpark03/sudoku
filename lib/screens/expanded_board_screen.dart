@@ -308,7 +308,7 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
     List<List<Set<int>>> notes,
   ) {
     return Container(
-      color: Colors.grey.shade400,
+      color: Colors.grey.shade800,
       child: Column(
         children: List.generate(9, (row) {
           return Expanded(
@@ -434,8 +434,6 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
         selectedCol != null &&
         value != 0 &&
         value == board[selectedRow!][selectedCol!];
-    bool hasError =
-        value != 0 && !SamuraiSudokuGenerator.isValidMove(board, row, col, value);
 
     Color backgroundColor;
     if (isSelected) {
@@ -448,33 +446,28 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
       backgroundColor = Colors.white;
     }
 
-    Color textColor;
-    if (hasError) {
-      textColor = Colors.red;
-    } else if (fixed) {
-      textColor = Colors.black;
-    } else {
-      textColor = Colors.blue.shade700;
-    }
+    Color textColor = Colors.black;
 
     return GestureDetector(
       onTap: () => _onCellTap(row, col, fixed),
-      child: Container(
-        color: backgroundColor,
-        child: value != 0
-            ? Center(
-                child: Text(
-                  value.toString(),
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: fixed ? FontWeight.bold : FontWeight.normal,
-                    color: textColor,
+      child: SizedBox.expand(
+        child: Container(
+          color: backgroundColor,
+          child: value != 0
+              ? Center(
+                  child: Text(
+                    value.toString(),
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: fixed ? FontWeight.bold : FontWeight.normal,
+                      color: textColor,
+                    ),
                   ),
-                ),
-              )
-            : cellNotes.isNotEmpty
-                ? _buildNotesGrid(cellNotes)
-                : const SizedBox(),
+                )
+              : cellNotes.isNotEmpty
+                  ? _buildNotesGrid(cellNotes)
+                  : null,
+        ),
       ),
     );
   }
