@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/samurai_game_state.dart';
 import '../models/samurai_sudoku_generator.dart';
 import '../widgets/samurai_board.dart';
-import '../widgets/expanded_board_dialog.dart';
+import 'expanded_board_screen.dart';
 
 class SamuraiGameScreen extends StatefulWidget {
   const SamuraiGameScreen({super.key});
@@ -51,57 +51,46 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen> {
   }
 
   void _showExpandedBoard(int board, int? row, int? col) {
-    showDialog(
-      context: context,
-      builder: (context) => ExpandedBoardDialog(
-        gameState: _gameState,
-        boardIndex: board,
-        initialRow: row,
-        initialCol: col,
-        onValueChanged: (b, r, c, value) {
-          setState(() {
-            _gameState.currentBoards[b][r][c] = value;
-            _gameState.syncOverlapValue(b, r, c, value);
-            // 값 입력 시 해당 셀의 메모 삭제
-            if (value != 0) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ExpandedBoardScreen(
+          gameState: _gameState,
+          boardIndex: board,
+          initialRow: row,
+          initialCol: col,
+          onValueChanged: (b, r, c, value) {
+            setState(() {
+              _gameState.currentBoards[b][r][c] = value;
+              _gameState.syncOverlapValue(b, r, c, value);
+              // 값 입력 시 해당 셀의 메모 삭제
+              if (value != 0) {
+                _gameState.clearNotes(b, r, c);
+              }
+            });
+          },
+          onHint: (b, r, c) {
+            int correctValue = _gameState.solutions[b][r][c];
+            setState(() {
+              _gameState.currentBoards[b][r][c] = correctValue;
+              _gameState.syncOverlapValue(b, r, c, correctValue);
               _gameState.clearNotes(b, r, c);
-            }
-
-            bool isComplete = SamuraiSudokuGenerator.areAllBoardsComplete(
-                _gameState.currentBoards);
-
-            if (isComplete) {
-              Navigator.pop(context);
-              _showCompletionDialog();
-            }
-          });
-        },
-        onHint: (b, r, c) {
-          int correctValue = _gameState.solutions[b][r][c];
-          setState(() {
-            _gameState.currentBoards[b][r][c] = correctValue;
-            _gameState.syncOverlapValue(b, r, c, correctValue);
-            _gameState.clearNotes(b, r, c);
-
-            bool isComplete = SamuraiSudokuGenerator.areAllBoardsComplete(
-                _gameState.currentBoards);
-
-            if (isComplete) {
-              Navigator.pop(context);
-              _showCompletionDialog();
-            }
-          });
-        },
-        onNoteToggle: (b, r, c, number) {
-          setState(() {
-            _gameState.toggleNote(b, r, c, number);
-          });
-        },
-        onFillAllNotes: (b) {
-          setState(() {
-            _gameState.fillAllNotes(b);
-          });
-        },
+            });
+          },
+          onNoteToggle: (b, r, c, number) {
+            setState(() {
+              _gameState.toggleNote(b, r, c, number);
+            });
+          },
+          onFillAllNotes: (b) {
+            setState(() {
+              _gameState.fillAllNotes(b);
+            });
+          },
+          onComplete: () {
+            _showCompletionDialog();
+          },
+        ),
       ),
     );
   }
@@ -228,7 +217,7 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen> {
         Padding(
           padding: const EdgeInsets.only(bottom: 8),
           child: Text(
-            '셀을 탭하면 확대됩니다',
+            '셀을 탭하면 편집 화면으로 이동합니다',
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey.shade600,
@@ -278,7 +267,7 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen> {
           child: Column(
             children: [
               Text(
-                '셀을 탭하면 확대됩니다',
+                '셀을 탭하면 편집 화면으로 이동합니다',
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.grey.shade600,
