@@ -45,7 +45,7 @@ class GameState {
         emptyCells = 60;
         break;
       case Difficulty.expert:
-        emptyCells = 75;
+        emptyCells = 70;
         break;
     }
 

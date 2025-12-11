@@ -57,20 +57,23 @@ class SamuraiSudokuGenerator {
       }
     }
 
-    // 달인이 아닌 경우, 중앙 보드의 비겹침 영역에 최소 셀 보장
+    // 중앙 보드의 비겹침 영역에 최소 셀 보장
     Set<int> preRevealedPositions = {};
-    bool isExpert = difficulty >= 75;
 
-    if (!isExpert) {
-      // 난이도별 중앙 비겹침 박스당 최소 노출 셀 수
-      int minCellsPerCenterBox;
-      if (difficulty >= 60) {
-        minCellsPerCenterBox = 1; // 어려움
-      } else if (difficulty >= 45) {
-        minCellsPerCenterBox = 2; // 보통
-      } else {
-        minCellsPerCenterBox = 3; // 쉬움
-      }
+    // 난이도별 중앙 비겹침 박스당 최소 노출 셀 수
+    // 쉬움(30): 4개, 보통(45): 3개, 어려움(60): 2개, 달인(70): 1개
+    int minCellsPerCenterBox;
+    if (difficulty >= 70) {
+      minCellsPerCenterBox = 1; // 달인
+    } else if (difficulty >= 60) {
+      minCellsPerCenterBox = 2; // 어려움
+    } else if (difficulty >= 45) {
+      minCellsPerCenterBox = 3; // 보통
+    } else {
+      minCellsPerCenterBox = 4; // 쉬움
+    }
+
+    if (minCellsPerCenterBox > 0) {
 
       // 중앙 보드의 비겹침 박스들 (21x21 그리드 좌표)
       // 박스 1: grid (6-8, 9-11), 박스 3: grid (9-11, 6-8)

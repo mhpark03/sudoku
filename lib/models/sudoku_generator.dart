@@ -15,17 +15,17 @@ class SudokuGenerator {
     List<List<int>> puzzle =
         solvedBoard.map((row) => List<int>.from(row)).toList();
 
-    int cellsToRemove = difficulty.clamp(20, 75);
+    int cellsToRemove = difficulty.clamp(20, 70);
 
     // 각 3x3 박스당 제거할 셀 수 계산
     int cellsPerBox = cellsToRemove ~/ 9;
     int extraCells = cellsToRemove % 9;
 
     // 난이도에 따른 최소 유지 셀 수
-    // 쉬움(30): 5개, 보통(45): 4개, 어려움(60): 2개, 달인(75): 0개 (전체 비율만 중요)
+    // 쉬움(30): 5개, 보통(45): 4개, 어려움(60): 2개, 달인(70): 1개
     int minCellsToKeep;
-    if (cellsToRemove >= 75) {
-      minCellsToKeep = 0; // 달인 - 박스당 최소 제한 없음
+    if (cellsToRemove >= 70) {
+      minCellsToKeep = 1; // 달인
     } else if (cellsToRemove >= 60) {
       minCellsToKeep = 2; // 어려움
     } else if (cellsToRemove >= 45) {
