@@ -113,6 +113,9 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
                     }
                     if (isQuickInputMode) {
                       isNoteMode = false;
+                      // 빠른 입력 모드 진입 시 선택된 셀 해제
+                      selectedRow = null;
+                      selectedCol = null;
                     }
                   });
                 },
@@ -217,6 +220,9 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
                             }
                             if (isQuickInputMode) {
                               isNoteMode = false;
+                              // 빠른 입력 모드 진입 시 선택된 셀 해제
+                              selectedRow = null;
+                              selectedCol = null;
                             }
                           });
                         },
