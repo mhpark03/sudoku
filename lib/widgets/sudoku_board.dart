@@ -51,6 +51,7 @@ class SudokuBoard extends StatelessWidget {
                             gameState.isSameBox(row, col),
                         isSameValue: gameState.isSameValue(row, col),
                         hasError: gameState.hasError(row, col),
+                        notes: gameState.notes[row][col],
                         onTap: () => onCellTap(row, col),
                       ),
                     ),
