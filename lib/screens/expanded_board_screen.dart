@@ -443,11 +443,8 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
         quickInputNumber != null &&
         value != 0 &&
         value == quickInputNumber;
-    // 빠른 입력 모드에서 메모에 선택된 숫자가 포함된 셀 하이라이트
-    bool isQuickInputNoteHighlight = isQuickInputMode &&
-        quickInputNumber != null &&
-        value == 0 &&
-        cellNotes.contains(quickInputNumber);
+    // 메모에 선택된 숫자가 포함된 셀 하이라이트 (빠른 입력 모드 또는 일반 모드)
+    bool isNoteHighlight = _shouldHighlightNote(value, cellNotes);
     // 일반 모드에서는 선택된 셀과 같은 값 하이라이트
     bool isSameValue = !isQuickInputMode &&
         selectedRow != null &&
@@ -461,7 +458,7 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
     } else if (isQuickInputHighlight) {
       // 숫자가 결정된 셀: 진한 파란색
       backgroundColor = Colors.blue.shade200;
-    } else if (isQuickInputNoteHighlight) {
+    } else if (isNoteHighlight) {
       // 메모에 포함된 셀: 연한 녹색
       backgroundColor = Colors.green.shade100;
     } else if (isSameValue) {
@@ -603,6 +600,30 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
     int cellBoxRow = (row ~/ 3) * 3;
     int cellBoxCol = (col ~/ 3) * 3;
     return selectedBoxRow == cellBoxRow && selectedBoxCol == cellBoxCol;
+  }
+
+  /// 메모 하이라이트 여부 판단
+  /// 빠른 입력 모드: quickInputNumber가 메모에 포함된 경우
+  /// 일반 모드: 선택된 셀의 숫자가 메모에 포함된 경우
+  bool _shouldHighlightNote(int cellValue, Set<int> cellNotes) {
+    // 현재 셀에 값이 있으면 하이라이트 안함
+    if (cellValue != 0) return false;
+
+    // 메모가 없으면 하이라이트 안함
+    if (cellNotes.isEmpty) return false;
+
+    if (isQuickInputMode) {
+      // 빠른 입력 모드
+      if (quickInputNumber == null) return false;
+      return cellNotes.contains(quickInputNumber);
+    } else {
+      // 일반 모드: 선택된 셀의 숫자가 메모에 포함된 경우
+      if (selectedRow == null || selectedCol == null) return false;
+      int selectedValue = widget.gameState.currentBoards[widget.boardIndex]
+          [selectedRow!][selectedCol!];
+      if (selectedValue == 0) return false;
+      return cellNotes.contains(selectedValue);
+    }
   }
 
   void _onNumberTap(int number) {
