@@ -39,11 +39,16 @@ class SamuraiSudokuGenerator {
         .map((board) => board.map((row) => List<int>.from(row)).toList())
         .toList();
 
-    int cellsToRemove = difficulty.clamp(25, 50);
+    int cellsToRemove = difficulty.clamp(25, 72);
 
     // 각 3x3 박스당 제거할 셀 수 계산 (9개 박스에 균등 분배)
     int cellsPerBox = cellsToRemove ~/ 9;
     int extraCells = cellsToRemove % 9;
+
+    // 난이도에 따른 최소 유지 셀 수
+    // 달인(63+): 박스당 1~2개, 그 외: 박스당 3개
+    int minCellsToKeep = cellsToRemove >= 63 ? 1 : 3;
+    int maxRemovePerBox = 9 - minCellsToKeep;
 
     for (int b = 0; b < 5; b++) {
       // 각 3x3 박스별로 균등하게 셀 제거
@@ -65,8 +70,9 @@ class SamuraiSudokuGenerator {
         }
         boxPositions.shuffle(_random);
 
-        // 이 박스에서 제거할 셀 수
+        // 이 박스에서 제거할 셀 수 (최대 제한 적용)
         int toRemoveInBox = cellsPerBox + (boxIdx < extraCells ? 1 : 0);
+        toRemoveInBox = toRemoveInBox.clamp(0, maxRemovePerBox);
         int removed = 0;
 
         for (int pos in boxPositions) {
@@ -75,10 +81,8 @@ class SamuraiSudokuGenerator {
           int row = pos ~/ 9;
           int col = pos % 9;
 
-          // 겹치는 영역은 제거 확률을 낮춤 (최소 1개는 유지)
-          if (_isOverlapCell(b, row, col) &&
-              removed > 0 &&
-              _random.nextDouble() > 0.6) {
+          // 겹치는 영역은 제거 확률을 낮춤
+          if (_isOverlapCell(b, row, col) && _random.nextDouble() > 0.5) {
             continue;
           }
 
