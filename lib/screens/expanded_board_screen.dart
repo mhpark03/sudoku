@@ -459,22 +459,24 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
 
     return GestureDetector(
       onTap: () => _onCellTap(row, col, fixed),
-      child: Container(
-        color: backgroundColor,
-        child: value != 0
-            ? Center(
-                child: Text(
-                  value.toString(),
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: fixed ? FontWeight.bold : FontWeight.normal,
-                    color: textColor,
+      child: SizedBox.expand(
+        child: Container(
+          color: backgroundColor,
+          child: value != 0
+              ? Center(
+                  child: Text(
+                    value.toString(),
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: fixed ? FontWeight.bold : FontWeight.normal,
+                      color: textColor,
+                    ),
                   ),
-                ),
-              )
-            : cellNotes.isNotEmpty
-                ? _buildNotesGrid(cellNotes)
-                : null,
+                )
+              : cellNotes.isNotEmpty
+                  ? _buildNotesGrid(cellNotes)
+                  : null,
+        ),
       ),
     );
   }
