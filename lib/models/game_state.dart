@@ -42,10 +42,10 @@ class GameState {
         emptyCells = 45;
         break;
       case Difficulty.hard:
-        emptyCells = 55;
+        emptyCells = 60;
         break;
       case Difficulty.expert:
-        emptyCells = 64; // 박스당 1~2개만 노출
+        emptyCells = 75;
         break;
     }
 

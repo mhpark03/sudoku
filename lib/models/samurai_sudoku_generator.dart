@@ -46,13 +46,13 @@ class SamuraiSudokuGenerator {
     int extraCells = cellsToRemove % 9;
 
     // 난이도에 따른 최소 유지 셀 수
-    // 쉬움(30): 5개, 보통(40): 4개, 어려움(50): 3개, 달인(63+): 1개
+    // 쉬움(30): 5개, 보통(45): 4개, 어려움(60): 2개, 달인(75): 1개
     int minCellsToKeep;
-    if (cellsToRemove >= 63) {
+    if (cellsToRemove >= 75) {
       minCellsToKeep = 1; // 달인
-    } else if (cellsToRemove >= 50) {
-      minCellsToKeep = 3; // 어려움
-    } else if (cellsToRemove >= 40) {
+    } else if (cellsToRemove >= 60) {
+      minCellsToKeep = 2; // 어려움
+    } else if (cellsToRemove >= 45) {
       minCellsToKeep = 4; // 보통
     } else {
       minCellsToKeep = 5; // 쉬움
@@ -168,36 +168,36 @@ class SamuraiSudokuGenerator {
     List<int> nonOverlapBoxes = [1, 3, 4, 5, 7];
     nonOverlapBoxes.shuffle(_random);
 
+    // 노출할 최소 셀 수 (maxRemovePerBox의 반대)
+    int minCellsToReveal = 9 - maxRemovePerBox;
+
     for (int idx = 0; idx < nonOverlapBoxes.length; idx++) {
       int boxNum = nonOverlapBoxes[idx];
       int boxStartRow = (boxNum ~/ 3) * 3;
       int boxStartCol = (boxNum % 3) * 3;
 
-      // 먼저 솔루션 값으로 채움
+      // 박스 내 모든 위치를 수집하고 셔플
+      List<List<int>> allPositions = [];
       for (int r = 0; r < 3; r++) {
         for (int c = 0; c < 3; c++) {
-          puzzles[2][boxStartRow + r][boxStartCol + c] =
-              solutions[2][boxStartRow + r][boxStartCol + c];
+          allPositions.add([boxStartRow + r, boxStartCol + c]);
         }
       }
+      allPositions.shuffle(_random);
 
-      // 난이도에 맞게 셀 제거
-      List<int> boxPositions = [];
-      for (int r = 0; r < 3; r++) {
-        for (int c = 0; c < 3; c++) {
-          boxPositions.add((boxStartRow + r) * 9 + (boxStartCol + c));
+      // 노출할 셀 수 결정 (최소값 + 약간의 랜덤)
+      int cellsToReveal = minCellsToReveal + (_random.nextInt(2)); // minCellsToReveal ~ minCellsToReveal+1
+      cellsToReveal = cellsToReveal.clamp(minCellsToReveal, 9);
+
+      // 선택된 셀만 솔루션 값으로 설정, 나머지는 0
+      for (int i = 0; i < allPositions.length; i++) {
+        int row = allPositions[i][0];
+        int col = allPositions[i][1];
+        if (i < cellsToReveal) {
+          puzzles[2][row][col] = solutions[2][row][col];
+        } else {
+          puzzles[2][row][col] = 0;
         }
-      }
-      boxPositions.shuffle(_random);
-
-      int toRemoveInBox = cellsPerBox + (idx < extraCells ? 1 : 0);
-      toRemoveInBox = toRemoveInBox.clamp(0, maxRemovePerBox);
-
-      for (int i = 0; i < toRemoveInBox && i < boxPositions.length; i++) {
-        int pos = boxPositions[i];
-        int row = pos ~/ 9;
-        int col = pos % 9;
-        puzzles[2][row][col] = 0;
       }
     }
   }
