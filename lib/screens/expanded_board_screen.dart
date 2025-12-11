@@ -430,7 +430,12 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
         selectedCol != null &&
         (selectedRow == row || selectedCol == col);
     bool isSameBox = _isSameBox(row, col);
-    // 빠른 입력 모드에서는 같은 숫자 하이라이트 비활성화
+    // 빠른 입력 모드에서 선택된 숫자와 같은 값을 가진 셀 하이라이트
+    bool isQuickInputHighlight = isQuickInputMode &&
+        quickInputNumber != null &&
+        value != 0 &&
+        value == quickInputNumber;
+    // 일반 모드에서는 선택된 셀과 같은 값 하이라이트
     bool isSameValue = !isQuickInputMode &&
         selectedRow != null &&
         selectedCol != null &&
@@ -440,6 +445,8 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
     Color backgroundColor;
     if (isSelected) {
       backgroundColor = Colors.blue.shade300;
+    } else if (isQuickInputHighlight) {
+      backgroundColor = Colors.blue.shade200;
     } else if (isSameValue) {
       backgroundColor = Colors.blue.shade200;
     } else if (isSameRowOrCol || isSameBox) {
