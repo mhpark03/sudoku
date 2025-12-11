@@ -244,7 +244,8 @@ class SamuraiGameState {
   void fillAllNotes(int board) {
     for (int row = 0; row < 9; row++) {
       for (int col = 0; col < 9; col++) {
-        if (currentBoards[board][row][col] == 0 && !isFixed[board][row][col]) {
+        // 빈 셀에만 메모 추가 (값이 0인 셀)
+        if (currentBoards[board][row][col] == 0) {
           notes[board][row][col].clear();
           for (int num = 1; num <= 9; num++) {
             if (SamuraiSudokuGenerator.isValidMove(
