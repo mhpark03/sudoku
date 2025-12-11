@@ -5,7 +5,9 @@ import '../widgets/sudoku_board.dart';
 import '../widgets/number_pad.dart';
 
 class GameScreen extends StatefulWidget {
-  const GameScreen({super.key});
+  final Difficulty? initialDifficulty;
+
+  const GameScreen({super.key, this.initialDifficulty});
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -13,12 +15,13 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> {
   late GameState _gameState;
-  Difficulty _selectedDifficulty = Difficulty.medium;
+  late Difficulty _selectedDifficulty;
   bool _isNoteMode = false;
 
   @override
   void initState() {
     super.initState();
+    _selectedDifficulty = widget.initialDifficulty ?? Difficulty.medium;
     _startNewGame();
   }
 

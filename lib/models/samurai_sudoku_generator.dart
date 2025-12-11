@@ -236,9 +236,16 @@ class SamuraiSudokuGenerator {
       }
     }
 
-    // 2. 노출할 셀 수 결정 (minCellsToKeep ~ minCellsToKeep+1)
-    int targetRevealed = minCellsToKeep + (_random.nextDouble() > 0.5 ? 1 : 0);
-    targetRevealed = targetRevealed.clamp(minCellsToKeep, revealedPositions.length);
+    // 2. 노출할 셀 수 결정
+    int targetRevealed;
+    if (revealedPositions.length <= minCellsToKeep) {
+      // 이미 노출된 셀이 최소값 이하면 모두 유지 (나중에 _ensureMinCellsPerBox에서 보충)
+      targetRevealed = revealedPositions.length;
+    } else {
+      // 노출된 셀이 충분하면 minCellsToKeep ~ minCellsToKeep+1개만 유지
+      targetRevealed = minCellsToKeep + (_random.nextDouble() > 0.5 ? 1 : 0);
+      targetRevealed = targetRevealed.clamp(minCellsToKeep, revealedPositions.length);
+    }
 
     // 3. 노출할 셀 무작위 선택
     revealedPositions.shuffle(_random);

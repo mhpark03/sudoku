@@ -5,7 +5,9 @@ import '../widgets/samurai_board.dart';
 import 'expanded_board_screen.dart';
 
 class SamuraiGameScreen extends StatefulWidget {
-  const SamuraiGameScreen({super.key});
+  final SamuraiDifficulty? initialDifficulty;
+
+  const SamuraiGameScreen({super.key, this.initialDifficulty});
 
   @override
   State<SamuraiGameScreen> createState() => _SamuraiGameScreenState();
@@ -13,12 +15,13 @@ class SamuraiGameScreen extends StatefulWidget {
 
 class _SamuraiGameScreenState extends State<SamuraiGameScreen> {
   late SamuraiGameState _gameState;
-  SamuraiDifficulty _selectedDifficulty = SamuraiDifficulty.medium;
+  late SamuraiDifficulty _selectedDifficulty;
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
+    _selectedDifficulty = widget.initialDifficulty ?? SamuraiDifficulty.medium;
     _startNewGame();
   }
 

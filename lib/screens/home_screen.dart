@@ -1,9 +1,84 @@
 import 'package:flutter/material.dart';
+import '../models/game_state.dart';
+import '../models/samurai_game_state.dart';
 import 'game_screen.dart';
 import 'samurai_game_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
+
+  void _showRegularDifficultyDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('난이도 선택'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildDifficultyTile(context, '쉬움', Difficulty.easy),
+            _buildDifficultyTile(context, '보통', Difficulty.medium),
+            _buildDifficultyTile(context, '어려움', Difficulty.hard),
+            _buildDifficultyTile(context, '달인', Difficulty.expert),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDifficultyTile(
+      BuildContext context, String label, Difficulty difficulty) {
+    return ListTile(
+      title: Text(label),
+      leading: const Icon(Icons.play_arrow, color: Colors.green),
+      onTap: () {
+        Navigator.pop(context);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => GameScreen(initialDifficulty: difficulty),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showSamuraiDifficultyDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('난이도 선택'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildSamuraiDifficultyTile(context, '쉬움', SamuraiDifficulty.easy),
+            _buildSamuraiDifficultyTile(
+                context, '보통', SamuraiDifficulty.medium),
+            _buildSamuraiDifficultyTile(context, '어려움', SamuraiDifficulty.hard),
+            _buildSamuraiDifficultyTile(
+                context, '달인', SamuraiDifficulty.expert),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSamuraiDifficultyTile(
+      BuildContext context, String label, SamuraiDifficulty difficulty) {
+    return ListTile(
+      title: Text(label),
+      leading: const Icon(Icons.play_arrow, color: Colors.deepPurple),
+      onTap: () {
+        Navigator.pop(context);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                SamuraiGameScreen(initialDifficulty: difficulty),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,14 +121,7 @@ class HomeScreen extends StatelessWidget {
                   subtitle: '9x9 클래식 스도쿠',
                   icon: Icons.grid_3x3,
                   color: Colors.green,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const GameScreen(),
-                      ),
-                    );
-                  },
+                  onTap: () => _showRegularDifficultyDialog(context),
                 ),
                 const SizedBox(height: 20),
                 _buildGameButton(
@@ -62,14 +130,7 @@ class HomeScreen extends StatelessWidget {
                   subtitle: '5개 보드가 겹친 스도쿠',
                   icon: Icons.apps,
                   color: Colors.deepPurple,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const SamuraiGameScreen(),
-                      ),
-                    );
-                  },
+                  onTap: () => _showSamuraiDifficultyDialog(context),
                 ),
               ],
             ),
