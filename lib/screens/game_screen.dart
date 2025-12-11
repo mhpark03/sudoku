@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import '../models/game_state.dart';
 import '../models/sudoku_generator.dart';
+import '../services/game_storage.dart';
 import '../widgets/sudoku_board.dart';
 import '../widgets/number_pad.dart';
 
 class GameScreen extends StatefulWidget {
   final Difficulty? initialDifficulty;
+  final GameState? savedGameState;
 
-  const GameScreen({super.key, this.initialDifficulty});
+  const GameScreen({
+    super.key,
+    this.initialDifficulty,
+    this.savedGameState,
+  });
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -21,14 +27,32 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedDifficulty = widget.initialDifficulty ?? Difficulty.medium;
-    _startNewGame();
+    if (widget.savedGameState != null) {
+      // 저장된 게임 불러오기
+      _gameState = widget.savedGameState!;
+      _selectedDifficulty = _gameState.difficulty;
+    } else {
+      // 새 게임 시작
+      _selectedDifficulty = widget.initialDifficulty ?? Difficulty.medium;
+      _startNewGame();
+    }
   }
 
   void _startNewGame() {
     setState(() {
       _gameState = GameState.newGame(_selectedDifficulty);
+      _saveGame();
     });
+  }
+
+  /// 게임 상태 저장
+  void _saveGame() {
+    if (!_gameState.isCompleted) {
+      GameStorage.saveRegularGame(_gameState);
+    } else {
+      // 게임 완료 시 저장된 게임 삭제
+      GameStorage.deleteRegularGame();
+    }
   }
 
   void _onCellTap(int row, int col) {
@@ -79,6 +103,7 @@ class _GameScreenState extends State<GameScreen> {
         }
       }
     });
+    _saveGame();
   }
 
   void _onNumberTap(int number) {
@@ -136,6 +161,7 @@ class _GameScreenState extends State<GameScreen> {
         _showCompletionDialog();
       }
     });
+    _saveGame();
   }
 
   void _onQuickInputToggle() {
@@ -165,6 +191,7 @@ class _GameScreenState extends State<GameScreen> {
 
       _gameState = _gameState.copyWith(currentBoard: newBoard);
     });
+    _saveGame();
   }
 
   void _showHint() {
@@ -207,6 +234,7 @@ class _GameScreenState extends State<GameScreen> {
         _showCompletionDialog();
       }
     });
+    _saveGame();
   }
 
   void _showCompletionDialog() {
