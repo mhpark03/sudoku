@@ -36,6 +36,11 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
   int? selectedCol;
   final GlobalKey<GameControlPanelState> _controlPanelKey = GlobalKey();
 
+  // 빠른 입력 모드 상태 (하이라이트용)
+  bool _isQuickInputMode = false;
+  int? _quickInputNumber;
+  bool _isEraseMode = false;
+
   @override
   void initState() {
     super.initState();
@@ -97,6 +102,17 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
             onErase: _onErase,
             onHint: _onHint,
             onFillAllNotes: _onFillAllNotes,
+            onQuickInputModeChanged: (isQuickInput, number) {
+              setState(() {
+                _isQuickInputMode = isQuickInput;
+                _quickInputNumber = number;
+              });
+            },
+            onEraseModeChanged: (isErase) {
+              setState(() {
+                _isEraseMode = isErase;
+              });
+            },
             disabledNumbers: widget.gameState.getCompletedNumbers(widget.boardIndex),
             isCompact: false,
           ),
@@ -139,6 +155,17 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
               onErase: _onErase,
               onHint: _onHint,
               onFillAllNotes: _onFillAllNotes,
+              onQuickInputModeChanged: (isQuickInput, number) {
+                setState(() {
+                  _isQuickInputMode = isQuickInput;
+                  _quickInputNumber = number;
+                });
+              },
+              onEraseModeChanged: (isErase) {
+                setState(() {
+                  _isEraseMode = isErase;
+                });
+              },
               disabledNumbers: widget.gameState.getCompletedNumbers(widget.boardIndex),
               isCompact: true,
             ),
@@ -189,7 +216,6 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
     int row,
     int col,
   ) {
-    final controlState = _controlPanelKey.currentState;
     int value = board[row][col];
     bool fixed = isFixed[row][col];
     Set<int> cellNotes = notes[row][col];
@@ -200,16 +226,14 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
     bool isSameBox = _isSameBox(row, col);
 
     // 빠른 입력 모드에서 선택된 숫자와 같은 값을 가진 셀 하이라이트
-    bool isQuickInputHighlight = controlState != null &&
-        controlState.isQuickInputMode &&
-        controlState.quickInputNumber != null &&
+    bool isQuickInputHighlight = _isQuickInputMode &&
+        _quickInputNumber != null &&
         value != 0 &&
-        value == controlState.quickInputNumber;
+        value == _quickInputNumber;
     // 메모에 선택된 숫자가 포함된 셀 하이라이트 (빠른 입력 모드 또는 일반 모드)
     bool isNoteHighlight = _shouldHighlightNote(value, cellNotes);
     // 일반 모드에서는 선택된 셀과 같은 값 하이라이트
-    bool isQuickInputMode = controlState?.isQuickInputMode ?? false;
-    bool isSameValue = !isQuickInputMode &&
+    bool isSameValue = !_isQuickInputMode &&
         selectedRow != null &&
         selectedCol != null &&
         value != 0 &&
@@ -226,7 +250,7 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
       backgroundColor = Colors.green.shade100;
     } else if (isSameValue) {
       backgroundColor = Colors.blue.shade200;
-    } else if (!isQuickInputMode && (isSameRowOrCol || isSameBox)) {
+    } else if (!_isQuickInputMode && (isSameRowOrCol || isSameBox)) {
       // 빠른 입력 모드에서는 행/열/박스 하이라이트 비활성화
       backgroundColor = Colors.blue.shade50;
     } else {
@@ -263,7 +287,22 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
     final controlState = _controlPanelKey.currentState;
 
     setState(() {
-      if (controlState != null && controlState.isQuickInputMode && controlState.quickInputNumber != null) {
+      // 지우기 모드일 때
+      if (controlState != null && controlState.isEraseMode) {
+        if (!isFixed) {
+          if (widget.gameState.currentBoards[widget.boardIndex][row][col] != 0) {
+            // 값이 있으면 값 지우기
+            widget.onValueChanged(widget.boardIndex, row, col, 0);
+          } else {
+            // 값이 없으면 메모 지우기
+            widget.gameState.clearNotes(widget.boardIndex, row, col);
+          }
+        }
+        selectedRow = row;
+        selectedCol = col;
+      }
+      // 빠른 입력 모드일 때
+      else if (controlState != null && controlState.isQuickInputMode && controlState.quickInputNumber != null) {
         if (!isFixed) {
           // 빠른 입력 + 메모 모드: 메모로 입력
           if (controlState.isNoteMode) {
@@ -400,12 +439,10 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
     // 메모가 없으면 하이라이트 안함
     if (cellNotes.isEmpty) return false;
 
-    final controlState = _controlPanelKey.currentState;
-
-    if (controlState != null && controlState.isQuickInputMode) {
+    if (_isQuickInputMode) {
       // 빠른 입력 모드
-      if (controlState.quickInputNumber == null) return false;
-      return cellNotes.contains(controlState.quickInputNumber);
+      if (_quickInputNumber == null) return false;
+      return cellNotes.contains(_quickInputNumber);
     } else {
       // 일반 모드: 선택된 셀의 숫자가 메모에 포함된 경우
       if (selectedRow == null || selectedCol == null) return false;

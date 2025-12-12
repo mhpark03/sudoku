@@ -5,11 +5,15 @@ import 'sudoku_cell.dart';
 class SudokuBoard extends StatelessWidget {
   final GameState gameState;
   final Function(int row, int col) onCellTap;
+  final bool isQuickInputMode;
+  final int? quickInputNumber;
 
   const SudokuBoard({
     super.key,
     required this.gameState,
     required this.onCellTap,
+    this.isQuickInputMode = false,
+    this.quickInputNumber,
   });
 
   @override
@@ -47,21 +51,20 @@ class SudokuBoard extends StatelessWidget {
                         value: gameState.currentBoard[row][col],
                         isFixed: gameState.isFixed[row][col],
                         isSelected: gameState.isSelected(row, col),
-                        isHighlighted: !gameState.isQuickInputMode &&
+                        isHighlighted: !isQuickInputMode &&
                             (gameState.isSameRowOrCol(row, col) ||
                                 gameState.isSameBox(row, col)),
-                        isSameValue: !gameState.isQuickInputMode &&
+                        isSameValue: !isQuickInputMode &&
                             gameState.isSameValue(row, col),
                         hasError: gameState.hasError(row, col),
                         notes: gameState.notes[row][col],
                         onTap: () => onCellTap(row, col),
-                        isQuickInputHighlight: gameState.isQuickInputMode &&
-                            gameState.quickInputNumber != null &&
+                        isQuickInputHighlight: isQuickInputMode &&
+                            quickInputNumber != null &&
                             gameState.currentBoard[row][col] != 0 &&
                             gameState.currentBoard[row][col] ==
-                                gameState.quickInputNumber,
-                        isQuickInputNoteHighlight: _shouldHighlightNote(
-                            gameState, row, col),
+                                quickInputNumber,
+                        isQuickInputNoteHighlight: _shouldHighlightNote(row, col),
                       ),
                     ),
                   );
@@ -77,17 +80,17 @@ class SudokuBoard extends StatelessWidget {
   /// 메모 하이라이트 여부 판단
   /// 빠른 입력 모드: quickInputNumber가 메모에 포함된 경우
   /// 일반 모드: 선택된 셀의 숫자가 메모에 포함된 경우
-  bool _shouldHighlightNote(GameState gameState, int row, int col) {
+  bool _shouldHighlightNote(int row, int col) {
     // 현재 셀에 값이 있으면 하이라이트 안함
     if (gameState.currentBoard[row][col] != 0) return false;
 
     // 메모가 없으면 하이라이트 안함
     if (gameState.notes[row][col].isEmpty) return false;
 
-    if (gameState.isQuickInputMode) {
+    if (isQuickInputMode) {
       // 빠른 입력 모드
-      if (gameState.quickInputNumber == null) return false;
-      return gameState.notes[row][col].contains(gameState.quickInputNumber);
+      if (quickInputNumber == null) return false;
+      return gameState.notes[row][col].contains(quickInputNumber);
     } else {
       // 일반 모드: 선택된 셀의 숫자가 메모에 포함된 경우
       if (gameState.selectedRow == null || gameState.selectedCol == null) {

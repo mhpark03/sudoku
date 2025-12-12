@@ -6,7 +6,7 @@ class GameControlPanel extends StatefulWidget {
   /// 숫자 탭 콜백 (isNoteMode 포함)
   final void Function(int number, bool isNoteMode) onNumberTap;
 
-  /// 지우기 콜백
+  /// 지우기 콜백 (선택된 셀 지우기)
   final VoidCallback onErase;
 
   /// 힌트 콜백
@@ -20,6 +20,9 @@ class GameControlPanel extends StatefulWidget {
 
   /// 메모 모드 변경 콜백
   final void Function(bool isNoteMode)? onNoteModeChanged;
+
+  /// 지우기 모드 변경 콜백
+  final void Function(bool isEraseMode)? onEraseModeChanged;
 
   /// 비활성화할 숫자들 (9개 모두 채워진 숫자)
   final Set<int> disabledNumbers;
@@ -42,6 +45,7 @@ class GameControlPanel extends StatefulWidget {
     required this.disabledNumbers,
     this.onQuickInputModeChanged,
     this.onNoteModeChanged,
+    this.onEraseModeChanged,
     this.isCompact = false,
     this.initialQuickInputMode = false,
     this.initialNoteMode = false,
@@ -55,10 +59,12 @@ class GameControlPanelState extends State<GameControlPanel> {
   late bool _isQuickInputMode;
   int? _quickInputNumber;
   late bool _isNoteMode;
+  bool _isEraseMode = false;
 
   bool get isQuickInputMode => _isQuickInputMode;
   int? get quickInputNumber => _quickInputNumber;
   bool get isNoteMode => _isNoteMode;
+  bool get isEraseMode => _isEraseMode;
 
   @override
   void initState() {
@@ -74,7 +80,11 @@ class GameControlPanelState extends State<GameControlPanel> {
       if (!_isQuickInputMode) {
         _quickInputNumber = null;
       }
-      // 빠른 입력과 메모 모드 동시 선택 가능
+      // 빠른 입력 모드 켜면 지우기 모드 끄기
+      if (_isQuickInputMode) {
+        _isEraseMode = false;
+        widget.onEraseModeChanged?.call(_isEraseMode);
+      }
     });
     widget.onQuickInputModeChanged?.call(_isQuickInputMode, _quickInputNumber);
   }
@@ -86,6 +96,20 @@ class GameControlPanelState extends State<GameControlPanel> {
       // 빠른 입력과 메모 모드 동시 선택 가능
     });
     widget.onNoteModeChanged?.call(_isNoteMode);
+  }
+
+  /// 지우기 모드 토글
+  void toggleEraseMode() {
+    setState(() {
+      _isEraseMode = !_isEraseMode;
+      // 지우기 모드 켜면 빠른 입력 모드 끄기
+      if (_isEraseMode) {
+        _isQuickInputMode = false;
+        _quickInputNumber = null;
+        widget.onQuickInputModeChanged?.call(_isQuickInputMode, _quickInputNumber);
+      }
+    });
+    widget.onEraseModeChanged?.call(_isEraseMode);
   }
 
   /// 빠른 입력 숫자 선택
@@ -103,6 +127,14 @@ class GameControlPanelState extends State<GameControlPanel> {
       _quickInputNumber = null;
     });
     widget.onQuickInputModeChanged?.call(_isQuickInputMode, _quickInputNumber);
+  }
+
+  /// 지우기 모드 해제
+  void clearEraseMode() {
+    setState(() {
+      _isEraseMode = false;
+    });
+    widget.onEraseModeChanged?.call(_isEraseMode);
   }
 
   void _onNumberTap(int number) {
@@ -130,7 +162,7 @@ class GameControlPanelState extends State<GameControlPanel> {
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (_isQuickInputMode) _buildQuickInputGuide(),
+            if (_isQuickInputMode || _isEraseMode) _buildModeGuide(),
             const SizedBox(height: 8),
             _buildControlButtons(),
             const SizedBox(height: 16),
@@ -149,7 +181,7 @@ class GameControlPanelState extends State<GameControlPanel> {
 
     return Column(
       children: [
-        if (_isQuickInputMode) _buildQuickInputGuide(),
+        if (_isQuickInputMode || _isEraseMode) _buildModeGuide(),
         _buildControlButtons(),
         const SizedBox(height: 16),
         NumberPad(
@@ -164,42 +196,55 @@ class GameControlPanelState extends State<GameControlPanel> {
     );
   }
 
-  Widget _buildQuickInputGuide() {
+  Widget _buildModeGuide() {
     String guideText;
-    if (_isQuickInputMode && _isNoteMode) {
+    Color bgColor;
+    Color borderColor;
+    Color textColor;
+
+    if (_isEraseMode) {
+      guideText = '지우기 모드 - 셀을 탭하여 지우기';
+      bgColor = Colors.red.shade50;
+      borderColor = Colors.red.shade200;
+      textColor = Colors.red.shade700;
+    } else if (_isQuickInputMode && _isNoteMode) {
       guideText = _quickInputNumber != null
           ? '숫자 $_quickInputNumber 선택됨 - 셀을 탭하여 메모 입력'
           : '아래에서 숫자를 먼저 선택하세요';
+      bgColor = Colors.amber.shade50;
+      borderColor = Colors.amber.shade200;
+      textColor = Colors.amber.shade700;
     } else {
       guideText = _quickInputNumber != null
           ? '숫자 $_quickInputNumber 선택됨 - 셀을 탭하여 입력'
           : '아래에서 숫자를 먼저 선택하세요';
+      bgColor = Colors.orange.shade50;
+      borderColor = Colors.orange.shade200;
+      textColor = Colors.orange.shade700;
     }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: _isNoteMode ? Colors.amber.shade50 : Colors.orange.shade50,
+        color: bgColor,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: _isNoteMode ? Colors.amber.shade200 : Colors.orange.shade200,
-        ),
+        border: Border.all(color: borderColor),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            Icons.info_outline,
+            _isEraseMode ? Icons.backspace_outlined : Icons.info_outline,
             size: 16,
-            color: _isNoteMode ? Colors.amber.shade700 : Colors.orange.shade700,
+            color: textColor,
           ),
           const SizedBox(width: 6),
           Text(
             guideText,
             style: TextStyle(
               fontSize: 12,
-              color: _isNoteMode ? Colors.amber.shade700 : Colors.orange.shade700,
+              color: textColor,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -233,11 +278,12 @@ class GameControlPanelState extends State<GameControlPanel> {
           label: '모든 메모',
           onTap: widget.onFillAllNotes,
         ),
-        _buildFeatureButton(
+        _buildToggleButton(
           icon: Icons.backspace_outlined,
           label: '지우기',
-          onTap: widget.onErase,
-          color: Colors.red,
+          isActive: _isEraseMode,
+          activeColor: Colors.red,
+          onTap: toggleEraseMode,
         ),
         _buildFeatureButton(
           icon: Icons.lightbulb_outline,
