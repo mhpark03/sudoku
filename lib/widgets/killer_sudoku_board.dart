@@ -29,7 +29,7 @@ class KillerSudokuBoard extends StatelessWidget {
           builder: (context, constraints) {
             final cellSize = constraints.maxWidth / 9;
             return CustomPaint(
-              painter: CageBorderPainter(
+              foregroundPainter: CageBorderPainter(
                 cages: gameState.cages,
                 cellSize: cellSize,
               ),

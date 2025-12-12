@@ -180,10 +180,15 @@ class KillerGameState {
     return hasCageError(cage);
   }
 
-  /// Extended error check including standard Sudoku + cage rules
+  /// Extended error check including standard Sudoku + cage rules + solution check
   bool hasError(int row, int col) {
     int value = currentBoard[row][col];
     if (value == 0) return false;
+
+    // Check if value matches solution (wrong answer)
+    if (value != solution[row][col]) {
+      return true;
+    }
 
     // Standard Sudoku validation
     if (!KillerSudokuGenerator.isValidMove(currentBoard, row, col, value)) {

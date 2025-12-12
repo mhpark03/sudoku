@@ -11,10 +11,11 @@ class CageBorderPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final cSize = cellSize ?? size.width / 9;
+    final inset = cSize * 0.06; // 셀 안쪽 여백
 
     final paint = Paint()
-      ..color = Colors.red.shade800
-      ..strokeWidth = 2.5
+      ..color = const Color(0xFF5B9BD5) // 진한 파란색
+      ..strokeWidth = 1.2
       ..style = PaintingStyle.stroke;
 
     // Build lookup map for cage IDs
@@ -35,34 +36,137 @@ class CageBorderPainter extends CustomPainter {
         double x = col * cSize;
         double y = row * cSize;
 
-        // Top edge
-        if (row == 0 || cellToCage['${row - 1}_$col'] != currentCageId) {
-          _drawDashedLine(canvas, Offset(x, y), Offset(x + cSize, y), paint);
-        }
+        // 각 방향의 이웃이 같은 케이지인지 확인
+        bool topSame = row > 0 && cellToCage['${row - 1}_$col'] == currentCageId;
+        bool bottomSame = row < 8 && cellToCage['${row + 1}_$col'] == currentCageId;
+        bool leftSame = col > 0 && cellToCage['${row}_${col - 1}'] == currentCageId;
+        bool rightSame = col < 8 && cellToCage['${row}_${col + 1}'] == currentCageId;
 
-        // Bottom edge
-        if (row == 8 || cellToCage['${row + 1}_$col'] != currentCageId) {
+        // 대각선 이웃 확인 (코너 처리용)
+        bool topLeftSame = row > 0 && col > 0 && cellToCage['${row - 1}_${col - 1}'] == currentCageId;
+        bool topRightSame = row > 0 && col < 8 && cellToCage['${row - 1}_${col + 1}'] == currentCageId;
+        bool bottomLeftSame = row < 8 && col > 0 && cellToCage['${row + 1}_${col - 1}'] == currentCageId;
+        bool bottomRightSame = row < 8 && col < 8 && cellToCage['${row + 1}_${col + 1}'] == currentCageId;
+
+        // 상단 경계
+        if (!topSame) {
+          double startX = x + (leftSame ? 0 : inset);
+          double endX = x + cSize - (rightSame ? 0 : inset);
           _drawDashedLine(
-              canvas, Offset(x, y + cSize), Offset(x + cSize, y + cSize), paint);
+            canvas,
+            Offset(startX, y + inset),
+            Offset(endX, y + inset),
+            paint,
+          );
         }
 
-        // Left edge
-        if (col == 0 || cellToCage['${row}_${col - 1}'] != currentCageId) {
-          _drawDashedLine(canvas, Offset(x, y), Offset(x, y + cSize), paint);
-        }
-
-        // Right edge
-        if (col == 8 || cellToCage['${row}_${col + 1}'] != currentCageId) {
+        // 하단 경계
+        if (!bottomSame) {
+          double startX = x + (leftSame ? 0 : inset);
+          double endX = x + cSize - (rightSame ? 0 : inset);
           _drawDashedLine(
-              canvas, Offset(x + cSize, y), Offset(x + cSize, y + cSize), paint);
+            canvas,
+            Offset(startX, y + cSize - inset),
+            Offset(endX, y + cSize - inset),
+            paint,
+          );
+        }
+
+        // 좌측 경계
+        if (!leftSame) {
+          double startY = y + (topSame ? 0 : inset);
+          double endY = y + cSize - (bottomSame ? 0 : inset);
+          _drawDashedLine(
+            canvas,
+            Offset(x + inset, startY),
+            Offset(x + inset, endY),
+            paint,
+          );
+        }
+
+        // 우측 경계
+        if (!rightSame) {
+          double startY = y + (topSame ? 0 : inset);
+          double endY = y + cSize - (bottomSame ? 0 : inset);
+          _drawDashedLine(
+            canvas,
+            Offset(x + cSize - inset, startY),
+            Offset(x + cSize - inset, endY),
+            paint,
+          );
+        }
+
+        // 내부 코너 처리 (ㄱ자 모양 케이지 등)
+        // 좌상단 내부 코너
+        if (topSame && leftSame && !topLeftSame) {
+          _drawDashedLine(
+            canvas,
+            Offset(x, y + inset),
+            Offset(x + inset, y + inset),
+            paint,
+          );
+          _drawDashedLine(
+            canvas,
+            Offset(x + inset, y),
+            Offset(x + inset, y + inset),
+            paint,
+          );
+        }
+
+        // 우상단 내부 코너
+        if (topSame && rightSame && !topRightSame) {
+          _drawDashedLine(
+            canvas,
+            Offset(x + cSize - inset, y + inset),
+            Offset(x + cSize, y + inset),
+            paint,
+          );
+          _drawDashedLine(
+            canvas,
+            Offset(x + cSize - inset, y),
+            Offset(x + cSize - inset, y + inset),
+            paint,
+          );
+        }
+
+        // 좌하단 내부 코너
+        if (bottomSame && leftSame && !bottomLeftSame) {
+          _drawDashedLine(
+            canvas,
+            Offset(x, y + cSize - inset),
+            Offset(x + inset, y + cSize - inset),
+            paint,
+          );
+          _drawDashedLine(
+            canvas,
+            Offset(x + inset, y + cSize - inset),
+            Offset(x + inset, y + cSize),
+            paint,
+          );
+        }
+
+        // 우하단 내부 코너
+        if (bottomSame && rightSame && !bottomRightSame) {
+          _drawDashedLine(
+            canvas,
+            Offset(x + cSize - inset, y + cSize - inset),
+            Offset(x + cSize, y + cSize - inset),
+            paint,
+          );
+          _drawDashedLine(
+            canvas,
+            Offset(x + cSize - inset, y + cSize - inset),
+            Offset(x + cSize - inset, y + cSize),
+            paint,
+          );
         }
       }
     }
   }
 
   void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint) {
-    const dashLength = 4.0;
-    const gapLength = 2.0;
+    const dashLength = 5.0;
+    const gapLength = 3.0;
 
     final dx = end.dx - start.dx;
     final dy = end.dy - start.dy;

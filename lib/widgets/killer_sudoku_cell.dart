@@ -47,14 +47,21 @@ class KillerSudokuCell extends StatelessWidget {
             // Cage sum in top-left corner
             if (cageSum != null)
               Positioned(
-                left: 2,
+                left: 1,
                 top: 1,
-                child: Text(
-                  cageSum.toString(),
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.bold,
-                    color: hasCageError ? Colors.red : Colors.grey.shade700,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 0),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade100,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                  child: Text(
+                    cageSum.toString(),
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      color: hasCageError ? Colors.red : Colors.brown.shade700,
+                    ),
                   ),
                 ),
               ),
@@ -99,10 +106,12 @@ class KillerSudokuCell extends StatelessWidget {
   Widget _buildNotesGrid() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final cellSize = constraints.maxWidth;
-        final fontSize = (cellSize / 4.5).clamp(6.0, 11.0);
-        // Leave space for cage sum
-        final topPadding = cageSum != null ? 11.0 : 1.0;
+        final cellWidth = constraints.maxWidth;
+        final cellHeight = constraints.maxHeight;
+        final minDimension = cellWidth < cellHeight ? cellWidth : cellHeight;
+        final fontSize = (minDimension / 3.8).clamp(7.0, 12.0);
+        // Always leave space for cage sum area (uniform layout)
+        final topPadding = minDimension * 0.30;
 
         return Padding(
           padding:
@@ -115,13 +124,15 @@ class KillerSudokuCell extends StatelessWidget {
                     int num = rowIndex * 3 + colIndex + 1;
                     bool hasNote = notes.contains(num);
                     return Expanded(
-                      child: Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
                         child: Text(
                           hasNote ? num.toString() : '',
                           style: TextStyle(
                             fontSize: fontSize,
-                            color: Colors.grey.shade800,
-                            fontWeight: FontWeight.bold,
+                            color: Colors.blueGrey.shade600,
+                            fontWeight: FontWeight.w600,
+                            height: 1.0,
                           ),
                         ),
                       ),
