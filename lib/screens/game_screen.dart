@@ -22,7 +22,7 @@ class GameScreen extends StatefulWidget {
   State<GameScreen> createState() => _GameScreenState();
 }
 
-class _GameScreenState extends State<GameScreen> {
+class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   late GameState _gameState;
   late Difficulty _selectedDifficulty;
   bool _isLoading = true;
@@ -42,6 +42,7 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     if (widget.savedGameState != null) {
       // 저장된 게임 불러오기
       _gameState = widget.savedGameState!;
@@ -57,8 +58,22 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // 앱이 백그라운드로 갈 때 자동 일시정지
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      if (!_isPaused && !_isLoading && !_gameState.isCompleted) {
+        setState(() {
+          _isPaused = true;
+        });
+      }
+    }
   }
 
   void _startTimer() {
