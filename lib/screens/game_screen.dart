@@ -183,18 +183,6 @@ class _GameScreenState extends State<GameScreen> {
     _saveGame();
   }
 
-  void _onQuickInputToggle() {
-    setState(() {
-      if (_gameState.isQuickInputMode) {
-        // 빠른 입력 모드 해제
-        _gameState = _gameState.copyWith(clearQuickInput: true);
-      } else {
-        // 빠른 입력 모드 진입 (기본값 1)
-        _gameState = _gameState.copyWith(quickInputNumber: 1);
-      }
-    });
-  }
-
   void _onErase() {
     if (!_gameState.hasSelection) return;
 
