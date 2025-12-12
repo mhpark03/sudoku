@@ -372,6 +372,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   void _showCompletionDialog() {
     String timeStr = _formatTime(_elapsedSeconds);
+    // 완료된 게임 삭제
+    GameStorage.deleteRegularGame();
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -390,10 +392,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
-              _startNewGame();
+              Navigator.pop(context); // 팝업 닫기
+              Navigator.pop(context); // 홈 화면으로 이동
             },
-            child: const Text('새 게임'),
+            child: const Text('확인'),
           ),
         ],
       ),

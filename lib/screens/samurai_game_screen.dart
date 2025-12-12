@@ -211,8 +211,11 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen>
   }
 
   void _showCompletionDialog() {
+    // 완료된 게임 삭제
+    GameStorage.deleteSamuraiGame();
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: const Text('축하합니다! 🎉'),
         content: Column(
@@ -241,10 +244,10 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen>
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
-              _startNewGame();
+              Navigator.pop(context); // 팝업 닫기
+              Navigator.pop(context); // 홈 화면으로 이동
             },
-            child: const Text('새 게임'),
+            child: const Text('확인'),
           ),
         ],
       ),
