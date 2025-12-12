@@ -26,6 +26,10 @@ class _GameScreenState extends State<GameScreen> {
   bool _isLoading = true;
   final GlobalKey<GameControlPanelState> _controlPanelKey = GlobalKey();
 
+  // 빠른 입력 모드 상태 (하이라이트용)
+  bool _isQuickInputMode = false;
+  int? _quickInputNumber;
+
   @override
   void initState() {
     super.initState();
@@ -325,6 +329,12 @@ class _GameScreenState extends State<GameScreen> {
       onErase: _onErase,
       onHint: _showHint,
       onFillAllNotes: _onFillAllNotes,
+      onQuickInputModeChanged: (isQuickInput, number) {
+        setState(() {
+          _isQuickInputMode = isQuickInput;
+          _quickInputNumber = number;
+        });
+      },
       disabledNumbers: _gameState.getCompletedNumbers(),
       isCompact: isLandscape,
     );
@@ -383,6 +393,8 @@ class _GameScreenState extends State<GameScreen> {
                           child: SudokuBoard(
                             gameState: _gameState,
                             onCellTap: _onCellTap,
+                            isQuickInputMode: _isQuickInputMode,
+                            quickInputNumber: _quickInputNumber,
                           ),
                         ),
                       ),
@@ -399,6 +411,8 @@ class _GameScreenState extends State<GameScreen> {
                     SudokuBoard(
                       gameState: _gameState,
                       onCellTap: _onCellTap,
+                      isQuickInputMode: _isQuickInputMode,
+                      quickInputNumber: _quickInputNumber,
                     ),
                     const SizedBox(height: 20),
                     _buildControls(isLandscape: false),
