@@ -529,6 +529,34 @@ class LogicalSolver {
         }
       }
 
+      // 3. Pointing Pairs (각 보드별로 적용)
+      for (int b = 0; b < 5; b++) {
+        if (_applySamuraiPointingPairs(boards[b], allCandidates[b])) {
+          progress = true;
+        }
+      }
+
+      // 4. Box-Line Reduction (각 보드별로 적용)
+      for (int b = 0; b < 5; b++) {
+        if (_applySamuraiBoxLineReduction(boards[b], allCandidates[b])) {
+          progress = true;
+        }
+      }
+
+      // 5. Naked Pairs (각 보드별로 적용)
+      for (int b = 0; b < 5; b++) {
+        if (_applySamuraiNakedPairs(boards[b], allCandidates[b])) {
+          progress = true;
+        }
+      }
+
+      // 6. Hidden Pairs (각 보드별로 적용)
+      for (int b = 0; b < 5; b++) {
+        if (_applySamuraiHiddenPairs(boards[b], allCandidates[b])) {
+          progress = true;
+        }
+      }
+
       // 모순 검사
       for (int b = 0; b < 5; b++) {
         for (int row = 0; row < 9; row++) {
@@ -684,5 +712,332 @@ class LogicalSolver {
         candidates[boxRow + r][boxCol + c].remove(value);
       }
     }
+  }
+
+  /// 사무라이 스도쿠용 Pointing Pairs
+  static bool _applySamuraiPointingPairs(
+      List<List<int>> board, List<List<Set<int>>> candidates) {
+    bool changed = false;
+
+    for (int boxRow = 0; boxRow < 3; boxRow++) {
+      for (int boxCol = 0; boxCol < 3; boxCol++) {
+        for (int num = 1; num <= 9; num++) {
+          Set<int> rows = {};
+          Set<int> cols = {};
+          for (int r = 0; r < 3; r++) {
+            for (int c = 0; c < 3; c++) {
+              int row = boxRow * 3 + r;
+              int col = boxCol * 3 + c;
+              if (board[row][col] == 0 && candidates[row][col].contains(num)) {
+                rows.add(row);
+                cols.add(col);
+              }
+            }
+          }
+
+          if (rows.length == 1) {
+            int row = rows.first;
+            for (int c = 0; c < 9; c++) {
+              if (c ~/ 3 != boxCol) {
+                if (candidates[row][c].remove(num)) {
+                  changed = true;
+                }
+              }
+            }
+          }
+
+          if (cols.length == 1) {
+            int col = cols.first;
+            for (int r = 0; r < 9; r++) {
+              if (r ~/ 3 != boxRow) {
+                if (candidates[r][col].remove(num)) {
+                  changed = true;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return changed;
+  }
+
+  /// 사무라이 스도쿠용 Box-Line Reduction
+  static bool _applySamuraiBoxLineReduction(
+      List<List<int>> board, List<List<Set<int>>> candidates) {
+    bool changed = false;
+
+    // 행 검사
+    for (int row = 0; row < 9; row++) {
+      for (int num = 1; num <= 9; num++) {
+        Set<int> boxes = {};
+        List<int> positions = [];
+        for (int col = 0; col < 9; col++) {
+          if (board[row][col] == 0 && candidates[row][col].contains(num)) {
+            boxes.add(col ~/ 3);
+            positions.add(col);
+          }
+        }
+
+        if (boxes.length == 1 && positions.isNotEmpty) {
+          int boxCol = boxes.first;
+          int boxRow = row ~/ 3;
+          for (int r = boxRow * 3; r < boxRow * 3 + 3; r++) {
+            if (r != row) {
+              for (int c = boxCol * 3; c < boxCol * 3 + 3; c++) {
+                if (candidates[r][c].remove(num)) {
+                  changed = true;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 열 검사
+    for (int col = 0; col < 9; col++) {
+      for (int num = 1; num <= 9; num++) {
+        Set<int> boxes = {};
+        List<int> positions = [];
+        for (int row = 0; row < 9; row++) {
+          if (board[row][col] == 0 && candidates[row][col].contains(num)) {
+            boxes.add(row ~/ 3);
+            positions.add(row);
+          }
+        }
+
+        if (boxes.length == 1 && positions.isNotEmpty) {
+          int boxRow = boxes.first;
+          int boxCol = col ~/ 3;
+          for (int c = boxCol * 3; c < boxCol * 3 + 3; c++) {
+            if (c != col) {
+              for (int r = boxRow * 3; r < boxRow * 3 + 3; r++) {
+                if (candidates[r][c].remove(num)) {
+                  changed = true;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return changed;
+  }
+
+  /// 사무라이 스도쿠용 Naked Pairs
+  static bool _applySamuraiNakedPairs(
+      List<List<int>> board, List<List<Set<int>>> candidates) {
+    bool changed = false;
+
+    // 행에서 Naked Pairs
+    for (int row = 0; row < 9; row++) {
+      List<int> pairCells = [];
+      for (int col = 0; col < 9; col++) {
+        if (board[row][col] == 0 && candidates[row][col].length == 2) {
+          pairCells.add(col);
+        }
+      }
+
+      for (int i = 0; i < pairCells.length; i++) {
+        for (int j = i + 1; j < pairCells.length; j++) {
+          int col1 = pairCells[i];
+          int col2 = pairCells[j];
+          if (candidates[row][col1].containsAll(candidates[row][col2]) &&
+              candidates[row][col2].containsAll(candidates[row][col1])) {
+            Set<int> pair = candidates[row][col1];
+            for (int c = 0; c < 9; c++) {
+              if (c != col1 && c != col2 && board[row][c] == 0) {
+                for (int num in pair) {
+                  if (candidates[row][c].remove(num)) {
+                    changed = true;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 열에서 Naked Pairs
+    for (int col = 0; col < 9; col++) {
+      List<int> pairCells = [];
+      for (int row = 0; row < 9; row++) {
+        if (board[row][col] == 0 && candidates[row][col].length == 2) {
+          pairCells.add(row);
+        }
+      }
+
+      for (int i = 0; i < pairCells.length; i++) {
+        for (int j = i + 1; j < pairCells.length; j++) {
+          int row1 = pairCells[i];
+          int row2 = pairCells[j];
+          if (candidates[row1][col].containsAll(candidates[row2][col]) &&
+              candidates[row2][col].containsAll(candidates[row1][col])) {
+            Set<int> pair = candidates[row1][col];
+            for (int r = 0; r < 9; r++) {
+              if (r != row1 && r != row2 && board[r][col] == 0) {
+                for (int num in pair) {
+                  if (candidates[r][col].remove(num)) {
+                    changed = true;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 박스에서 Naked Pairs
+    for (int boxRow = 0; boxRow < 3; boxRow++) {
+      for (int boxCol = 0; boxCol < 3; boxCol++) {
+        List<List<int>> pairCells = [];
+        for (int r = 0; r < 3; r++) {
+          for (int c = 0; c < 3; c++) {
+            int row = boxRow * 3 + r;
+            int col = boxCol * 3 + c;
+            if (board[row][col] == 0 && candidates[row][col].length == 2) {
+              pairCells.add([row, col]);
+            }
+          }
+        }
+
+        for (int i = 0; i < pairCells.length; i++) {
+          for (int j = i + 1; j < pairCells.length; j++) {
+            int row1 = pairCells[i][0], col1 = pairCells[i][1];
+            int row2 = pairCells[j][0], col2 = pairCells[j][1];
+            if (candidates[row1][col1].containsAll(candidates[row2][col2]) &&
+                candidates[row2][col2].containsAll(candidates[row1][col1])) {
+              Set<int> pair = candidates[row1][col1];
+              for (int r = 0; r < 3; r++) {
+                for (int c = 0; c < 3; c++) {
+                  int row = boxRow * 3 + r;
+                  int col = boxCol * 3 + c;
+                  if ((row != row1 || col != col1) &&
+                      (row != row2 || col != col2) &&
+                      board[row][col] == 0) {
+                    for (int num in pair) {
+                      if (candidates[row][col].remove(num)) {
+                        changed = true;
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return changed;
+  }
+
+  /// 사무라이 스도쿠용 Hidden Pairs
+  static bool _applySamuraiHiddenPairs(
+      List<List<int>> board, List<List<Set<int>>> candidates) {
+    bool changed = false;
+
+    // 행에서 Hidden Pairs
+    for (int row = 0; row < 9; row++) {
+      for (int num1 = 1; num1 <= 8; num1++) {
+        for (int num2 = num1 + 1; num2 <= 9; num2++) {
+          List<int> positions = [];
+          for (int col = 0; col < 9; col++) {
+            if (board[row][col] == 0 &&
+                (candidates[row][col].contains(num1) ||
+                    candidates[row][col].contains(num2))) {
+              if (candidates[row][col].contains(num1) &&
+                  candidates[row][col].contains(num2)) {
+                positions.add(col);
+              } else {
+                positions.clear();
+                break;
+              }
+            }
+          }
+          if (positions.length == 2) {
+            for (int col in positions) {
+              if (candidates[row][col].length > 2) {
+                candidates[row][col] = {num1, num2};
+                changed = true;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 열에서 Hidden Pairs
+    for (int col = 0; col < 9; col++) {
+      for (int num1 = 1; num1 <= 8; num1++) {
+        for (int num2 = num1 + 1; num2 <= 9; num2++) {
+          List<int> positions = [];
+          for (int row = 0; row < 9; row++) {
+            if (board[row][col] == 0 &&
+                (candidates[row][col].contains(num1) ||
+                    candidates[row][col].contains(num2))) {
+              if (candidates[row][col].contains(num1) &&
+                  candidates[row][col].contains(num2)) {
+                positions.add(row);
+              } else {
+                positions.clear();
+                break;
+              }
+            }
+          }
+          if (positions.length == 2) {
+            for (int row in positions) {
+              if (candidates[row][col].length > 2) {
+                candidates[row][col] = {num1, num2};
+                changed = true;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 박스에서 Hidden Pairs
+    for (int boxRow = 0; boxRow < 3; boxRow++) {
+      for (int boxCol = 0; boxCol < 3; boxCol++) {
+        for (int num1 = 1; num1 <= 8; num1++) {
+          for (int num2 = num1 + 1; num2 <= 9; num2++) {
+            List<List<int>> positions = [];
+            bool valid = true;
+            for (int r = 0; r < 3 && valid; r++) {
+              for (int c = 0; c < 3 && valid; c++) {
+                int row = boxRow * 3 + r;
+                int col = boxCol * 3 + c;
+                if (board[row][col] == 0 &&
+                    (candidates[row][col].contains(num1) ||
+                        candidates[row][col].contains(num2))) {
+                  if (candidates[row][col].contains(num1) &&
+                      candidates[row][col].contains(num2)) {
+                    positions.add([row, col]);
+                  } else {
+                    valid = false;
+                  }
+                }
+              }
+            }
+            if (valid && positions.length == 2) {
+              for (var pos in positions) {
+                if (candidates[pos[0]][pos[1]].length > 2) {
+                  candidates[pos[0]][pos[1]] = {num1, num2};
+                  changed = true;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return changed;
   }
 }
