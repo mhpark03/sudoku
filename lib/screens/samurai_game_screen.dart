@@ -99,9 +99,10 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen> {
           onValueChanged: (b, r, c, value) {
             _gameState.currentBoards[b][r][c] = value;
             _gameState.syncOverlapValue(b, r, c, value);
-            // 값 입력 시 해당 셀의 메모 삭제
+            // 값 입력 시 해당 셀의 메모 삭제 및 관련 셀의 메모에서 숫자 제거
             if (value != 0) {
               _gameState.clearNotes(b, r, c);
+              _gameState.removeNumberFromAllRelatedNotes(b, r, c, value);
             }
           },
           onHint: (b, r, c) {
@@ -109,6 +110,7 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen> {
             _gameState.currentBoards[b][r][c] = correctValue;
             _gameState.syncOverlapValue(b, r, c, correctValue);
             _gameState.clearNotes(b, r, c);
+            _gameState.removeNumberFromAllRelatedNotes(b, r, c, correctValue);
           },
           onNoteToggle: (b, r, c, number) {
             _gameState.toggleNote(b, r, c, number);
