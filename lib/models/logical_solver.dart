@@ -557,6 +557,27 @@ class LogicalSolver {
         }
       }
 
+      // 7. Naked Triples (각 보드별로 적용)
+      for (int b = 0; b < 5; b++) {
+        if (_applySamuraiNakedTriples(boards[b], allCandidates[b])) {
+          progress = true;
+        }
+      }
+
+      // 8. X-Wing (각 보드별로 적용)
+      for (int b = 0; b < 5; b++) {
+        if (_applySamuraiXWing(boards[b], allCandidates[b])) {
+          progress = true;
+        }
+      }
+
+      // 9. Swordfish (각 보드별로 적용)
+      for (int b = 0; b < 5; b++) {
+        if (_applySamuraiSwordfish(boards[b], allCandidates[b])) {
+          progress = true;
+        }
+      }
+
       // 모순 검사
       for (int b = 0; b < 5; b++) {
         for (int row = 0; row < 9; row++) {
@@ -1030,6 +1051,312 @@ class LogicalSolver {
                 if (candidates[pos[0]][pos[1]].length > 2) {
                   candidates[pos[0]][pos[1]] = {num1, num2};
                   changed = true;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return changed;
+  }
+
+  /// 사무라이 스도쿠용 Naked Triples
+  static bool _applySamuraiNakedTriples(
+      List<List<int>> board, List<List<Set<int>>> candidates) {
+    bool changed = false;
+
+    // 행에서 Naked Triples
+    for (int row = 0; row < 9; row++) {
+      List<int> tripleCells = [];
+      for (int col = 0; col < 9; col++) {
+        if (board[row][col] == 0 &&
+            candidates[row][col].length >= 2 &&
+            candidates[row][col].length <= 3) {
+          tripleCells.add(col);
+        }
+      }
+
+      for (int i = 0; i < tripleCells.length; i++) {
+        for (int j = i + 1; j < tripleCells.length; j++) {
+          for (int k = j + 1; k < tripleCells.length; k++) {
+            int col1 = tripleCells[i];
+            int col2 = tripleCells[j];
+            int col3 = tripleCells[k];
+            Set<int> union = {...candidates[row][col1], ...candidates[row][col2], ...candidates[row][col3]};
+            if (union.length == 3) {
+              for (int c = 0; c < 9; c++) {
+                if (c != col1 && c != col2 && c != col3 && board[row][c] == 0) {
+                  for (int num in union) {
+                    if (candidates[row][c].remove(num)) {
+                      changed = true;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 열에서 Naked Triples
+    for (int col = 0; col < 9; col++) {
+      List<int> tripleCells = [];
+      for (int row = 0; row < 9; row++) {
+        if (board[row][col] == 0 &&
+            candidates[row][col].length >= 2 &&
+            candidates[row][col].length <= 3) {
+          tripleCells.add(row);
+        }
+      }
+
+      for (int i = 0; i < tripleCells.length; i++) {
+        for (int j = i + 1; j < tripleCells.length; j++) {
+          for (int k = j + 1; k < tripleCells.length; k++) {
+            int row1 = tripleCells[i];
+            int row2 = tripleCells[j];
+            int row3 = tripleCells[k];
+            Set<int> union = {...candidates[row1][col], ...candidates[row2][col], ...candidates[row3][col]};
+            if (union.length == 3) {
+              for (int r = 0; r < 9; r++) {
+                if (r != row1 && r != row2 && r != row3 && board[r][col] == 0) {
+                  for (int num in union) {
+                    if (candidates[r][col].remove(num)) {
+                      changed = true;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 박스에서 Naked Triples
+    for (int boxRow = 0; boxRow < 3; boxRow++) {
+      for (int boxCol = 0; boxCol < 3; boxCol++) {
+        List<List<int>> tripleCells = [];
+        for (int r = 0; r < 3; r++) {
+          for (int c = 0; c < 3; c++) {
+            int row = boxRow * 3 + r;
+            int col = boxCol * 3 + c;
+            if (board[row][col] == 0 &&
+                candidates[row][col].length >= 2 &&
+                candidates[row][col].length <= 3) {
+              tripleCells.add([row, col]);
+            }
+          }
+        }
+
+        for (int i = 0; i < tripleCells.length; i++) {
+          for (int j = i + 1; j < tripleCells.length; j++) {
+            for (int k = j + 1; k < tripleCells.length; k++) {
+              var c1 = tripleCells[i], c2 = tripleCells[j], c3 = tripleCells[k];
+              Set<int> union = {
+                ...candidates[c1[0]][c1[1]],
+                ...candidates[c2[0]][c2[1]],
+                ...candidates[c3[0]][c3[1]]
+              };
+              if (union.length == 3) {
+                for (int r = 0; r < 3; r++) {
+                  for (int c = 0; c < 3; c++) {
+                    int row = boxRow * 3 + r;
+                    int col = boxCol * 3 + c;
+                    if ((row != c1[0] || col != c1[1]) &&
+                        (row != c2[0] || col != c2[1]) &&
+                        (row != c3[0] || col != c3[1]) &&
+                        board[row][col] == 0) {
+                      for (int num in union) {
+                        if (candidates[row][col].remove(num)) {
+                          changed = true;
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return changed;
+  }
+
+  /// 사무라이 스도쿠용 X-Wing
+  /// 두 행에서 특정 숫자가 같은 두 열에만 있으면, 그 두 열의 다른 행에서 제거
+  static bool _applySamuraiXWing(
+      List<List<int>> board, List<List<Set<int>>> candidates) {
+    bool changed = false;
+
+    // 행 기반 X-Wing
+    for (int num = 1; num <= 9; num++) {
+      List<List<int>> rowsWithTwoCols = [];
+      for (int row = 0; row < 9; row++) {
+        List<int> cols = [];
+        for (int col = 0; col < 9; col++) {
+          if (board[row][col] == 0 && candidates[row][col].contains(num)) {
+            cols.add(col);
+          }
+        }
+        if (cols.length == 2) {
+          rowsWithTwoCols.add([row, cols[0], cols[1]]);
+        }
+      }
+
+      for (int i = 0; i < rowsWithTwoCols.length; i++) {
+        for (int j = i + 1; j < rowsWithTwoCols.length; j++) {
+          if (rowsWithTwoCols[i][1] == rowsWithTwoCols[j][1] &&
+              rowsWithTwoCols[i][2] == rowsWithTwoCols[j][2]) {
+            int row1 = rowsWithTwoCols[i][0];
+            int row2 = rowsWithTwoCols[j][0];
+            int col1 = rowsWithTwoCols[i][1];
+            int col2 = rowsWithTwoCols[i][2];
+
+            for (int r = 0; r < 9; r++) {
+              if (r != row1 && r != row2) {
+                if (candidates[r][col1].remove(num)) changed = true;
+                if (candidates[r][col2].remove(num)) changed = true;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 열 기반 X-Wing
+    for (int num = 1; num <= 9; num++) {
+      List<List<int>> colsWithTwoRows = [];
+      for (int col = 0; col < 9; col++) {
+        List<int> rows = [];
+        for (int row = 0; row < 9; row++) {
+          if (board[row][col] == 0 && candidates[row][col].contains(num)) {
+            rows.add(row);
+          }
+        }
+        if (rows.length == 2) {
+          colsWithTwoRows.add([col, rows[0], rows[1]]);
+        }
+      }
+
+      for (int i = 0; i < colsWithTwoRows.length; i++) {
+        for (int j = i + 1; j < colsWithTwoRows.length; j++) {
+          if (colsWithTwoRows[i][1] == colsWithTwoRows[j][1] &&
+              colsWithTwoRows[i][2] == colsWithTwoRows[j][2]) {
+            int col1 = colsWithTwoRows[i][0];
+            int col2 = colsWithTwoRows[j][0];
+            int row1 = colsWithTwoRows[i][1];
+            int row2 = colsWithTwoRows[i][2];
+
+            for (int c = 0; c < 9; c++) {
+              if (c != col1 && c != col2) {
+                if (candidates[row1][c].remove(num)) changed = true;
+                if (candidates[row2][c].remove(num)) changed = true;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return changed;
+  }
+
+  /// 사무라이 스도쿠용 Swordfish (X-Wing의 3행/3열 확장)
+  static bool _applySamuraiSwordfish(
+      List<List<int>> board, List<List<Set<int>>> candidates) {
+    bool changed = false;
+
+    // 행 기반 Swordfish
+    for (int num = 1; num <= 9; num++) {
+      List<List<int>> rowsWithCols = [];
+      for (int row = 0; row < 9; row++) {
+        List<int> cols = [];
+        for (int col = 0; col < 9; col++) {
+          if (board[row][col] == 0 && candidates[row][col].contains(num)) {
+            cols.add(col);
+          }
+        }
+        if (cols.length >= 2 && cols.length <= 3) {
+          rowsWithCols.add([row, ...cols]);
+        }
+      }
+
+      for (int i = 0; i < rowsWithCols.length; i++) {
+        for (int j = i + 1; j < rowsWithCols.length; j++) {
+          for (int k = j + 1; k < rowsWithCols.length; k++) {
+            Set<int> allCols = {};
+            for (int idx = 1; idx < rowsWithCols[i].length; idx++) {
+              allCols.add(rowsWithCols[i][idx]);
+            }
+            for (int idx = 1; idx < rowsWithCols[j].length; idx++) {
+              allCols.add(rowsWithCols[j][idx]);
+            }
+            for (int idx = 1; idx < rowsWithCols[k].length; idx++) {
+              allCols.add(rowsWithCols[k][idx]);
+            }
+
+            if (allCols.length == 3) {
+              int row1 = rowsWithCols[i][0];
+              int row2 = rowsWithCols[j][0];
+              int row3 = rowsWithCols[k][0];
+
+              for (int r = 0; r < 9; r++) {
+                if (r != row1 && r != row2 && r != row3) {
+                  for (int col in allCols) {
+                    if (candidates[r][col].remove(num)) changed = true;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 열 기반 Swordfish
+    for (int num = 1; num <= 9; num++) {
+      List<List<int>> colsWithRows = [];
+      for (int col = 0; col < 9; col++) {
+        List<int> rows = [];
+        for (int row = 0; row < 9; row++) {
+          if (board[row][col] == 0 && candidates[row][col].contains(num)) {
+            rows.add(row);
+          }
+        }
+        if (rows.length >= 2 && rows.length <= 3) {
+          colsWithRows.add([col, ...rows]);
+        }
+      }
+
+      for (int i = 0; i < colsWithRows.length; i++) {
+        for (int j = i + 1; j < colsWithRows.length; j++) {
+          for (int k = j + 1; k < colsWithRows.length; k++) {
+            Set<int> allRows = {};
+            for (int idx = 1; idx < colsWithRows[i].length; idx++) {
+              allRows.add(colsWithRows[i][idx]);
+            }
+            for (int idx = 1; idx < colsWithRows[j].length; idx++) {
+              allRows.add(colsWithRows[j][idx]);
+            }
+            for (int idx = 1; idx < colsWithRows[k].length; idx++) {
+              allRows.add(colsWithRows[k][idx]);
+            }
+
+            if (allRows.length == 3) {
+              int col1 = colsWithRows[i][0];
+              int col2 = colsWithRows[j][0];
+              int col3 = colsWithRows[k][0];
+
+              for (int c = 0; c < 9; c++) {
+                if (c != col1 && c != col2 && c != col3) {
+                  for (int row in allRows) {
+                    if (candidates[row][c].remove(num)) changed = true;
+                  }
                 }
               }
             }
