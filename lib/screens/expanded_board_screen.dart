@@ -60,6 +60,7 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
   // 로컬 타이머 (부모의 시간을 업데이트하기 위함)
   Timer? _timer;
   late int _localElapsedSeconds;
+  late int _localFailureCount;
 
   @override
   void initState() {
@@ -67,6 +68,7 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
     selectedRow = widget.initialRow;
     selectedCol = widget.initialCol;
     _localElapsedSeconds = widget.elapsedSeconds;
+    _localFailureCount = widget.failureCount;
     _startTimer();
   }
 
@@ -161,7 +163,7 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
           // 게임 상태 표시 바
           GameStatusBar(
             elapsedSeconds: _localElapsedSeconds,
-            failureCount: widget.failureCount,
+            failureCount: _localFailureCount,
             isPaused: widget.isPaused,
             onPauseToggle: widget.onPauseToggle,
           ),
@@ -249,7 +251,7 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
                 // 게임 상태 표시 바 (컴팩트)
                 GameStatusBar(
                   elapsedSeconds: _localElapsedSeconds,
-                  failureCount: widget.failureCount,
+                  failureCount: _localFailureCount,
                   isPaused: widget.isPaused,
                   onPauseToggle: widget.onPauseToggle,
                   isCompact: true,
@@ -478,8 +480,11 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
   }
 
   void _showFeedback(bool isCorrect) {
-    // 실패 시 부모에게 알림
+    // 실패 시 로컬 상태 업데이트 및 부모에게 알림
     if (!isCorrect) {
+      setState(() {
+        _localFailureCount++;
+      });
       widget.onFailure();
     }
 
