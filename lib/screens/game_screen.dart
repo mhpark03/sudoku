@@ -38,6 +38,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   int _elapsedSeconds = 0;
   int _failureCount = 0;
   bool _isPaused = false;
+  bool _isBackgrounded = false; // 백그라운드 상태 (타이머만 멈춤, 화면 표시 안함)
 
   @override
   void initState() {
@@ -68,21 +69,26 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // 앱이 백그라운드로 갈 때 자동 일시정지
+    // 앱이 백그라운드로 갈 때 타이머만 멈춤 (일시정지 화면 표시 안함)
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
-      if (!_isPaused && !_isLoading && !_gameState.isCompleted) {
+      if (!_isLoading && !_gameState.isCompleted) {
         setState(() {
-          _isPaused = true;
+          _isBackgrounded = true;
         });
       }
+    } else if (state == AppLifecycleState.resumed) {
+      // 앱이 포그라운드로 돌아오면 백그라운드 상태 해제
+      setState(() {
+        _isBackgrounded = false;
+      });
     }
   }
 
   void _startTimer() {
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!_isPaused && !_gameState.isCompleted) {
+      if (!_isPaused && !_isBackgrounded && !_gameState.isCompleted) {
         setState(() {
           _elapsedSeconds++;
         });

@@ -495,12 +495,33 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
     });
   }
 
+  /// 현재 보드의 모든 셀이 채워졌는지 확인
+  bool _isCurrentBoardFilled() {
+    final board = widget.gameState.currentBoards[widget.boardIndex];
+    for (int row = 0; row < 9; row++) {
+      for (int col = 0; col < 9; col++) {
+        if (board[row][col] == 0) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   void _checkCompletion() {
-    bool isComplete = SamuraiSudokuGenerator.areAllBoardsComplete(
-        widget.gameState.currentBoards);
-    if (isComplete) {
+    // 현재 보드가 모두 채워졌는지 확인
+    if (_isCurrentBoardFilled()) {
+      // 전체 게임이 완료되었는지 확인
+      bool isGameComplete = SamuraiSudokuGenerator.areAllBoardsComplete(
+          widget.gameState.currentBoards);
+
+      // 사무라이 화면으로 돌아가기
       Navigator.pop(context);
-      widget.onComplete?.call();
+
+      // 전체 게임이 완료되었으면 완료 팝업 표시
+      if (isGameComplete) {
+        widget.onComplete?.call();
+      }
     }
   }
 
