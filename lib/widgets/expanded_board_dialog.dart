@@ -555,7 +555,7 @@ class _ExpandedBoardDialogState extends State<ExpandedBoardDialog> {
             borderRadius: BorderRadius.circular(8),
           ),
         ),
-        child: const Icon(Icons.backspace, size: 20),
+        child: const Icon(Icons.cleaning_services, size: 20),
       ),
     );
   }

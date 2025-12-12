@@ -235,7 +235,7 @@ class GameControlPanelState extends State<GameControlPanel> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            _isEraseMode ? Icons.backspace_outlined : Icons.info_outline,
+            _isEraseMode ? Icons.cleaning_services : Icons.info_outline,
             size: 16,
             color: textColor,
           ),
@@ -279,7 +279,7 @@ class GameControlPanelState extends State<GameControlPanel> {
           onTap: widget.onFillAllNotes,
         ),
         _buildToggleButton(
-          icon: Icons.backspace_outlined,
+          icon: Icons.cleaning_services,
           label: '지우기',
           isActive: _isEraseMode,
           activeColor: Colors.red,
