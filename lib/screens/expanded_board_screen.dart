@@ -356,6 +356,8 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
         selectedCol != null &&
         value != 0 &&
         value == board[selectedRow!][selectedCol!];
+    // 오류 체크 (일반 스도쿠와 동일)
+    bool hasError = widget.gameState.hasError(widget.boardIndex, row, col);
 
     Color backgroundColor;
     if (isSelected) {
@@ -375,7 +377,15 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
       backgroundColor = Colors.white;
     }
 
-    Color textColor = Colors.black;
+    // 텍스트 색상: 오류는 빨간색, 고정 셀은 검은색, 입력 셀은 파란색
+    Color textColor;
+    if (hasError) {
+      textColor = Colors.red;
+    } else if (fixed) {
+      textColor = Colors.black;
+    } else {
+      textColor = Colors.blue.shade700;
+    }
 
     return GestureDetector(
       onTap: () => _onCellTap(row, col, fixed),
@@ -433,26 +443,27 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
             selectedRow = row;
             selectedCol = col;
           } else {
-            // 빠른 입력 모드만: 일반 숫자 입력
-            // 현재 보드를 복사하여 유효성 검사
-            final board = widget.gameState.currentBoards[widget.boardIndex];
-            final testBoard = board.map((r) => List<int>.from(r)).toList();
-            testBoard[row][col] = controlState.quickInputNumber!;
+            // 빠른 입력 모드만: 일반 숫자 입력 (일반 스도쿠와 동일하게 처리)
+            int number = controlState.quickInputNumber!;
+            int correctValue = widget.gameState.solutions[widget.boardIndex][row][col];
 
-            bool isValid = SamuraiSudokuGenerator.isValidMove(
-                testBoard, row, col, controlState.quickInputNumber!);
+            // 오답이면 실패 횟수 증가
+            if (number != correctValue) {
+              _localFailureCount++;
+              widget.onFailure();
+            }
 
-            if (isValid) {
-              widget.onValueChanged(
-                  widget.boardIndex, row, col, controlState.quickInputNumber!);
-              _showFeedback(true);
-              _checkCompletion();
+            // 같은 숫자면 지우고, 다른 숫자면 입력 (무조건 입력)
+            int currentValue = widget.gameState.currentBoards[widget.boardIndex][row][col];
+            if (currentValue == number) {
+              widget.onValueChanged(widget.boardIndex, row, col, 0);
             } else {
-              _showFeedback(false);
+              widget.onValueChanged(widget.boardIndex, row, col, number);
             }
 
             selectedRow = row;
             selectedCol = col;
+            _checkCompletion();
           }
         } else {
           selectedRow = row;
@@ -477,36 +488,6 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
       Navigator.pop(context);
       widget.onComplete?.call();
     }
-  }
-
-  void _showFeedback(bool isCorrect) {
-    // 실패 시 로컬 상태 업데이트 및 부모에게 알림
-    if (!isCorrect) {
-      setState(() {
-        _localFailureCount++;
-      });
-      widget.onFailure();
-    }
-
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(
-              isCorrect ? Icons.check_circle : Icons.cancel,
-              color: Colors.white,
-            ),
-            const SizedBox(width: 8),
-            Text(isCorrect ? '정답입니다!' : '틀렸습니다!'),
-          ],
-        ),
-        backgroundColor: isCorrect ? Colors.green : Colors.red,
-        duration: const Duration(milliseconds: 800),
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-      ),
-    );
   }
 
   Widget _buildNotesGrid(Set<int> cellNotes) {
@@ -594,21 +575,18 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
     if (isNoteMode) {
       widget.onNoteToggle(widget.boardIndex, selectedRow!, selectedCol!, number);
     } else {
-      // 유효성 검사
-      final board = widget.gameState.currentBoards[widget.boardIndex];
-      final testBoard = board.map((r) => List<int>.from(r)).toList();
-      testBoard[selectedRow!][selectedCol!] = number;
-
-      bool isValid = SamuraiSudokuGenerator.isValidMove(
-          testBoard, selectedRow!, selectedCol!, number);
-
-      if (isValid) {
-        widget.onValueChanged(widget.boardIndex, selectedRow!, selectedCol!, number);
-        _showFeedback(true);
-        _checkCompletion();
-      } else {
-        _showFeedback(false);
+      // 일반 입력 모드 - 정답 확인 (일반 스도쿠와 동일하게 처리)
+      int correctValue = widget.gameState.solutions[widget.boardIndex][selectedRow!][selectedCol!];
+      if (number != correctValue) {
+        setState(() {
+          _localFailureCount++;
+        });
+        widget.onFailure();
       }
+
+      // 무조건 값 입력
+      widget.onValueChanged(widget.boardIndex, selectedRow!, selectedCol!, number);
+      _checkCompletion();
     }
     setState(() {});
   }
