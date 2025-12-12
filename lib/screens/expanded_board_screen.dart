@@ -513,9 +513,6 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
           if (isValid) {
             widget.onValueChanged(
                 widget.boardIndex, row, col, quickInputNumber!);
-            // 모든 관련 보드의 메모에서 해당 숫자 삭제
-            widget.gameState.removeNumberFromAllRelatedNotes(
-                widget.boardIndex, row, col, quickInputNumber!);
             _showFeedback(true);
             _checkCompletion();
           } else {
@@ -677,11 +674,6 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
 
       if (isValid) {
         widget.onValueChanged(widget.boardIndex, selectedRow!, selectedCol!, number);
-
-        // 값이 입력되면 모든 관련 보드의 메모에서 해당 숫자 삭제
-        widget.gameState.removeNumberFromAllRelatedNotes(
-            widget.boardIndex, selectedRow!, selectedCol!, number);
-
         _showFeedback(true);
         _checkCompletion();
       } else {
