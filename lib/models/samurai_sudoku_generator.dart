@@ -99,6 +99,25 @@ class SamuraiSudokuGenerator {
           if (value < 1 || value > 9) return false; // 유효하지 않은 값
         }
       }
+
+      // 각 행에 1-9가 모두 있는지 확인
+      for (int row = 0; row < 9; row++) {
+        Set<int> rowNums = {};
+        for (int col = 0; col < 9; col++) {
+          rowNums.add(boards[b][row][col]);
+        }
+        if (rowNums.length != 9) return false; // 행에 중복이 있거나 누락
+      }
+
+      // 각 열에 1-9가 모두 있는지 확인
+      for (int col = 0; col < 9; col++) {
+        Set<int> colNums = {};
+        for (int row = 0; row < 9; row++) {
+          colNums.add(boards[b][row][col]);
+        }
+        if (colNums.length != 9) return false; // 열에 중복이 있거나 누락
+      }
+
       // 각 3x3 박스에 1-9가 모두 있는지 확인
       for (int boxRow = 0; boxRow < 3; boxRow++) {
         for (int boxCol = 0; boxCol < 3; boxCol++) {
@@ -112,6 +131,33 @@ class SamuraiSudokuGenerator {
         }
       }
     }
+
+    // 겹치는 영역 일관성 검증
+    // 보드 0 우하단 == 보드 2 좌상단
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 3; j++) {
+        if (boards[0][6 + i][6 + j] != boards[2][i][j]) return false;
+      }
+    }
+    // 보드 1 좌하단 == 보드 2 우상단
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 3; j++) {
+        if (boards[1][6 + i][j] != boards[2][i][6 + j]) return false;
+      }
+    }
+    // 보드 2 좌하단 == 보드 3 우상단
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 3; j++) {
+        if (boards[2][6 + i][j] != boards[3][i][6 + j]) return false;
+      }
+    }
+    // 보드 2 우하단 == 보드 4 좌상단
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 3; j++) {
+        if (boards[2][6 + i][6 + j] != boards[4][i][j]) return false;
+      }
+    }
+
     return true;
   }
 

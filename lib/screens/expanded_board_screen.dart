@@ -667,13 +667,26 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
     if (isNoteMode) {
       widget.onNoteToggle(widget.boardIndex, selectedRow!, selectedCol!, number);
     } else {
-      widget.onValueChanged(widget.boardIndex, selectedRow!, selectedCol!, number);
+      // 유효성 검사
+      final board = widget.gameState.currentBoards[widget.boardIndex];
+      final testBoard = board.map((r) => List<int>.from(r)).toList();
+      testBoard[selectedRow!][selectedCol!] = number;
 
-      // 값이 입력되면 모든 관련 보드의 메모에서 해당 숫자 삭제
-      widget.gameState.removeNumberFromAllRelatedNotes(
-          widget.boardIndex, selectedRow!, selectedCol!, number);
+      bool isValid = SamuraiSudokuGenerator.isValidMove(
+          testBoard, selectedRow!, selectedCol!, number);
 
-      _checkCompletion();
+      if (isValid) {
+        widget.onValueChanged(widget.boardIndex, selectedRow!, selectedCol!, number);
+
+        // 값이 입력되면 모든 관련 보드의 메모에서 해당 숫자 삭제
+        widget.gameState.removeNumberFromAllRelatedNotes(
+            widget.boardIndex, selectedRow!, selectedCol!, number);
+
+        _showFeedback(true);
+        _checkCompletion();
+      } else {
+        _showFeedback(false);
+      }
     }
     setState(() {});
   }
