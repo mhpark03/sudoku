@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/samurai_game_state.dart';
 import '../models/samurai_sudoku_generator.dart';
-import '../widgets/number_pad.dart';
+import '../widgets/game_control_panel.dart';
 
 class ExpandedBoardScreen extends StatefulWidget {
   final SamuraiGameState gameState;
@@ -77,8 +77,6 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          // 빠른 입력 모드 안내
-          if (isQuickInputMode) _buildQuickInputGuide(),
           // 9x9 보드
           Expanded(
             child: Center(
@@ -94,73 +92,19 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          // 기능 버튼들 (빠른, 메모, 모든 메모, 힌트)
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            alignment: WrapAlignment.center,
-            children: [
-              _buildToggleButton(
-                icon: Icons.flash_on,
-                label: '빠른',
-                isActive: isQuickInputMode,
-                activeColor: Colors.orange,
-                onTap: () {
-                  setState(() {
-                    isQuickInputMode = !isQuickInputMode;
-                    if (!isQuickInputMode) {
-                      quickInputNumber = null;
-                    }
-                    if (isQuickInputMode) {
-                      isNoteMode = false;
-                      // 빠른 입력 모드 진입 시 선택된 셀 해제
-                      selectedRow = null;
-                      selectedCol = null;
-                    }
-                  });
-                },
-              ),
-              _buildToggleButton(
-                icon: Icons.edit_note,
-                label: '메모',
-                isActive: isNoteMode,
-                activeColor: Colors.amber,
-                onTap: () {
-                  setState(() {
-                    isNoteMode = !isNoteMode;
-                    if (isNoteMode) {
-                      isQuickInputMode = false;
-                      quickInputNumber = null;
-                    }
-                  });
-                },
-              ),
-              _buildFeatureButton(
-                icon: Icons.grid_on,
-                label: '모든 메모',
-                onTap: () {
-                  setState(() {
-                    widget.gameState.fillAllNotes(widget.boardIndex);
-                  });
-                },
-              ),
-              _buildFeatureButton(
-                icon: Icons.lightbulb_outline,
-                label: '힌트',
-                onTap: _onHint,
-                color: Colors.deepOrange,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          // 숫자 패드
-          NumberPad(
+          // 공통 게임 컨트롤 패널
+          GameControlPanel(
             onNumberTap: _onNumberTap,
             onErase: _onErase,
-            isCompact: false,
-            quickInputNumber: isQuickInputMode ? quickInputNumber : null,
-            onQuickInputToggle: null, // AppBar에서 토글하므로 여기서는 null
+            onHint: _onHint,
+            onFillAllNotes: _onFillAllNotes,
+            onQuickInputToggle: _onQuickInputToggle,
+            onNoteModeToggle: _onNoteModeToggle,
+            isQuickInputMode: isQuickInputMode,
+            quickInputNumber: quickInputNumber,
+            isNoteMode: isNoteMode,
             disabledNumbers: widget.gameState.getCompletedNumbers(widget.boardIndex),
+            isCompact: false,
           ),
         ],
       ),
@@ -192,119 +136,21 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
             ),
           ),
           const SizedBox(width: 16),
-          // 컨트롤
+          // 공통 게임 컨트롤 패널
           Expanded(
             flex: 1,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // 빠른 입력 모드 안내
-                  if (isQuickInputMode) _buildQuickInputGuide(),
-                  const SizedBox(height: 8),
-                  // 기능 버튼들 (빠른, 메모, 모든 메모, 힌트)
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    alignment: WrapAlignment.center,
-                    children: [
-                      _buildToggleButton(
-                        icon: Icons.flash_on,
-                        label: '빠른',
-                        isActive: isQuickInputMode,
-                        activeColor: Colors.orange,
-                        compact: true,
-                        onTap: () {
-                          setState(() {
-                            isQuickInputMode = !isQuickInputMode;
-                            if (!isQuickInputMode) {
-                              quickInputNumber = null;
-                            }
-                            if (isQuickInputMode) {
-                              isNoteMode = false;
-                              // 빠른 입력 모드 진입 시 선택된 셀 해제
-                              selectedRow = null;
-                              selectedCol = null;
-                            }
-                          });
-                        },
-                      ),
-                      _buildToggleButton(
-                        icon: Icons.edit_note,
-                        label: '메모',
-                        isActive: isNoteMode,
-                        activeColor: Colors.amber,
-                        compact: true,
-                        onTap: () {
-                          setState(() {
-                            isNoteMode = !isNoteMode;
-                            if (isNoteMode) {
-                              isQuickInputMode = false;
-                              quickInputNumber = null;
-                            }
-                          });
-                        },
-                      ),
-                      _buildFeatureButton(
-                        icon: Icons.grid_on,
-                        label: '모든 메모',
-                        onTap: () {
-                          setState(() {
-                            widget.gameState.fillAllNotes(widget.boardIndex);
-                          });
-                        },
-                        compact: true,
-                      ),
-                      _buildFeatureButton(
-                        icon: Icons.lightbulb_outline,
-                        label: '힌트',
-                        onTap: _onHint,
-                        color: Colors.deepOrange,
-                        compact: true,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  // 숫자 패드
-                  NumberPad(
-                    onNumberTap: _onNumberTap,
-                    onErase: _onErase,
-                    isCompact: true,
-                    quickInputNumber: isQuickInputMode ? quickInputNumber : null,
-                    onQuickInputToggle: null,
-                    disabledNumbers: widget.gameState.getCompletedNumbers(widget.boardIndex),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickInputGuide() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.orange.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.orange.shade200),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.info_outline, size: 16, color: Colors.orange.shade700),
-          const SizedBox(width: 6),
-          Text(
-            quickInputNumber != null
-                ? '숫자 $quickInputNumber 선택됨 - 셀을 탭하여 입력'
-                : '아래에서 숫자를 먼저 선택하세요',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.orange.shade700,
-              fontWeight: FontWeight.w500,
+            child: GameControlPanel(
+              onNumberTap: _onNumberTap,
+              onErase: _onErase,
+              onHint: _onHint,
+              onFillAllNotes: _onFillAllNotes,
+              onQuickInputToggle: _onQuickInputToggle,
+              onNoteModeToggle: _onNoteModeToggle,
+              isQuickInputMode: isQuickInputMode,
+              quickInputNumber: quickInputNumber,
+              isNoteMode: isNoteMode,
+              disabledNumbers: widget.gameState.getCompletedNumbers(widget.boardIndex),
+              isCompact: true,
             ),
           ),
         ],
@@ -342,85 +188,6 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
             ),
           );
         }),
-      ),
-    );
-  }
-
-  Widget _buildFeatureButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-    Color? color,
-    bool compact = false,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: compact ? 12 : 16,
-          vertical: compact ? 6 : 8,
-        ),
-        decoration: BoxDecoration(
-          color: (color ?? Colors.blue).withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: compact ? 16 : 18, color: color ?? Colors.blue),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                color: color ?? Colors.blue,
-                fontWeight: FontWeight.w500,
-                fontSize: compact ? 12 : 14,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildToggleButton({
-    required IconData icon,
-    required String label,
-    required bool isActive,
-    required Color activeColor,
-    required VoidCallback onTap,
-    bool compact = false,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: compact ? 12 : 16,
-          vertical: compact ? 6 : 8,
-        ),
-        decoration: BoxDecoration(
-          color: isActive ? activeColor : Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: compact ? 16 : 18,
-              color: isActive ? Colors.white : Colors.grey.shade600,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                color: isActive ? Colors.white : Colors.grey.shade600,
-                fontWeight: FontWeight.w500,
-                fontSize: compact ? 12 : 14,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -703,6 +470,37 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
       widget.gameState.clearNotes(widget.boardIndex, selectedRow!, selectedCol!);
     }
     setState(() {});
+  }
+
+  void _onFillAllNotes() {
+    setState(() {
+      widget.gameState.fillAllNotes(widget.boardIndex);
+    });
+  }
+
+  void _onQuickInputToggle() {
+    setState(() {
+      isQuickInputMode = !isQuickInputMode;
+      if (!isQuickInputMode) {
+        quickInputNumber = null;
+      }
+      if (isQuickInputMode) {
+        isNoteMode = false;
+        // 빠른 입력 모드 진입 시 선택된 셀 해제
+        selectedRow = null;
+        selectedCol = null;
+      }
+    });
+  }
+
+  void _onNoteModeToggle() {
+    setState(() {
+      isNoteMode = !isNoteMode;
+      if (isNoteMode) {
+        isQuickInputMode = false;
+        quickInputNumber = null;
+      }
+    });
   }
 
   void _onHint() {

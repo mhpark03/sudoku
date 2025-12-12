@@ -4,7 +4,7 @@ import '../models/game_state.dart';
 import '../models/sudoku_generator.dart';
 import '../services/game_storage.dart';
 import '../widgets/sudoku_board.dart';
-import '../widgets/number_pad.dart';
+import '../widgets/game_control_panel.dart';
 
 class GameScreen extends StatefulWidget {
   final Difficulty? initialDifficulty;
@@ -334,226 +334,45 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildControls({required bool isLandscape}) {
-    final quickInputGuide = _gameState.isQuickInputMode
-        ? Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.orange.shade50,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.orange.shade200),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.info_outline,
-                    size: 16, color: Colors.orange.shade700),
-                const SizedBox(width: 6),
-                Text(
-                  _gameState.quickInputNumber != null
-                      ? '숫자 ${_gameState.quickInputNumber} 선택됨 - 셀을 탭하여 입력'
-                      : '아래에서 숫자를 먼저 선택하세요',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.orange.shade700,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          )
-        : const SizedBox.shrink();
-
-    if (isLandscape) {
-      return SingleChildScrollView(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            quickInputGuide,
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              alignment: WrapAlignment.center,
-              children: [
-                _buildToggleButton(
-                  icon: Icons.flash_on,
-                  label: '빠른',
-                  isActive: _gameState.isQuickInputMode,
-                  activeColor: Colors.orange,
-                  onTap: () {
-                    setState(() {
-                      if (_gameState.isQuickInputMode) {
-                        _gameState = _gameState.copyWith(clearQuickInput: true);
-                      } else {
-                        _gameState = _gameState.copyWith(quickInputNumber: 1);
-                        _isNoteMode = false;
-                      }
-                    });
-                  },
-                  compact: true,
-                ),
-                _buildToggleButton(
-                  icon: Icons.edit_note,
-                  label: '메모',
-                  isActive: _isNoteMode,
-                  activeColor: Colors.amber,
-                  onTap: () {
-                    setState(() {
-                      _isNoteMode = !_isNoteMode;
-                      if (_isNoteMode && _gameState.isQuickInputMode) {
-                        _gameState = _gameState.copyWith(clearQuickInput: true);
-                      }
-                    });
-                  },
-                  compact: true,
-                ),
-                _buildControlButton(
-                  icon: Icons.grid_on,
-                  label: '모든 메모',
-                  color: Colors.blue,
-                  onTap: () {
-                    setState(() {
-                      _gameState.fillAllNotes();
-                    });
-                  },
-                  compact: true,
-                ),
-                _buildControlButton(
-                  icon: Icons.lightbulb,
-                  label: '힌트',
-                  color: Colors.deepOrange,
-                  onTap: _showHint,
-                  compact: true,
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            NumberPad(
-              onNumberTap: _onNumberTap,
-              onErase: _onErase,
-              isCompact: true,
-              quickInputNumber: _gameState.quickInputNumber,
-              onQuickInputToggle: null,
-              disabledNumbers: _gameState.getCompletedNumbers(),
-            ),
-          ],
-        ),
-      );
-    } else {
-      return Column(
-        children: [
-          quickInputGuide,
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            alignment: WrapAlignment.center,
-            children: [
-              _buildToggleButton(
-                icon: Icons.flash_on,
-                label: '빠른',
-                isActive: _gameState.isQuickInputMode,
-                activeColor: Colors.orange,
-                onTap: () {
-                  setState(() {
-                    if (_gameState.isQuickInputMode) {
-                      _gameState = _gameState.copyWith(clearQuickInput: true);
-                    } else {
-                      _gameState = _gameState.copyWith(quickInputNumber: 1);
-                      _isNoteMode = false;
-                    }
-                  });
-                },
-              ),
-              _buildToggleButton(
-                icon: Icons.edit_note,
-                label: '메모',
-                isActive: _isNoteMode,
-                activeColor: Colors.amber,
-                onTap: () {
-                  setState(() {
-                    _isNoteMode = !_isNoteMode;
-                    if (_isNoteMode && _gameState.isQuickInputMode) {
-                      _gameState = _gameState.copyWith(clearQuickInput: true);
-                    }
-                  });
-                },
-              ),
-              _buildControlButton(
-                icon: Icons.grid_on,
-                label: '모든 메모',
-                color: Colors.blue,
-                onTap: () {
-                  setState(() {
-                    _gameState.fillAllNotes();
-                  });
-                },
-              ),
-              _buildControlButton(
-                icon: Icons.lightbulb,
-                label: '힌트',
-                color: Colors.deepOrange,
-                onTap: _showHint,
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          NumberPad(
-            onNumberTap: _onNumberTap,
-            onErase: _onErase,
-            isCompact: false,
-            quickInputNumber: _gameState.quickInputNumber,
-            onQuickInputToggle: null,
-            disabledNumbers: _gameState.getCompletedNumbers(),
-          ),
-        ],
-      );
-    }
-  }
-
-  Widget _buildControlButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-    bool compact = false,
-  }) {
-    return ElevatedButton.icon(
-      onPressed: onTap,
-      icon: Icon(icon, size: compact ? 16 : 20),
-      label: Text(label, style: TextStyle(fontSize: compact ? 12 : 14)),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        foregroundColor: Colors.white,
-        padding: EdgeInsets.symmetric(
-          horizontal: compact ? 8 : 12,
-          vertical: compact ? 4 : 8,
-        ),
-      ),
+    return GameControlPanel(
+      onNumberTap: _onNumberTap,
+      onErase: _onErase,
+      onHint: _showHint,
+      onFillAllNotes: _onFillAllNotes,
+      onQuickInputToggle: _onQuickInputToggle,
+      onNoteModeToggle: _onNoteModeToggle,
+      isQuickInputMode: _gameState.isQuickInputMode,
+      quickInputNumber: _gameState.quickInputNumber,
+      isNoteMode: _isNoteMode,
+      disabledNumbers: _gameState.getCompletedNumbers(),
+      isCompact: isLandscape,
     );
   }
 
-  Widget _buildToggleButton({
-    required IconData icon,
-    required String label,
-    required bool isActive,
-    required Color activeColor,
-    required VoidCallback onTap,
-    bool compact = false,
-  }) {
-    return ElevatedButton.icon(
-      onPressed: onTap,
-      icon: Icon(icon, size: compact ? 16 : 20),
-      label: Text(label, style: TextStyle(fontSize: compact ? 12 : 14)),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: isActive ? activeColor : Colors.grey.shade400,
-        foregroundColor: Colors.white,
-        padding: EdgeInsets.symmetric(
-          horizontal: compact ? 8 : 12,
-          vertical: compact ? 4 : 8,
-        ),
-      ),
-    );
+  void _onFillAllNotes() {
+    setState(() {
+      _gameState.fillAllNotes();
+    });
+  }
+
+  void _onQuickInputToggle() {
+    setState(() {
+      if (_gameState.isQuickInputMode) {
+        _gameState = _gameState.copyWith(clearQuickInput: true);
+      } else {
+        _gameState = _gameState.copyWith(quickInputNumber: 1);
+        _isNoteMode = false;
+      }
+    });
+  }
+
+  void _onNoteModeToggle() {
+    setState(() {
+      _isNoteMode = !_isNoteMode;
+      if (_isNoteMode && _gameState.isQuickInputMode) {
+        _gameState = _gameState.copyWith(clearQuickInput: true);
+      }
+    });
   }
 
   @override
