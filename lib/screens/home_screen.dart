@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../models/game_state.dart';
 import '../models/samurai_game_state.dart';
+import '../models/killer_game_state.dart';
 import '../services/game_storage.dart';
 import 'game_screen.dart';
 import 'samurai_game_screen.dart';
+import 'killer_game_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,6 +17,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   bool _hasRegularSavedGame = false;
   bool _hasSamuraiSavedGame = false;
+  bool _hasKillerSavedGame = false;
 
   @override
   void initState() {
@@ -25,11 +28,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _checkSavedGames() async {
     final hasRegular = await GameStorage.hasRegularGame();
     final hasSamurai = await GameStorage.hasSamuraiGame();
+    final hasKiller = await GameStorage.hasKillerGame();
 
     if (mounted) {
       setState(() {
         _hasRegularSavedGame = hasRegular;
         _hasSamuraiSavedGame = hasSamurai;
+        _hasKillerSavedGame = hasKiller;
       });
     }
   }
@@ -81,6 +86,31 @@ class _HomeScreenState extends State<HomeScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => SamuraiGameScreen(initialDifficulty: SamuraiDifficulty.medium),
+      ),
+    );
+    _checkSavedGames();
+  }
+
+  /// 저장된 킬러 스도쿠 이어하기
+  void _continueKillerGame() async {
+    final savedGame = await GameStorage.loadKillerGame();
+    if (savedGame != null && mounted) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => KillerGameScreen(savedGameState: savedGame),
+        ),
+      );
+      _checkSavedGames();
+    }
+  }
+
+  /// 킬러 스도쿠 새 게임
+  void _startKillerGame() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => KillerGameScreen(initialDifficulty: KillerDifficulty.medium),
       ),
     );
     _checkSavedGames();
@@ -155,9 +185,43 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _showKillerDifficultyDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('난이도 선택'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildKillerDifficultyTile('쉬움', KillerDifficulty.easy),
+            _buildKillerDifficultyTile('보통', KillerDifficulty.medium),
+            _buildKillerDifficultyTile('어려움', KillerDifficulty.hard),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildKillerDifficultyTile(String label, KillerDifficulty difficulty) {
+    return ListTile(
+      title: Text(label),
+      leading: const Icon(Icons.play_arrow, color: Colors.deepOrange),
+      onTap: () async {
+        Navigator.pop(context);
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => KillerGameScreen(initialDifficulty: difficulty),
+          ),
+        );
+        _checkSavedGames();
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final hasSavedGame = _hasRegularSavedGame || _hasSamuraiSavedGame;
+    final hasSavedGame = _hasRegularSavedGame || _hasSamuraiSavedGame || _hasKillerSavedGame;
 
     return Scaffold(
       body: Container(
@@ -216,7 +280,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               color: Colors.green,
                               onTap: _continueRegularGame,
                             ),
-                          if (_hasRegularSavedGame && _hasSamuraiSavedGame)
+                          if (_hasRegularSavedGame && (_hasSamuraiSavedGame || _hasKillerSavedGame))
                             const SizedBox(height: 12),
                           if (_hasSamuraiSavedGame)
                             _buildContinueButton(
@@ -224,6 +288,15 @@ class _HomeScreenState extends State<HomeScreen> {
                               icon: Icons.apps,
                               color: Colors.deepPurple,
                               onTap: _continueSamuraiGame,
+                            ),
+                          if (_hasSamuraiSavedGame && _hasKillerSavedGame)
+                            const SizedBox(height: 12),
+                          if (_hasKillerSavedGame)
+                            _buildContinueButton(
+                              title: '킬러 스도쿠',
+                              icon: Icons.calculate,
+                              color: Colors.deepOrange,
+                              onTap: _continueKillerGame,
                             ),
                         ],
                       ),
@@ -258,6 +331,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     icon: Icons.grid_3x3,
                     color: Colors.green,
                     onTap: _showRegularDifficultyDialog,
+                  ),
+                  const SizedBox(height: 20),
+                  _buildGameButton(
+                    title: '킬러 스도쿠',
+                    subtitle: '케이지 합계를 이용한 스도쿠',
+                    icon: Icons.calculate,
+                    color: Colors.deepOrange,
+                    onTap: _showKillerDifficultyDialog,
                   ),
                   const SizedBox(height: 20),
                   _buildGameButton(
