@@ -147,6 +147,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       if (controlState.isEraseMode) {
         if (!_gameState.isFixed[row][col]) {
           if (_gameState.currentBoard[row][col] != 0) {
+            // Undo 히스토리에 저장
+            _gameState.saveToUndoHistory(row, col);
             // 값이 있으면 값 지우기
             List<List<int>> newBoard =
                 _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
@@ -156,9 +158,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               selectedRow: row,
               selectedCol: col,
             );
-          } else {
+          } else if (_gameState.notes[row][col].isNotEmpty) {
+            // Undo 히스토리에 저장
+            _gameState.saveToUndoHistory(row, col);
             // 값이 없으면 메모 지우기
             _gameState.clearNotes(row, col);
+            _gameState = _gameState.copyWith(selectedRow: row, selectedCol: col);
+          } else {
             _gameState = _gameState.copyWith(selectedRow: row, selectedCol: col);
           }
         } else {
@@ -172,6 +178,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           // 빠른 입력 + 메모 모드: 메모로 입력
           if (controlState.isNoteMode) {
             if (_gameState.currentBoard[row][col] == 0) {
+              // Undo 히스토리에 저장
+              _gameState.saveToUndoHistory(row, col);
               _gameState.toggleNote(row, col, controlState.quickInputNumber!);
               _gameState = _gameState.copyWith(selectedRow: row, selectedCol: col);
             }
@@ -190,8 +198,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
             // 같은 숫자면 지우고, 다른 숫자면 입력
             if (newBoard[row][col] == controlState.quickInputNumber) {
+              // Undo 히스토리에 저장 (지우기이므로 numberToInput 없음)
+              _gameState.saveToUndoHistory(row, col);
               newBoard[row][col] = 0;
             } else {
+              // Undo 히스토리에 저장 (숫자 입력이므로 numberToInput 전달)
+              _gameState.saveToUndoHistory(row, col, numberToInput: number);
               newBoard[row][col] = number;
 
               // 유효한 입력이면 같은 행/열/박스의 메모에서 해당 숫자 삭제
@@ -246,10 +258,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       // 메모 모드일 때
       if (isNoteMode) {
         if (_gameState.currentBoard[row][col] == 0) {
+          // Undo 히스토리에 저장
+          _gameState.saveToUndoHistory(row, col);
           _gameState.toggleNote(row, col, number);
         }
         return;
       }
+
+      // Undo 히스토리에 저장 (숫자 입력이므로 numberToInput 전달)
+      _gameState.saveToUndoHistory(row, col, numberToInput: number);
 
       // 일반 입력 모드 - 정답 확인
       int correctValue = _gameState.solution[row][col];
@@ -291,6 +308,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     int col = _gameState.selectedCol!;
 
     if (_gameState.isFixed[row][col]) return;
+
+    // 값이나 메모가 있을 때만 Undo 히스토리에 저장
+    if (_gameState.currentBoard[row][col] != 0 || _gameState.notes[row][col].isNotEmpty) {
+      _gameState.saveToUndoHistory(row, col);
+    }
 
     setState(() {
       List<List<int>> newBoard =
@@ -452,6 +474,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       key: _controlPanelKey,
       onNumberTap: _onNumberTap,
       onErase: _onErase,
+      onUndo: _onUndo,
+      canUndo: _gameState.canUndo,
       onHint: _showHint,
       onFillAllNotes: _onFillAllNotes,
       onQuickInputModeChanged: (isQuickInput, number) {
@@ -472,6 +496,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       disabledNumbers: _gameState.getCompletedNumbers(),
       isCompact: isLandscape,
     );
+  }
+
+  void _onUndo() {
+    if (_isPaused) return;
+
+    setState(() {
+      _gameState.undo();
+    });
+    _saveGame();
   }
 
   void _onFillAllNotes() {

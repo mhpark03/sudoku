@@ -190,6 +190,8 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
             key: _controlPanelKey,
             onNumberTap: _onNumberTap,
             onErase: _onErase,
+            onUndo: _onUndo,
+            canUndo: widget.gameState.canUndo,
             onHint: _onHint,
             onFillAllNotes: _onFillAllNotes,
             onQuickInputModeChanged: (isQuickInput, number) {
@@ -263,6 +265,8 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
                     key: _controlPanelKey,
                     onNumberTap: _onNumberTap,
                     onErase: _onErase,
+                    onUndo: _onUndo,
+                    canUndo: widget.gameState.canUndo,
                     onHint: _onHint,
                     onFillAllNotes: _onFillAllNotes,
                     onQuickInputModeChanged: (isQuickInput, number) {
@@ -422,9 +426,13 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
       if (controlState != null && controlState.isEraseMode) {
         if (!isFixed) {
           if (widget.gameState.currentBoards[widget.boardIndex][row][col] != 0) {
+            // Undo 히스토리에 저장
+            widget.gameState.saveToUndoHistory(widget.boardIndex, row, col);
             // 값이 있으면 값 지우기
             widget.onValueChanged(widget.boardIndex, row, col, 0);
-          } else {
+          } else if (widget.gameState.notes[widget.boardIndex][row][col].isNotEmpty) {
+            // Undo 히스토리에 저장
+            widget.gameState.saveToUndoHistory(widget.boardIndex, row, col);
             // 값이 없으면 메모 지우기
             widget.gameState.clearNotes(widget.boardIndex, row, col);
           }
@@ -438,6 +446,8 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
           // 빠른 입력 + 메모 모드: 메모로 입력
           if (controlState.isNoteMode) {
             if (widget.gameState.currentBoards[widget.boardIndex][row][col] == 0) {
+              // Undo 히스토리에 저장
+              widget.gameState.saveToUndoHistory(widget.boardIndex, row, col);
               widget.onNoteToggle(widget.boardIndex, row, col, controlState.quickInputNumber!);
             }
             selectedRow = row;
@@ -456,8 +466,12 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
             // 같은 숫자면 지우고, 다른 숫자면 입력 (무조건 입력)
             int currentValue = widget.gameState.currentBoards[widget.boardIndex][row][col];
             if (currentValue == number) {
+              // Undo 히스토리에 저장 (지우기이므로 numberToInput 없음)
+              widget.gameState.saveToUndoHistory(widget.boardIndex, row, col);
               widget.onValueChanged(widget.boardIndex, row, col, 0);
             } else {
+              // Undo 히스토리에 저장 (숫자 입력이므로 numberToInput 전달)
+              widget.gameState.saveToUndoHistory(widget.boardIndex, row, col, numberToInput: number);
               widget.onValueChanged(widget.boardIndex, row, col, number);
             }
 
@@ -573,8 +587,13 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
     }
 
     if (isNoteMode) {
+      // Undo 히스토리에 저장
+      widget.gameState.saveToUndoHistory(widget.boardIndex, selectedRow!, selectedCol!);
       widget.onNoteToggle(widget.boardIndex, selectedRow!, selectedCol!, number);
     } else {
+      // Undo 히스토리에 저장 (숫자 입력이므로 numberToInput 전달)
+      widget.gameState.saveToUndoHistory(widget.boardIndex, selectedRow!, selectedCol!, numberToInput: number);
+
       // 일반 입력 모드 - 정답 확인 (일반 스도쿠와 동일하게 처리)
       int correctValue = widget.gameState.solutions[widget.boardIndex][selectedRow!][selectedCol!];
       if (number != correctValue) {
@@ -607,6 +626,12 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
       return;
     }
 
+    // 값이나 메모가 있을 때만 Undo 히스토리에 저장
+    if (widget.gameState.currentBoards[widget.boardIndex][selectedRow!][selectedCol!] != 0 ||
+        widget.gameState.notes[widget.boardIndex][selectedRow!][selectedCol!].isNotEmpty) {
+      widget.gameState.saveToUndoHistory(widget.boardIndex, selectedRow!, selectedCol!);
+    }
+
     if (widget.gameState.currentBoards[widget.boardIndex][selectedRow!][selectedCol!] !=
         0) {
       widget.onValueChanged(widget.boardIndex, selectedRow!, selectedCol!, 0);
@@ -622,6 +647,15 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
 
     setState(() {
       widget.gameState.fillAllNotes(widget.boardIndex);
+    });
+  }
+
+  void _onUndo() {
+    // 일시정지 상태에서는 입력 차단
+    if (widget.isPaused) return;
+
+    setState(() {
+      widget.gameState.undo();
     });
   }
 

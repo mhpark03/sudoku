@@ -9,6 +9,12 @@ class GameControlPanel extends StatefulWidget {
   /// 지우기 콜백 (선택된 셀 지우기)
   final VoidCallback onErase;
 
+  /// 취소(Undo) 콜백
+  final VoidCallback onUndo;
+
+  /// 취소 가능 여부
+  final bool canUndo;
+
   /// 힌트 콜백
   final VoidCallback onHint;
 
@@ -40,6 +46,8 @@ class GameControlPanel extends StatefulWidget {
     super.key,
     required this.onNumberTap,
     required this.onErase,
+    required this.onUndo,
+    this.canUndo = false,
     required this.onHint,
     required this.onFillAllNotes,
     required this.disabledNumbers,
@@ -168,7 +176,8 @@ class GameControlPanelState extends State<GameControlPanel> {
             const SizedBox(height: 16),
             NumberPad(
               onNumberTap: _onNumberTap,
-              onErase: widget.onErase,
+              onUndo: widget.onUndo,
+              canUndo: widget.canUndo,
               isCompact: true,
               quickInputNumber: _isQuickInputMode ? _quickInputNumber : null,
               onQuickInputToggle: null,
@@ -186,7 +195,8 @@ class GameControlPanelState extends State<GameControlPanel> {
         const SizedBox(height: 16),
         NumberPad(
           onNumberTap: _onNumberTap,
-          onErase: widget.onErase,
+          onUndo: widget.onUndo,
+          canUndo: widget.canUndo,
           isCompact: false,
           quickInputNumber: _isQuickInputMode ? _quickInputNumber : null,
           onQuickInputToggle: null,

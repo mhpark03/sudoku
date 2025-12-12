@@ -32,6 +32,33 @@ Map<String, dynamic> generatePuzzleInIsolate(Difficulty difficulty) {
   };
 }
 
+/// Undo를 위한 동작 기록
+class UndoAction {
+  final int row;
+  final int col;
+  final int previousValue;
+  final Set<int> previousNotes;
+  // 영향받는 관련 셀들의 메모 상태 (행/열/박스 내 셀들)
+  final Map<String, Set<int>> affectedCellsNotes;
+
+  UndoAction({
+    required this.row,
+    required this.col,
+    required this.previousValue,
+    required this.previousNotes,
+    this.affectedCellsNotes = const {},
+  });
+
+  /// 셀 키 생성 (row_col 형식)
+  static String cellKey(int row, int col) => '${row}_$col';
+
+  /// 셀 키에서 row, col 추출
+  static (int, int) parseKey(String key) {
+    final parts = key.split('_');
+    return (int.parse(parts[0]), int.parse(parts[1]));
+  }
+}
+
 class GameState {
   final List<List<int>> solution;
   final List<List<int>> puzzle;
@@ -47,6 +74,9 @@ class GameState {
   // 게임 통계
   int elapsedSeconds;
   int failureCount;
+  // Undo 히스토리 (최대 10개)
+  final List<UndoAction> _undoHistory = [];
+  static const int maxUndoCount = 10;
 
   GameState({
     required this.solution,
@@ -179,6 +209,78 @@ class GameState {
   /// 셀의 메모 지우기
   void clearNotes(int row, int col) {
     notes[row][col].clear();
+  }
+
+  /// 현재 상태를 Undo 히스토리에 저장 (관련 셀 메모 포함)
+  void saveToUndoHistory(int row, int col, {int? numberToInput}) {
+    // 영향받는 관련 셀들의 메모 상태 저장
+    Map<String, Set<int>> affectedNotes = {};
+
+    // numberToInput이 주어진 경우, 해당 숫자가 영향을 미칠 관련 셀들의 메모 저장
+    if (numberToInput != null && numberToInput != 0) {
+      // 같은 행
+      for (int c = 0; c < 9; c++) {
+        if (c != col && notes[row][c].contains(numberToInput)) {
+          affectedNotes[UndoAction.cellKey(row, c)] = Set<int>.from(notes[row][c]);
+        }
+      }
+      // 같은 열
+      for (int r = 0; r < 9; r++) {
+        if (r != row && notes[r][col].contains(numberToInput)) {
+          affectedNotes[UndoAction.cellKey(r, col)] = Set<int>.from(notes[r][col]);
+        }
+      }
+      // 같은 3x3 박스
+      int boxRow = (row ~/ 3) * 3;
+      int boxCol = (col ~/ 3) * 3;
+      for (int r = boxRow; r < boxRow + 3; r++) {
+        for (int c = boxCol; c < boxCol + 3; c++) {
+          if ((r != row || c != col) && notes[r][c].contains(numberToInput)) {
+            affectedNotes[UndoAction.cellKey(r, c)] = Set<int>.from(notes[r][c]);
+          }
+        }
+      }
+    }
+
+    final action = UndoAction(
+      row: row,
+      col: col,
+      previousValue: currentBoard[row][col],
+      previousNotes: Set<int>.from(notes[row][col]),
+      affectedCellsNotes: affectedNotes,
+    );
+    _undoHistory.add(action);
+    // 최대 개수 초과 시 가장 오래된 것 제거
+    if (_undoHistory.length > maxUndoCount) {
+      _undoHistory.removeAt(0);
+    }
+  }
+
+  /// Undo 실행 - 이전 상태로 복원
+  bool undo() {
+    if (_undoHistory.isEmpty) return false;
+
+    final action = _undoHistory.removeLast();
+    currentBoard[action.row][action.col] = action.previousValue;
+    notes[action.row][action.col] = Set<int>.from(action.previousNotes);
+
+    // 영향받았던 관련 셀들의 메모도 복원
+    for (final entry in action.affectedCellsNotes.entries) {
+      final (r, c) = UndoAction.parseKey(entry.key);
+      notes[r][c] = Set<int>.from(entry.value);
+    }
+    return true;
+  }
+
+  /// Undo 가능 여부
+  bool get canUndo => _undoHistory.isNotEmpty;
+
+  /// Undo 히스토리 개수
+  int get undoCount => _undoHistory.length;
+
+  /// Undo 히스토리 초기화
+  void clearUndoHistory() {
+    _undoHistory.clear();
   }
 
   /// 모든 빈 셀에 메모 자동 채우기

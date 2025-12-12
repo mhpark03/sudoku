@@ -2,6 +2,35 @@ import 'samurai_sudoku_generator.dart';
 
 enum SamuraiDifficulty { easy, medium, hard, expert }
 
+/// Undo를 위한 동작 기록 (사무라이 스도쿠용)
+class SamuraiUndoAction {
+  final int board;
+  final int row;
+  final int col;
+  final int previousValue;
+  final Set<int> previousNotes;
+  // 영향받는 관련 셀들의 메모 상태 (board_row_col 형식)
+  final Map<String, Set<int>> affectedCellsNotes;
+
+  SamuraiUndoAction({
+    required this.board,
+    required this.row,
+    required this.col,
+    required this.previousValue,
+    required this.previousNotes,
+    this.affectedCellsNotes = const {},
+  });
+
+  /// 셀 키 생성 (board_row_col 형식)
+  static String cellKey(int board, int row, int col) => '${board}_${row}_$col';
+
+  /// 셀 키에서 board, row, col 추출
+  static (int, int, int) parseKey(String key) {
+    final parts = key.split('_');
+    return (int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
+  }
+}
+
 /// Isolate에서 실행할 퍼즐 생성 함수 (top-level 함수)
 Map<String, dynamic> generateSamuraiPuzzleInIsolate(SamuraiDifficulty difficulty) {
   final generator = SamuraiSudokuGenerator();
@@ -47,6 +76,9 @@ class SamuraiGameState {
   // 게임 통계
   int elapsedSeconds;
   int failureCount;
+  // Undo 히스토리 (최대 10개)
+  final List<SamuraiUndoAction> _undoHistory = [];
+  static const int maxUndoCount = 10;
 
   SamuraiGameState({
     required this.solutions,
@@ -311,6 +343,148 @@ class SamuraiGameState {
   void clearNotes(int board, int row, int col) {
     notes[board][row][col].clear();
     syncOverlapNotes(board, row, col, notes[board][row][col]);
+  }
+
+  /// 현재 상태를 Undo 히스토리에 저장 (관련 셀 메모 포함)
+  void saveToUndoHistory(int board, int row, int col, {int? numberToInput}) {
+    // 영향받는 관련 셀들의 메모 상태 저장
+    Map<String, Set<int>> affectedNotes = {};
+
+    // numberToInput이 주어진 경우, 해당 숫자가 영향을 미칠 관련 셀들의 메모 저장
+    if (numberToInput != null && numberToInput != 0) {
+      // 같은 행
+      for (int c = 0; c < 9; c++) {
+        if (c != col && notes[board][row][c].contains(numberToInput)) {
+          affectedNotes[SamuraiUndoAction.cellKey(board, row, c)] = Set<int>.from(notes[board][row][c]);
+        }
+      }
+      // 같은 열
+      for (int r = 0; r < 9; r++) {
+        if (r != row && notes[board][r][col].contains(numberToInput)) {
+          affectedNotes[SamuraiUndoAction.cellKey(board, r, col)] = Set<int>.from(notes[board][r][col]);
+        }
+      }
+      // 같은 3x3 박스
+      int boxRow = (row ~/ 3) * 3;
+      int boxCol = (col ~/ 3) * 3;
+      for (int r = boxRow; r < boxRow + 3; r++) {
+        for (int c = boxCol; c < boxCol + 3; c++) {
+          if ((r != row || c != col) && notes[board][r][c].contains(numberToInput)) {
+            affectedNotes[SamuraiUndoAction.cellKey(board, r, c)] = Set<int>.from(notes[board][r][c]);
+          }
+        }
+      }
+
+      // 겹치는 영역의 다른 보드에서도 영향받는 셀 저장
+      _saveOverlapAffectedNotes(board, row, col, numberToInput, affectedNotes);
+    }
+
+    final action = SamuraiUndoAction(
+      board: board,
+      row: row,
+      col: col,
+      previousValue: currentBoards[board][row][col],
+      previousNotes: Set<int>.from(notes[board][row][col]),
+      affectedCellsNotes: affectedNotes,
+    );
+    _undoHistory.add(action);
+    // 최대 개수 초과 시 가장 오래된 것 제거
+    if (_undoHistory.length > maxUndoCount) {
+      _undoHistory.removeAt(0);
+    }
+  }
+
+  /// 겹치는 영역의 다른 보드에서 영향받는 메모 저장
+  void _saveOverlapAffectedNotes(int board, int row, int col, int number, Map<String, Set<int>> affectedNotes) {
+    // 보드 0 우하단 <-> 보드 2 좌상단
+    if (board == 0 && row >= 6 && col >= 6) {
+      _saveAffectedNotesForBoard(2, row - 6, col - 6, number, affectedNotes);
+    } else if (board == 2 && row < 3 && col < 3) {
+      _saveAffectedNotesForBoard(0, row + 6, col + 6, number, affectedNotes);
+    }
+    // 보드 1 좌하단 <-> 보드 2 우상단
+    if (board == 1 && row >= 6 && col < 3) {
+      _saveAffectedNotesForBoard(2, row - 6, col + 6, number, affectedNotes);
+    } else if (board == 2 && row < 3 && col >= 6) {
+      _saveAffectedNotesForBoard(1, row + 6, col - 6, number, affectedNotes);
+    }
+    // 보드 2 좌하단 <-> 보드 3 우상단
+    if (board == 2 && row >= 6 && col < 3) {
+      _saveAffectedNotesForBoard(3, row - 6, col + 6, number, affectedNotes);
+    } else if (board == 3 && row < 3 && col >= 6) {
+      _saveAffectedNotesForBoard(2, row + 6, col - 6, number, affectedNotes);
+    }
+    // 보드 2 우하단 <-> 보드 4 좌상단
+    if (board == 2 && row >= 6 && col >= 6) {
+      _saveAffectedNotesForBoard(4, row - 6, col - 6, number, affectedNotes);
+    } else if (board == 4 && row < 3 && col < 3) {
+      _saveAffectedNotesForBoard(2, row + 6, col + 6, number, affectedNotes);
+    }
+  }
+
+  /// 특정 보드의 행/열/박스에서 영향받는 메모 저장
+  void _saveAffectedNotesForBoard(int board, int row, int col, int number, Map<String, Set<int>> affectedNotes) {
+    // 같은 행
+    for (int c = 0; c < 9; c++) {
+      if (c != col && notes[board][row][c].contains(number)) {
+        final key = SamuraiUndoAction.cellKey(board, row, c);
+        if (!affectedNotes.containsKey(key)) {
+          affectedNotes[key] = Set<int>.from(notes[board][row][c]);
+        }
+      }
+    }
+    // 같은 열
+    for (int r = 0; r < 9; r++) {
+      if (r != row && notes[board][r][col].contains(number)) {
+        final key = SamuraiUndoAction.cellKey(board, r, col);
+        if (!affectedNotes.containsKey(key)) {
+          affectedNotes[key] = Set<int>.from(notes[board][r][col]);
+        }
+      }
+    }
+    // 같은 3x3 박스
+    int boxRow = (row ~/ 3) * 3;
+    int boxCol = (col ~/ 3) * 3;
+    for (int r = boxRow; r < boxRow + 3; r++) {
+      for (int c = boxCol; c < boxCol + 3; c++) {
+        if ((r != row || c != col) && notes[board][r][c].contains(number)) {
+          final key = SamuraiUndoAction.cellKey(board, r, c);
+          if (!affectedNotes.containsKey(key)) {
+            affectedNotes[key] = Set<int>.from(notes[board][r][c]);
+          }
+        }
+      }
+    }
+  }
+
+  /// Undo 실행 - 이전 상태로 복원
+  bool undo() {
+    if (_undoHistory.isEmpty) return false;
+
+    final action = _undoHistory.removeLast();
+    currentBoards[action.board][action.row][action.col] = action.previousValue;
+    notes[action.board][action.row][action.col] = Set<int>.from(action.previousNotes);
+    // 겹치는 영역 동기화
+    syncOverlapValue(action.board, action.row, action.col, action.previousValue);
+    syncOverlapNotes(action.board, action.row, action.col, action.previousNotes);
+
+    // 영향받았던 관련 셀들의 메모도 복원
+    for (final entry in action.affectedCellsNotes.entries) {
+      final (b, r, c) = SamuraiUndoAction.parseKey(entry.key);
+      notes[b][r][c] = Set<int>.from(entry.value);
+    }
+    return true;
+  }
+
+  /// Undo 가능 여부
+  bool get canUndo => _undoHistory.isNotEmpty;
+
+  /// Undo 히스토리 개수
+  int get undoCount => _undoHistory.length;
+
+  /// Undo 히스토리 초기화
+  void clearUndoHistory() {
+    _undoHistory.clear();
   }
 
   /// 값 입력 시 모든 관련 보드의 메모에서 해당 숫자 제거
