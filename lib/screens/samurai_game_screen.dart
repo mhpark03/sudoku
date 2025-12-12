@@ -196,6 +196,7 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen>
           },
           onComplete: () {
             _timer?.cancel();
+            _gameState.isCompleted = true;
             _showCompletionDialog();
           },
         ),
