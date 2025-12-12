@@ -422,4 +422,267 @@ class LogicalSolver {
 
     return changed;
   }
+
+  /// 사무라이 스도쿠 퍼즐이 논리적으로 풀 수 있는지 확인
+  /// 5개의 겹치는 보드를 함께 고려하여 검증
+  static bool canSolveSamuraiLogically(List<List<List<int>>> puzzles) {
+    // 5개 보드 복사
+    List<List<List<int>>> boards = puzzles
+        .map((board) => board.map((row) => List<int>.from(row)).toList())
+        .toList();
+
+    // 각 보드의 후보 숫자
+    List<List<List<Set<int>>>> allCandidates = List.generate(
+      5,
+      (_) => List.generate(9, (_) => List.generate(9, (_) => <int>{})),
+    );
+
+    // 초기 후보 계산 (겹치는 영역 고려)
+    for (int b = 0; b < 5; b++) {
+      for (int row = 0; row < 9; row++) {
+        for (int col = 0; col < 9; col++) {
+          if (boards[b][row][col] == 0) {
+            allCandidates[b][row][col] =
+                _getSamuraiCandidates(boards, b, row, col);
+          }
+        }
+      }
+    }
+
+    // 반복적으로 논리 기법 적용
+    bool progress = true;
+    while (progress) {
+      progress = false;
+
+      for (int b = 0; b < 5; b++) {
+        // 1. Naked Singles
+        for (int row = 0; row < 9; row++) {
+          for (int col = 0; col < 9; col++) {
+            if (boards[b][row][col] == 0 &&
+                allCandidates[b][row][col].length == 1) {
+              int value = allCandidates[b][row][col].first;
+              _placeSamuraiValue(boards, allCandidates, b, row, col, value);
+              progress = true;
+            }
+          }
+        }
+
+        // 2. Hidden Singles - 행
+        for (int row = 0; row < 9; row++) {
+          for (int num = 1; num <= 9; num++) {
+            List<int> positions = [];
+            for (int col = 0; col < 9; col++) {
+              if (boards[b][row][col] == 0 &&
+                  allCandidates[b][row][col].contains(num)) {
+                positions.add(col);
+              }
+            }
+            if (positions.length == 1) {
+              int col = positions[0];
+              _placeSamuraiValue(boards, allCandidates, b, row, col, num);
+              progress = true;
+            }
+          }
+        }
+
+        // 2. Hidden Singles - 열
+        for (int col = 0; col < 9; col++) {
+          for (int num = 1; num <= 9; num++) {
+            List<int> positions = [];
+            for (int row = 0; row < 9; row++) {
+              if (boards[b][row][col] == 0 &&
+                  allCandidates[b][row][col].contains(num)) {
+                positions.add(row);
+              }
+            }
+            if (positions.length == 1) {
+              int row = positions[0];
+              _placeSamuraiValue(boards, allCandidates, b, row, col, num);
+              progress = true;
+            }
+          }
+        }
+
+        // 2. Hidden Singles - 박스
+        for (int boxRow = 0; boxRow < 3; boxRow++) {
+          for (int boxCol = 0; boxCol < 3; boxCol++) {
+            for (int num = 1; num <= 9; num++) {
+              List<List<int>> positions = [];
+              for (int r = 0; r < 3; r++) {
+                for (int c = 0; c < 3; c++) {
+                  int row = boxRow * 3 + r;
+                  int col = boxCol * 3 + c;
+                  if (boards[b][row][col] == 0 &&
+                      allCandidates[b][row][col].contains(num)) {
+                    positions.add([row, col]);
+                  }
+                }
+              }
+              if (positions.length == 1) {
+                int row = positions[0][0];
+                int col = positions[0][1];
+                _placeSamuraiValue(boards, allCandidates, b, row, col, num);
+                progress = true;
+              }
+            }
+          }
+        }
+      }
+
+      // 모순 검사
+      for (int b = 0; b < 5; b++) {
+        for (int row = 0; row < 9; row++) {
+          for (int col = 0; col < 9; col++) {
+            if (boards[b][row][col] == 0 &&
+                allCandidates[b][row][col].isEmpty) {
+              return false;
+            }
+          }
+        }
+      }
+    }
+
+    // 모든 셀이 채워졌는지 확인
+    for (int b = 0; b < 5; b++) {
+      for (int row = 0; row < 9; row++) {
+        for (int col = 0; col < 9; col++) {
+          if (boards[b][row][col] == 0) {
+            return false;
+          }
+        }
+      }
+    }
+
+    return true;
+  }
+
+  /// 사무라이 스도쿠에서 셀의 후보 계산 (겹치는 영역 고려)
+  static Set<int> _getSamuraiCandidates(
+      List<List<List<int>>> boards, int boardIdx, int row, int col) {
+    Set<int> candidates = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+    // 현재 보드의 행/열/박스에서 제거
+    for (int c = 0; c < 9; c++) {
+      candidates.remove(boards[boardIdx][row][c]);
+    }
+    for (int r = 0; r < 9; r++) {
+      candidates.remove(boards[boardIdx][r][col]);
+    }
+    int boxRow = (row ~/ 3) * 3;
+    int boxCol = (col ~/ 3) * 3;
+    for (int r = 0; r < 3; r++) {
+      for (int c = 0; c < 3; c++) {
+        candidates.remove(boards[boardIdx][boxRow + r][boxCol + c]);
+      }
+    }
+
+    // 겹치는 영역이면 다른 보드의 제약도 고려
+    var overlap = _getOverlappingBoard(boardIdx, row, col);
+    if (overlap != null) {
+      int otherBoard = overlap[0];
+      int otherRow = overlap[1];
+      int otherCol = overlap[2];
+
+      // 다른 보드의 행/열/박스에서도 제거
+      for (int c = 0; c < 9; c++) {
+        candidates.remove(boards[otherBoard][otherRow][c]);
+      }
+      for (int r = 0; r < 9; r++) {
+        candidates.remove(boards[otherBoard][r][otherCol]);
+      }
+      int otherBoxRow = (otherRow ~/ 3) * 3;
+      int otherBoxCol = (otherCol ~/ 3) * 3;
+      for (int r = 0; r < 3; r++) {
+        for (int c = 0; c < 3; c++) {
+          candidates.remove(boards[otherBoard][otherBoxRow + r][otherBoxCol + c]);
+        }
+      }
+    }
+
+    return candidates;
+  }
+
+  /// 겹치는 보드와 좌표 반환 (없으면 null)
+  static List<int>? _getOverlappingBoard(int boardIdx, int row, int col) {
+    // 보드 0 우하단 (6-8, 6-8) <-> 보드 2 좌상단 (0-2, 0-2)
+    if (boardIdx == 0 && row >= 6 && col >= 6) {
+      return [2, row - 6, col - 6];
+    }
+    if (boardIdx == 2 && row <= 2 && col <= 2) {
+      return [0, row + 6, col + 6];
+    }
+
+    // 보드 1 좌하단 (6-8, 0-2) <-> 보드 2 우상단 (0-2, 6-8)
+    if (boardIdx == 1 && row >= 6 && col <= 2) {
+      return [2, row - 6, col + 6];
+    }
+    if (boardIdx == 2 && row <= 2 && col >= 6) {
+      return [1, row + 6, col - 6];
+    }
+
+    // 보드 2 좌하단 (6-8, 0-2) <-> 보드 3 우상단 (0-2, 6-8)
+    if (boardIdx == 2 && row >= 6 && col <= 2) {
+      return [3, row - 6, col + 6];
+    }
+    if (boardIdx == 3 && row <= 2 && col >= 6) {
+      return [2, row + 6, col - 6];
+    }
+
+    // 보드 2 우하단 (6-8, 6-8) <-> 보드 4 좌상단 (0-2, 0-2)
+    if (boardIdx == 2 && row >= 6 && col >= 6) {
+      return [4, row - 6, col - 6];
+    }
+    if (boardIdx == 4 && row <= 2 && col <= 2) {
+      return [2, row + 6, col + 6];
+    }
+
+    return null;
+  }
+
+  /// 사무라이 스도쿠에서 값 배치 (겹치는 영역 동기화)
+  static void _placeSamuraiValue(
+      List<List<List<int>>> boards,
+      List<List<List<Set<int>>>> allCandidates,
+      int boardIdx,
+      int row,
+      int col,
+      int value) {
+    // 현재 보드에 값 배치
+    boards[boardIdx][row][col] = value;
+    allCandidates[boardIdx][row][col].clear();
+
+    // 현재 보드의 peers에서 후보 제거
+    _eliminateSamuraiFromPeers(allCandidates[boardIdx], row, col, value);
+
+    // 겹치는 영역이면 다른 보드도 업데이트
+    var overlap = _getOverlappingBoard(boardIdx, row, col);
+    if (overlap != null) {
+      int otherBoard = overlap[0];
+      int otherRow = overlap[1];
+      int otherCol = overlap[2];
+
+      boards[otherBoard][otherRow][otherCol] = value;
+      allCandidates[otherBoard][otherRow][otherCol].clear();
+      _eliminateSamuraiFromPeers(
+          allCandidates[otherBoard], otherRow, otherCol, value);
+    }
+  }
+
+  /// 사무라이 스도쿠에서 peers 후보 제거
+  static void _eliminateSamuraiFromPeers(
+      List<List<Set<int>>> candidates, int row, int col, int value) {
+    for (int c = 0; c < 9; c++) {
+      candidates[row][c].remove(value);
+    }
+    for (int r = 0; r < 9; r++) {
+      candidates[r][col].remove(value);
+    }
+    int boxRow = (row ~/ 3) * 3;
+    int boxCol = (col ~/ 3) * 3;
+    for (int r = 0; r < 3; r++) {
+      for (int c = 0; c < 3; c++) {
+        candidates[boxRow + r][boxCol + c].remove(value);
+      }
+    }
+  }
 }
