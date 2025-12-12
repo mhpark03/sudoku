@@ -202,7 +202,7 @@ class NumberPad extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
           ),
         ),
-        child: Icon(Icons.cleaning_services, size: iconSize),
+        child: Icon(Icons.backspace, size: iconSize),
       ),
     );
   }
