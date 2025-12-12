@@ -1,6 +1,6 @@
 import 'samurai_sudoku_generator.dart';
 
-enum SamuraiDifficulty { easy, medium, hard, expert }
+enum SamuraiDifficulty { easy, medium, hard }
 
 /// Undo를 위한 동작 기록 (사무라이 스도쿠용)
 class SamuraiUndoAction {
@@ -46,9 +46,6 @@ Map<String, dynamic> generateSamuraiPuzzleInIsolate(SamuraiDifficulty difficulty
       break;
     case SamuraiDifficulty.hard:
       emptyCells = 60;
-      break;
-    case SamuraiDifficulty.expert:
-      emptyCells = 70;
       break;
   }
 

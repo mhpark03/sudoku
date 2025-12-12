@@ -280,9 +280,6 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen>
               case SamuraiDifficulty.hard:
                 label = '어려움';
                 break;
-              case SamuraiDifficulty.expert:
-                label = '달인';
-                break;
             }
             return ListTile(
               title: Text(label),
@@ -314,8 +311,6 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen>
         return '보통';
       case SamuraiDifficulty.hard:
         return '어려움';
-      case SamuraiDifficulty.expert:
-        return '달인';
     }
   }
 

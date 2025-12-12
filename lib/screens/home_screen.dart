@@ -132,7 +132,6 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildSamuraiDifficultyTile('쉬움', SamuraiDifficulty.easy),
             _buildSamuraiDifficultyTile('보통', SamuraiDifficulty.medium),
             _buildSamuraiDifficultyTile('어려움', SamuraiDifficulty.hard),
-            _buildSamuraiDifficultyTile('달인', SamuraiDifficulty.expert),
           ],
         ),
       ),
