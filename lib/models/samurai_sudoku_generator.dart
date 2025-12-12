@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'samurai_logical_solver.dart';
 
 /// 사무라이 스도쿠: 5개의 9x9 보드가 겹쳐진 형태
 /// 배치:
@@ -161,20 +162,112 @@ class SamuraiSudokuGenerator {
     return true;
   }
 
-  /// 퍼즐 생성 - 21x21 그리드 기준 비율 적용
+  /// 퍼즐 생성 - 논리적으로만 풀 수 있는 퍼즐 생성
   List<List<List<int>>> generatePuzzles(
+      List<List<List<int>>> solvedBoards, int difficulty) {
+    // 논리적으로 풀 수 있는 퍼즐 생성 시도 (최대 5회)
+    for (int attempt = 0; attempt < 5; attempt++) {
+      var result = _generateLogicalPuzzle(solvedBoards, difficulty);
+      if (result != null) {
+        return result;
+      }
+    }
+
+    // 실패 시 기존 방식으로 폴백 (더 쉬운 퍼즐)
+    return _generateFallbackPuzzle(solvedBoards, difficulty);
+  }
+
+  /// 논리적으로 풀 수 있는 퍼즐 생성 시도
+  List<List<List<int>>>? _generateLogicalPuzzle(
+      List<List<List<int>>> solvedBoards, int difficulty) {
+    // 솔루션 복사 (처음에는 모든 셀이 채워진 상태)
+    List<List<List<int>>> puzzles = solvedBoards
+        .map((board) => board.map((row) => List<int>.from(row)).toList())
+        .toList();
+
+    // 난이도에 따른 목표 제거 셀 수 (21x21 그리드 기준)
+    // difficulty는 81셀 기준이므로 비율로 변환
+    double removeRatio = difficulty / 81.0;
+    int totalGridCells = 21 * 21; // 441
+    int targetRemoveCells = (totalGridCells * removeRatio * 0.8).round(); // 80% 목표
+
+    // 21x21 그리드의 모든 셀 위치 수집
+    List<int> allPositions = [];
+    for (int gridRow = 0; gridRow < 21; gridRow++) {
+      for (int gridCol = 0; gridCol < 21; gridCol++) {
+        List<List<int>> mappings = _mapGridToBoards(gridRow, gridCol);
+        if (mappings.isNotEmpty) {
+          allPositions.add(gridRow * 21 + gridCol);
+        }
+      }
+    }
+    allPositions.shuffle(_random);
+
+    int removedCount = 0;
+    int failCount = 0;
+    int maxFails = 80; // 최대 연속 실패 허용 횟수
+
+    for (int pos in allPositions) {
+      if (removedCount >= targetRemoveCells) break;
+      if (failCount >= maxFails) break;
+
+      int gridRow = pos ~/ 21;
+      int gridCol = pos % 21;
+
+      List<List<int>> mappings = _mapGridToBoards(gridRow, gridCol);
+      if (mappings.isEmpty) continue;
+
+      // 이미 빈 셀이면 건너뛰기
+      bool alreadyEmpty = false;
+      for (var mapping in mappings) {
+        if (puzzles[mapping[0]][mapping[1]][mapping[2]] == 0) {
+          alreadyEmpty = true;
+          break;
+        }
+      }
+      if (alreadyEmpty) continue;
+
+      // 셀 값 저장 후 제거
+      List<int> savedValues = [];
+      for (var mapping in mappings) {
+        savedValues.add(puzzles[mapping[0]][mapping[1]][mapping[2]]);
+        puzzles[mapping[0]][mapping[1]][mapping[2]] = 0;
+      }
+
+      // 논리적으로 풀 수 있는지 확인
+      if (SamuraiLogicalSolver.canSolveLogically(puzzles)) {
+        removedCount++;
+        failCount = 0;
+      } else {
+        // 복원
+        for (int i = 0; i < mappings.length; i++) {
+          puzzles[mappings[i][0]][mappings[i][1]][mappings[i][2]] = savedValues[i];
+        }
+        failCount++;
+      }
+    }
+
+    // 충분한 셀이 제거되었는지 확인 (목표의 60% 이상)
+    if (removedCount >= targetRemoveCells * 0.6) {
+      return puzzles;
+    }
+
+    return null;
+  }
+
+  /// 폴백: 기존 방식으로 퍼즐 생성 (논리적 풀이 보장 안됨)
+  List<List<List<int>>> _generateFallbackPuzzle(
       List<List<List<int>>> solvedBoards, int difficulty) {
     // 솔루션 복사
     List<List<List<int>>> puzzles = solvedBoards
         .map((board) => board.map((row) => List<int>.from(row)).toList())
         .toList();
 
-    // 난이도를 비율로 변환 (difficulty는 81셀 기준 제거할 셀 수)
-    // revealPercentage = (81 - difficulty) / 81
-    double revealPercentage = (81 - difficulty.clamp(0, 81)) / 81.0;
+    // 더 쉬운 난이도로 조정 (원래 난이도의 60%)
+    int adjustedDifficulty = (difficulty * 0.6).round();
+    double revealPercentage = (81 - adjustedDifficulty.clamp(0, 81)) / 81.0;
 
-    // 21x21 그리드 기준 노출할 셀 수 계산
-    int totalGridCells = 21 * 21; // 441
+    int totalGridCells = 21 * 21;
     int cellsToReveal = (totalGridCells * revealPercentage).round();
 
     // 모든 보드의 모든 셀을 0으로 초기화
@@ -189,64 +282,47 @@ class SamuraiSudokuGenerator {
     // 중앙 보드의 비겹침 영역에 최소 셀 보장
     Set<int> preRevealedPositions = {};
 
-    // 난이도별 중앙 비겹침 박스당 최소 노출 셀 수
-    // 쉬움(30): 4개, 보통(45): 3개, 어려움(60): 2개, 달인(70): 1개
     int minCellsPerCenterBox;
-    if (difficulty >= 70) {
-      minCellsPerCenterBox = 1; // 달인
-    } else if (difficulty >= 60) {
-      minCellsPerCenterBox = 2; // 어려움
-    } else if (difficulty >= 45) {
-      minCellsPerCenterBox = 3; // 보통
+    if (adjustedDifficulty >= 70) {
+      minCellsPerCenterBox = 2;
+    } else if (adjustedDifficulty >= 60) {
+      minCellsPerCenterBox = 3;
+    } else if (adjustedDifficulty >= 45) {
+      minCellsPerCenterBox = 4;
     } else {
-      minCellsPerCenterBox = 4; // 쉬움
+      minCellsPerCenterBox = 5;
     }
 
-    if (minCellsPerCenterBox > 0) {
+    List<List<int>> centerOnlyBoxes = [
+      [6, 9], [9, 6], [9, 9], [9, 12], [12, 9],
+    ];
 
-      // 중앙 보드의 비겹침 박스들 (21x21 그리드 좌표)
-      // 박스 1: grid (6-8, 9-11), 박스 3: grid (9-11, 6-8)
-      // 박스 4: grid (9-11, 9-11), 박스 5: grid (9-11, 12-14)
-      // 박스 7: grid (12-14, 9-11)
-      List<List<int>> centerOnlyBoxes = [
-        [6, 9], // 박스 1
-        [9, 6], // 박스 3
-        [9, 9], // 박스 4
-        [9, 12], // 박스 5
-        [12, 9], // 박스 7
-      ];
+    for (var box in centerOnlyBoxes) {
+      int startRow = box[0];
+      int startCol = box[1];
 
-      for (var box in centerOnlyBoxes) {
-        int startRow = box[0];
-        int startCol = box[1];
-
-        // 해당 박스의 모든 셀 위치 수집
-        List<int> boxPositions = [];
-        for (int r = 0; r < 3; r++) {
-          for (int c = 0; c < 3; c++) {
-            int gridRow = startRow + r;
-            int gridCol = startCol + c;
-            boxPositions.add(gridRow * 21 + gridCol);
-          }
+      List<int> boxPositions = [];
+      for (int r = 0; r < 3; r++) {
+        for (int c = 0; c < 3; c++) {
+          int gridRow = startRow + r;
+          int gridCol = startCol + c;
+          boxPositions.add(gridRow * 21 + gridCol);
         }
-        boxPositions.shuffle(_random);
+      }
+      boxPositions.shuffle(_random);
 
-        // 최소 셀 수만큼 노출
-        for (int i = 0; i < minCellsPerCenterBox && i < boxPositions.length; i++) {
-          int pos = boxPositions[i];
-          preRevealedPositions.add(pos);
+      for (int i = 0; i < minCellsPerCenterBox && i < boxPositions.length; i++) {
+        int pos = boxPositions[i];
+        preRevealedPositions.add(pos);
 
-          int gridRow = pos ~/ 21;
-          int gridCol = pos % 21;
-          // 보드 2의 좌표로 변환
-          int boardRow = gridRow - 6;
-          int boardCol = gridCol - 6;
-          puzzles[2][boardRow][boardCol] = solvedBoards[2][boardRow][boardCol];
-        }
+        int gridRow = pos ~/ 21;
+        int gridCol = pos % 21;
+        int boardRow = gridRow - 6;
+        int boardCol = gridCol - 6;
+        puzzles[2][boardRow][boardCol] = solvedBoards[2][boardRow][boardCol];
       }
     }
 
-    // 21x21 그리드의 모든 위치 생성 (이미 노출된 위치 제외)
     List<int> allPositions = [];
     for (int i = 0; i < totalGridCells; i++) {
       if (!preRevealedPositions.contains(i)) {
@@ -255,7 +331,6 @@ class SamuraiSudokuGenerator {
     }
     allPositions.shuffle(_random);
 
-    // 남은 셀 수만큼 추가 노출
     int remainingToReveal = cellsToReveal - preRevealedPositions.length;
 
     for (int i = 0; i < remainingToReveal && i < allPositions.length; i++) {
@@ -263,10 +338,8 @@ class SamuraiSudokuGenerator {
       int gridRow = pos ~/ 21;
       int gridCol = pos % 21;
 
-      // 21x21 위치를 보드 위치로 매핑
       List<List<int>> mappings = _mapGridToBoards(gridRow, gridCol);
 
-      // 매핑된 모든 보드에 셀 노출
       for (var mapping in mappings) {
         int board = mapping[0];
         int row = mapping[1];
