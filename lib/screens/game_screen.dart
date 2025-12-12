@@ -80,34 +80,43 @@ class _GameScreenState extends State<GameScreen> {
       if (_gameState.isQuickInputMode) {
         // 고정 셀이 아니면 빠른 입력 숫자로 입력
         if (!_gameState.isFixed[row][col]) {
-          List<List<int>> newBoard =
-              _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
-
-          // 같은 숫자면 지우고, 다른 숫자면 입력
-          if (newBoard[row][col] == _gameState.quickInputNumber) {
-            newBoard[row][col] = 0;
-          } else {
-            int number = _gameState.quickInputNumber!;
-            newBoard[row][col] = number;
-
-            // 유효한 입력이면 같은 행/열/박스의 메모에서 해당 숫자 삭제
-            if (SudokuGenerator.isValidMove(newBoard, row, col, number)) {
-              _gameState.removeNumberFromRelatedNotes(row, col, number);
-              _gameState.clearNotes(row, col);
+          // 빠른 입력 + 메모 모드: 메모로 입력
+          if (_isNoteMode) {
+            if (_gameState.currentBoard[row][col] == 0 && _gameState.quickInputNumber != null) {
+              _gameState.toggleNote(row, col, _gameState.quickInputNumber!);
+              _gameState = _gameState.copyWith(selectedRow: row, selectedCol: col);
             }
-          }
+          } else {
+            // 빠른 입력 모드만: 일반 숫자 입력
+            List<List<int>> newBoard =
+                _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
 
-          bool isComplete = SudokuGenerator.isBoardComplete(newBoard);
+            // 같은 숫자면 지우고, 다른 숫자면 입력
+            if (newBoard[row][col] == _gameState.quickInputNumber) {
+              newBoard[row][col] = 0;
+            } else {
+              int number = _gameState.quickInputNumber!;
+              newBoard[row][col] = number;
 
-          _gameState = _gameState.copyWith(
-            currentBoard: newBoard,
-            selectedRow: row,
-            selectedCol: col,
-            isCompleted: isComplete,
-          );
+              // 유효한 입력이면 같은 행/열/박스의 메모에서 해당 숫자 삭제
+              if (SudokuGenerator.isValidMove(newBoard, row, col, number)) {
+                _gameState.removeNumberFromRelatedNotes(row, col, number);
+                _gameState.clearNotes(row, col);
+              }
+            }
 
-          if (isComplete) {
-            _showCompletionDialog();
+            bool isComplete = SudokuGenerator.isBoardComplete(newBoard);
+
+            _gameState = _gameState.copyWith(
+              currentBoard: newBoard,
+              selectedRow: row,
+              selectedCol: col,
+              isCompleted: isComplete,
+            );
+
+            if (isComplete) {
+              _showCompletionDialog();
+            }
           }
         } else {
           // 고정 셀을 탭하면 선택만
@@ -349,7 +358,7 @@ class _GameScreenState extends State<GameScreen> {
         _gameState = _gameState.copyWith(clearQuickInput: true);
       } else {
         _gameState = _gameState.copyWith(quickInputNumber: 1);
-        _isNoteMode = false;
+        // 빠른 입력과 메모 모드 동시 선택 가능
       }
     });
   }
@@ -357,9 +366,7 @@ class _GameScreenState extends State<GameScreen> {
   void _onNoteModeToggle() {
     setState(() {
       _isNoteMode = !_isNoteMode;
-      if (_isNoteMode && _gameState.isQuickInputMode) {
-        _gameState = _gameState.copyWith(clearQuickInput: true);
-      }
+      // 빠른 입력과 메모 모드 동시 선택 가능
     });
   }
 

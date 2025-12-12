@@ -269,25 +269,35 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
     setState(() {
       if (isQuickInputMode && quickInputNumber != null) {
         if (!isFixed) {
-          // 현재 보드를 복사하여 유효성 검사
-          final board = widget.gameState.currentBoards[widget.boardIndex];
-          final testBoard = board.map((r) => List<int>.from(r)).toList();
-          testBoard[row][col] = quickInputNumber!;
-
-          bool isValid = SamuraiSudokuGenerator.isValidMove(
-              testBoard, row, col, quickInputNumber!);
-
-          if (isValid) {
-            widget.onValueChanged(
-                widget.boardIndex, row, col, quickInputNumber!);
-            _showFeedback(true);
-            _checkCompletion();
+          // 빠른 입력 + 메모 모드: 메모로 입력
+          if (isNoteMode) {
+            if (widget.gameState.currentBoards[widget.boardIndex][row][col] == 0) {
+              widget.onNoteToggle(widget.boardIndex, row, col, quickInputNumber!);
+            }
+            selectedRow = row;
+            selectedCol = col;
           } else {
-            _showFeedback(false);
-          }
+            // 빠른 입력 모드만: 일반 숫자 입력
+            // 현재 보드를 복사하여 유효성 검사
+            final board = widget.gameState.currentBoards[widget.boardIndex];
+            final testBoard = board.map((r) => List<int>.from(r)).toList();
+            testBoard[row][col] = quickInputNumber!;
 
-          selectedRow = row;
-          selectedCol = col;
+            bool isValid = SamuraiSudokuGenerator.isValidMove(
+                testBoard, row, col, quickInputNumber!);
+
+            if (isValid) {
+              widget.onValueChanged(
+                  widget.boardIndex, row, col, quickInputNumber!);
+              _showFeedback(true);
+              _checkCompletion();
+            } else {
+              _showFeedback(false);
+            }
+
+            selectedRow = row;
+            selectedCol = col;
+          }
         } else {
           selectedRow = row;
           selectedCol = col;
@@ -485,10 +495,10 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
         quickInputNumber = null;
       }
       if (isQuickInputMode) {
-        isNoteMode = false;
         // 빠른 입력 모드 진입 시 선택된 셀 해제
         selectedRow = null;
         selectedCol = null;
+        // 빠른 입력과 메모 모드 동시 선택 가능
       }
     });
   }
@@ -496,10 +506,7 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
   void _onNoteModeToggle() {
     setState(() {
       isNoteMode = !isNoteMode;
-      if (isNoteMode) {
-        isQuickInputMode = false;
-        quickInputNumber = null;
-      }
+      // 빠른 입력과 메모 모드 동시 선택 가능
     });
   }
 
