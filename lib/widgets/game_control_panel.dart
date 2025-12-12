@@ -148,6 +148,12 @@ class GameControlPanel extends StatelessWidget {
           onTap: onFillAllNotes,
         ),
         _buildFeatureButton(
+          icon: Icons.backspace_outlined,
+          label: '지우기',
+          onTap: onErase,
+          color: Colors.red,
+        ),
+        _buildFeatureButton(
           icon: Icons.lightbulb_outline,
           label: '힌트',
           onTap: onHint,
