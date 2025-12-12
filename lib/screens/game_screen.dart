@@ -23,8 +23,8 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen> {
   late GameState _gameState;
   late Difficulty _selectedDifficulty;
-  bool _isNoteMode = false;
   bool _isLoading = true;
+  final GlobalKey<GameControlPanelState> _controlPanelKey = GlobalKey();
 
   @override
   void initState() {
@@ -75,15 +75,18 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _onCellTap(int row, int col) {
+    final controlState = _controlPanelKey.currentState;
+    if (controlState == null) return;
+
     setState(() {
       // 빠른 입력 모드일 때
-      if (_gameState.isQuickInputMode) {
+      if (controlState.isQuickInputMode && controlState.quickInputNumber != null) {
         // 고정 셀이 아니면 빠른 입력 숫자로 입력
         if (!_gameState.isFixed[row][col]) {
           // 빠른 입력 + 메모 모드: 메모로 입력
-          if (_isNoteMode) {
-            if (_gameState.currentBoard[row][col] == 0 && _gameState.quickInputNumber != null) {
-              _gameState.toggleNote(row, col, _gameState.quickInputNumber!);
+          if (controlState.isNoteMode) {
+            if (_gameState.currentBoard[row][col] == 0) {
+              _gameState.toggleNote(row, col, controlState.quickInputNumber!);
               _gameState = _gameState.copyWith(selectedRow: row, selectedCol: col);
             }
           } else {
@@ -92,10 +95,10 @@ class _GameScreenState extends State<GameScreen> {
                 _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
 
             // 같은 숫자면 지우고, 다른 숫자면 입력
-            if (newBoard[row][col] == _gameState.quickInputNumber) {
+            if (newBoard[row][col] == controlState.quickInputNumber) {
               newBoard[row][col] = 0;
             } else {
-              int number = _gameState.quickInputNumber!;
+              int number = controlState.quickInputNumber!;
               newBoard[row][col] = number;
 
               // 유효한 입력이면 같은 행/열/박스의 메모에서 해당 숫자 삭제
@@ -134,23 +137,8 @@ class _GameScreenState extends State<GameScreen> {
     _saveGame();
   }
 
-  void _onNumberTap(int number) {
+  void _onNumberTap(int number, bool isNoteMode) {
     setState(() {
-      // 빠른 입력 모드일 때: 숫자 선택/해제
-      if (_gameState.isQuickInputMode) {
-        if (_gameState.quickInputNumber == number) {
-          // 같은 숫자를 다시 탭하면 빠른 입력 모드 해제
-          _gameState = _gameState.copyWith(clearQuickInput: true);
-        } else {
-          // 다른 숫자 선택 + 셀 선택 해제
-          _gameState = _gameState.copyWith(
-            quickInputNumber: number,
-            clearSelection: true,
-          );
-        }
-        return;
-      }
-
       // 일반 모드: 기존 로직
       if (!_gameState.hasSelection) return;
 
@@ -160,7 +148,7 @@ class _GameScreenState extends State<GameScreen> {
       if (_gameState.isFixed[row][col]) return;
 
       // 메모 모드일 때
-      if (_isNoteMode) {
+      if (isNoteMode) {
         if (_gameState.currentBoard[row][col] == 0) {
           _gameState.toggleNote(row, col, number);
         }
@@ -332,15 +320,11 @@ class _GameScreenState extends State<GameScreen> {
 
   Widget _buildControls({required bool isLandscape}) {
     return GameControlPanel(
+      key: _controlPanelKey,
       onNumberTap: _onNumberTap,
       onErase: _onErase,
       onHint: _showHint,
       onFillAllNotes: _onFillAllNotes,
-      onQuickInputToggle: _onQuickInputToggle,
-      onNoteModeToggle: _onNoteModeToggle,
-      isQuickInputMode: _gameState.isQuickInputMode,
-      quickInputNumber: _gameState.quickInputNumber,
-      isNoteMode: _isNoteMode,
       disabledNumbers: _gameState.getCompletedNumbers(),
       isCompact: isLandscape,
     );
@@ -349,24 +333,6 @@ class _GameScreenState extends State<GameScreen> {
   void _onFillAllNotes() {
     setState(() {
       _gameState.fillAllNotes();
-    });
-  }
-
-  void _onQuickInputToggle() {
-    setState(() {
-      if (_gameState.isQuickInputMode) {
-        _gameState = _gameState.copyWith(clearQuickInput: true);
-      } else {
-        _gameState = _gameState.copyWith(quickInputNumber: 1);
-        // 빠른 입력과 메모 모드 동시 선택 가능
-      }
-    });
-  }
-
-  void _onNoteModeToggle() {
-    setState(() {
-      _isNoteMode = !_isNoteMode;
-      // 빠른 입력과 메모 모드 동시 선택 가능
     });
   }
 
