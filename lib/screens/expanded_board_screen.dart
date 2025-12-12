@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/samurai_game_state.dart';
 import '../models/samurai_sudoku_generator.dart';
 import '../widgets/game_control_panel.dart';
+import '../widgets/game_status_bar.dart';
 
 class ExpandedBoardScreen extends StatefulWidget {
   final SamuraiGameState gameState;
@@ -41,11 +43,78 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
   int? _quickInputNumber;
   bool _isEraseMode = false;
 
+  // 게임 타이머 및 통계
+  Timer? _timer;
+  int _elapsedSeconds = 0;
+  int _failureCount = 0;
+  bool _isPaused = false;
+
   @override
   void initState() {
     super.initState();
     selectedRow = widget.initialRow;
     selectedCol = widget.initialCol;
+    _startTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!_isPaused) {
+        setState(() {
+          _elapsedSeconds++;
+        });
+      }
+    });
+  }
+
+  void _togglePause() {
+    setState(() {
+      _isPaused = !_isPaused;
+    });
+  }
+
+  Widget _buildPausedOverlay() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade300,
+        border: Border.all(color: Colors.black, width: 3),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.pause_circle_outline,
+              size: 64,
+              color: Colors.grey.shade600,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              '일시정지',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '재개 버튼을 눌러 계속하세요',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -80,17 +149,27 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          // 9x9 보드
+          // 게임 상태 표시 바
+          GameStatusBar(
+            elapsedSeconds: _elapsedSeconds,
+            failureCount: _failureCount,
+            isPaused: _isPaused,
+            onPauseToggle: _togglePause,
+          ),
+          const SizedBox(height: 12),
+          // 9x9 보드 또는 일시정지 오버레이
           Expanded(
             child: Center(
               child: AspectRatio(
                 aspectRatio: 1,
-                child: Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.black, width: 3),
-                  ),
-                  child: _buildGrid(board, isFixed, notes),
-                ),
+                child: _isPaused
+                    ? _buildPausedOverlay()
+                    : Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.black, width: 3),
+                        ),
+                        child: _buildGrid(board, isFixed, notes),
+                      ),
               ),
             ),
           ),
@@ -135,49 +214,67 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
       padding: const EdgeInsets.all(8),
       child: Row(
         children: [
-          // 9x9 보드
+          // 9x9 보드 또는 일시정지 오버레이
           Expanded(
             flex: 1,
             child: Center(
               child: AspectRatio(
                 aspectRatio: 1,
-                child: Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.black, width: 3),
-                  ),
-                  child: _buildGrid(board, isFixed, notes),
-                ),
+                child: _isPaused
+                    ? _buildPausedOverlay()
+                    : Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.black, width: 3),
+                        ),
+                        child: _buildGrid(board, isFixed, notes),
+                      ),
               ),
             ),
           ),
           const SizedBox(width: 16),
-          // 공통 게임 컨트롤 패널
+          // 오른쪽: 상태 바 + 컨트롤 패널
           Expanded(
             flex: 1,
-            child: GameControlPanel(
-              key: _controlPanelKey,
-              onNumberTap: _onNumberTap,
-              onErase: _onErase,
-              onHint: _onHint,
-              onFillAllNotes: _onFillAllNotes,
-              onQuickInputModeChanged: (isQuickInput, number) {
-                setState(() {
-                  _isQuickInputMode = isQuickInput;
-                  _quickInputNumber = number;
-                  // 빠른 입력 모드에서 숫자 선택 시 셀 선택 초기화
-                  if (isQuickInput && number != null) {
-                    selectedRow = null;
-                    selectedCol = null;
-                  }
-                });
-              },
-              onEraseModeChanged: (isErase) {
-                setState(() {
-                  _isEraseMode = isErase;
-                });
-              },
-              disabledNumbers: widget.gameState.getCompletedNumbers(widget.boardIndex),
-              isCompact: true,
+            child: Column(
+              children: [
+                // 게임 상태 표시 바 (컴팩트)
+                GameStatusBar(
+                  elapsedSeconds: _elapsedSeconds,
+                  failureCount: _failureCount,
+                  isPaused: _isPaused,
+                  onPauseToggle: _togglePause,
+                  isCompact: true,
+                ),
+                const SizedBox(height: 8),
+                // 공통 게임 컨트롤 패널
+                Expanded(
+                  child: GameControlPanel(
+                    key: _controlPanelKey,
+                    onNumberTap: _onNumberTap,
+                    onErase: _onErase,
+                    onHint: _onHint,
+                    onFillAllNotes: _onFillAllNotes,
+                    onQuickInputModeChanged: (isQuickInput, number) {
+                      setState(() {
+                        _isQuickInputMode = isQuickInput;
+                        _quickInputNumber = number;
+                        // 빠른 입력 모드에서 숫자 선택 시 셀 선택 초기화
+                        if (isQuickInput && number != null) {
+                          selectedRow = null;
+                          selectedCol = null;
+                        }
+                      });
+                    },
+                    onEraseModeChanged: (isErase) {
+                      setState(() {
+                        _isEraseMode = isErase;
+                      });
+                    },
+                    disabledNumbers: widget.gameState.getCompletedNumbers(widget.boardIndex),
+                    isCompact: true,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -294,6 +391,9 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
   }
 
   void _onCellTap(int row, int col, bool isFixed) {
+    // 일시정지 상태에서는 입력 차단
+    if (_isPaused) return;
+
     final controlState = _controlPanelKey.currentState;
 
     setState(() {
@@ -369,6 +469,13 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
   }
 
   void _showFeedback(bool isCorrect) {
+    // 실패 시 횟수 증가
+    if (!isCorrect) {
+      setState(() {
+        _failureCount++;
+      });
+    }
+
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -464,6 +571,9 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
   }
 
   void _onNumberTap(int number, bool isNoteMode) {
+    // 일시정지 상태에서는 입력 차단
+    if (_isPaused) return;
+
     if (selectedRow == null || selectedCol == null) return;
     if (widget.gameState.isFixed[widget.boardIndex][selectedRow!][selectedCol!]) {
       return;
@@ -492,6 +602,9 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
   }
 
   void _onErase() {
+    // 일시정지 상태에서는 입력 차단
+    if (_isPaused) return;
+
     final controlState = _controlPanelKey.currentState;
 
     if (controlState != null && controlState.isQuickInputMode) {
@@ -514,12 +627,18 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
   }
 
   void _onFillAllNotes() {
+    // 일시정지 상태에서는 입력 차단
+    if (_isPaused) return;
+
     setState(() {
       widget.gameState.fillAllNotes(widget.boardIndex);
     });
   }
 
   void _onHint() {
+    // 일시정지 상태에서는 입력 차단
+    if (_isPaused) return;
+
     if (selectedRow == null || selectedCol == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('셀을 먼저 선택하세요')),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../models/game_state.dart';
@@ -5,6 +6,7 @@ import '../models/sudoku_generator.dart';
 import '../services/game_storage.dart';
 import '../widgets/sudoku_board.dart';
 import '../widgets/game_control_panel.dart';
+import '../widgets/game_status_bar.dart';
 
 class GameScreen extends StatefulWidget {
   final Difficulty? initialDifficulty;
@@ -31,6 +33,12 @@ class _GameScreenState extends State<GameScreen> {
   int? _quickInputNumber;
   bool _isEraseMode = false;
 
+  // 게임 타이머 및 통계
+  Timer? _timer;
+  int _elapsedSeconds = 0;
+  int _failureCount = 0;
+  bool _isPaused = false;
+
   @override
   void initState() {
     super.initState();
@@ -39,11 +47,35 @@ class _GameScreenState extends State<GameScreen> {
       _gameState = widget.savedGameState!;
       _selectedDifficulty = _gameState.difficulty;
       _isLoading = false;
+      _startTimer();
     } else {
       // 새 게임 시작
       _selectedDifficulty = widget.initialDifficulty ?? Difficulty.medium;
       _startNewGame();
     }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!_isPaused && !_gameState.isCompleted) {
+        setState(() {
+          _elapsedSeconds++;
+        });
+      }
+    });
+  }
+
+  void _togglePause() {
+    setState(() {
+      _isPaused = !_isPaused;
+    });
   }
 
   Future<void> _startNewGame() async {
@@ -64,7 +96,11 @@ class _GameScreenState extends State<GameScreen> {
       setState(() {
         _gameState = GameState.fromGeneratedData(data);
         _isLoading = false;
+        _elapsedSeconds = 0;
+        _failureCount = 0;
+        _isPaused = false;
       });
+      _startTimer();
       _saveGame();
     }
   }
@@ -80,6 +116,8 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _onCellTap(int row, int col) {
+    if (_isPaused) return; // 일시정지 중에는 입력 불가
+
     final controlState = _controlPanelKey.currentState;
     if (controlState == null) return;
 
@@ -118,6 +156,14 @@ class _GameScreenState extends State<GameScreen> {
             }
           } else {
             // 빠른 입력 모드만: 일반 숫자 입력
+            int number = controlState.quickInputNumber!;
+            int correctValue = _gameState.solution[row][col];
+
+            // 정답 확인
+            if (number != correctValue) {
+              _failureCount++;
+            }
+
             List<List<int>> newBoard =
                 _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
 
@@ -125,7 +171,6 @@ class _GameScreenState extends State<GameScreen> {
             if (newBoard[row][col] == controlState.quickInputNumber) {
               newBoard[row][col] = 0;
             } else {
-              int number = controlState.quickInputNumber!;
               newBoard[row][col] = number;
 
               // 유효한 입력이면 같은 행/열/박스의 메모에서 해당 숫자 삭제
@@ -145,6 +190,7 @@ class _GameScreenState extends State<GameScreen> {
             );
 
             if (isComplete) {
+              _timer?.cancel();
               _showCompletionDialog();
             }
           }
@@ -165,6 +211,8 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _onNumberTap(int number, bool isNoteMode) {
+    if (_isPaused) return; // 일시정지 중에는 입력 불가
+
     setState(() {
       // 일반 모드: 기존 로직
       if (!_gameState.hasSelection) return;
@@ -182,7 +230,12 @@ class _GameScreenState extends State<GameScreen> {
         return;
       }
 
-      // 일반 입력 모드
+      // 일반 입력 모드 - 정답 확인
+      int correctValue = _gameState.solution[row][col];
+      if (number != correctValue) {
+        _failureCount++;
+      }
+
       List<List<int>> newBoard =
           _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
       newBoard[row][col] = number;
@@ -201,6 +254,7 @@ class _GameScreenState extends State<GameScreen> {
       );
 
       if (isComplete) {
+        _timer?.cancel();
         _showCompletionDialog();
       }
     });
@@ -208,6 +262,8 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _onErase() {
+    if (_isPaused) return; // 일시정지 중에는 입력 불가
+
     if (!_gameState.hasSelection) return;
 
     int row = _gameState.selectedRow!;
@@ -226,6 +282,8 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _showHint() {
+    if (_isPaused) return; // 일시정지 중에는 입력 불가
+
     if (!_gameState.hasSelection) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('셀을 먼저 선택하세요')),
@@ -262,6 +320,7 @@ class _GameScreenState extends State<GameScreen> {
       );
 
       if (isComplete) {
+        _timer?.cancel();
         _showCompletionDialog();
       }
     });
@@ -269,11 +328,22 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _showCompletionDialog() {
+    String timeStr = _formatTime(_elapsedSeconds);
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: const Text('축하합니다! 🎉'),
-        content: const Text('스도쿠를 완성했습니다!'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('스도쿠를 완성했습니다!'),
+            const SizedBox(height: 16),
+            Text('소요 시간: $timeStr'),
+            Text('실패 횟수: $_failureCount회'),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () {
@@ -285,6 +355,17 @@ class _GameScreenState extends State<GameScreen> {
         ],
       ),
     );
+  }
+
+  String _formatTime(int seconds) {
+    final hours = seconds ~/ 3600;
+    final minutes = (seconds % 3600) ~/ 60;
+    final secs = seconds % 60;
+
+    if (hours > 0) {
+      return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+    }
+    return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
   }
 
   void _showDifficultyDialog() {
@@ -373,6 +454,8 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _onFillAllNotes() {
+    if (_isPaused) return; // 일시정지 중에는 입력 불가
+
     setState(() {
       _gameState.fillAllNotes();
     });
@@ -419,16 +502,32 @@ class _GameScreenState extends State<GameScreen> {
                   children: [
                     Expanded(
                       flex: 1,
-                      child: Center(
-                        child: AspectRatio(
-                          aspectRatio: 1,
-                          child: SudokuBoard(
-                            gameState: _gameState,
-                            onCellTap: _onCellTap,
-                            isQuickInputMode: _isQuickInputMode,
-                            quickInputNumber: _quickInputNumber,
+                      child: Column(
+                        children: [
+                          GameStatusBar(
+                            elapsedSeconds: _elapsedSeconds,
+                            failureCount: _failureCount,
+                            isPaused: _isPaused,
+                            onPauseToggle: _togglePause,
+                            isCompact: true,
                           ),
-                        ),
+                          const SizedBox(height: 8),
+                          Expanded(
+                            child: Center(
+                              child: AspectRatio(
+                                aspectRatio: 1,
+                                child: _isPaused
+                                    ? _buildPausedOverlay()
+                                    : SudokuBoard(
+                                        gameState: _gameState,
+                                        onCellTap: _onCellTap,
+                                        isQuickInputMode: _isQuickInputMode,
+                                        quickInputNumber: _quickInputNumber,
+                                      ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -440,16 +539,68 @@ class _GameScreenState extends State<GameScreen> {
                 )
               : Column(
                   children: [
-                    SudokuBoard(
-                      gameState: _gameState,
-                      onCellTap: _onCellTap,
-                      isQuickInputMode: _isQuickInputMode,
-                      quickInputNumber: _quickInputNumber,
+                    GameStatusBar(
+                      elapsedSeconds: _elapsedSeconds,
+                      failureCount: _failureCount,
+                      isPaused: _isPaused,
+                      onPauseToggle: _togglePause,
+                      isCompact: false,
                     ),
+                    const SizedBox(height: 12),
+                    _isPaused
+                        ? AspectRatio(
+                            aspectRatio: 1,
+                            child: _buildPausedOverlay(),
+                          )
+                        : SudokuBoard(
+                            gameState: _gameState,
+                            onCellTap: _onCellTap,
+                            isQuickInputMode: _isQuickInputMode,
+                            quickInputNumber: _quickInputNumber,
+                          ),
                     const SizedBox(height: 20),
                     _buildControls(isLandscape: false),
                   ],
                 ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPausedOverlay() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade300,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade400, width: 2),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.pause_circle_outline,
+              size: 64,
+              color: Colors.grey.shade600,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              '일시정지',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '재개 버튼을 눌러 계속하세요',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade500,
+              ),
+            ),
+          ],
         ),
       ),
     );
