@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../models/samurai_game_state.dart';
 import '../models/samurai_sudoku_generator.dart';
 import '../services/game_storage.dart';
 import '../widgets/samurai_board.dart';
+import '../widgets/game_status_bar.dart';
 import 'expanded_board_screen.dart';
 
 class SamuraiGameScreen extends StatefulWidget {
@@ -20,24 +22,70 @@ class SamuraiGameScreen extends StatefulWidget {
   State<SamuraiGameScreen> createState() => _SamuraiGameScreenState();
 }
 
-class _SamuraiGameScreenState extends State<SamuraiGameScreen> {
+class _SamuraiGameScreenState extends State<SamuraiGameScreen>
+    with WidgetsBindingObserver {
   late SamuraiGameState _gameState;
   late SamuraiDifficulty _selectedDifficulty;
   bool _isLoading = true;
 
+  // 게임 타이머 및 통계
+  Timer? _timer;
+  int _elapsedSeconds = 0;
+  int _failureCount = 0;
+  bool _isPaused = false;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     if (widget.savedGameState != null) {
       // 저장된 게임 불러오기
       _gameState = widget.savedGameState!;
       _selectedDifficulty = _gameState.difficulty;
       _isLoading = false;
+      _startTimer();
     } else {
       // 새 게임 시작
       _selectedDifficulty = widget.initialDifficulty ?? SamuraiDifficulty.medium;
       _startNewGame();
     }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // 앱이 백그라운드로 갈 때 자동 일시정지
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      if (!_isPaused && !_isLoading) {
+        setState(() {
+          _isPaused = true;
+        });
+      }
+    }
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!_isPaused && !_gameState.isCompleted) {
+        setState(() {
+          _elapsedSeconds++;
+        });
+      }
+    });
+  }
+
+  void _togglePause() {
+    setState(() {
+      _isPaused = !_isPaused;
+    });
   }
 
   Future<void> _startNewGame() async {
@@ -58,7 +106,11 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen> {
       setState(() {
         _gameState = SamuraiGameState.fromGeneratedData(data);
         _isLoading = false;
+        _elapsedSeconds = 0;
+        _failureCount = 0;
+        _isPaused = false;
       });
+      _startTimer();
       _saveGame();
     }
   }
@@ -96,6 +148,18 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen> {
           boardIndex: board,
           initialRow: row,
           initialCol: col,
+          elapsedSeconds: _elapsedSeconds,
+          failureCount: _failureCount,
+          isPaused: _isPaused,
+          onPauseToggle: _togglePause,
+          onFailure: () {
+            setState(() {
+              _failureCount++;
+            });
+          },
+          onElapsedSecondsUpdate: (seconds) {
+            _elapsedSeconds = seconds;
+          },
           onValueChanged: (b, r, c, value) {
             _gameState.currentBoards[b][r][c] = value;
             _gameState.syncOverlapValue(b, r, c, value);
@@ -119,6 +183,7 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen> {
             _gameState.fillAllNotes(b);
           },
           onComplete: () {
+            _timer?.cancel();
             _showCompletionDialog();
           },
         ),
@@ -129,12 +194,44 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen> {
     _saveGame();
   }
 
+  String _formatTime(int seconds) {
+    int hours = seconds ~/ 3600;
+    int minutes = (seconds % 3600) ~/ 60;
+    int secs = seconds % 60;
+    if (hours > 0) {
+      return '$hours:${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+    }
+    return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+  }
+
   void _showCompletionDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('축하합니다! 🎉'),
-        content: const Text('사무라이 스도쿠를 완성했습니다!'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('사무라이 스도쿠를 완성했습니다!'),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Icon(Icons.timer, size: 20, color: Colors.blue),
+                const SizedBox(width: 8),
+                Text('소요 시간: ${_formatTime(_elapsedSeconds)}'),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.close, size: 20, color: Colors.red),
+                const SizedBox(width: 8),
+                Text('실패 횟수: $_failureCount회'),
+              ],
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () {
@@ -253,6 +350,14 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen> {
   Widget _buildPortraitLayout() {
     return Column(
       children: [
+        // 게임 상태 표시 바
+        GameStatusBar(
+          elapsedSeconds: _elapsedSeconds,
+          failureCount: _failureCount,
+          isPaused: _isPaused,
+          onPauseToggle: _togglePause,
+        ),
+        const SizedBox(height: 8),
         // 안내 텍스트
         Padding(
           padding: const EdgeInsets.only(bottom: 8),
@@ -264,21 +369,61 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen> {
             ),
           ),
         ),
-        // 사무라이 보드
+        // 사무라이 보드 또는 일시정지 오버레이
         Expanded(
           child: Center(
             child: AspectRatio(
               aspectRatio: 1,
-              child: SamuraiBoard(
-                gameState: _gameState,
-                onCellTap: _onCellTap,
-                onBoardSelect: _onBoardSelect,
-              ),
+              child: _isPaused
+                  ? _buildPausedOverlay()
+                  : SamuraiBoard(
+                      gameState: _gameState,
+                      onCellTap: _onCellTap,
+                      onBoardSelect: _onBoardSelect,
+                    ),
             ),
           ),
         ),
         const SizedBox(height: 16),
       ],
+    );
+  }
+
+  Widget _buildPausedOverlay() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade300,
+        border: Border.all(color: Colors.black, width: 2),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.pause_circle_outline,
+              size: 64,
+              color: Colors.grey.shade600,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              '일시정지',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '재개 버튼을 눌러 계속하세요',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -301,16 +446,32 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen> {
                 child: Center(
                   child: AspectRatio(
                     aspectRatio: 1,
-                    child: SamuraiBoard(
-                      gameState: _gameState,
-                      onCellTap: _onCellTap,
-                      onBoardSelect: _onBoardSelect,
-                    ),
+                    child: _isPaused
+                        ? _buildPausedOverlay()
+                        : SamuraiBoard(
+                            gameState: _gameState,
+                            onCellTap: _onCellTap,
+                            onBoardSelect: _onBoardSelect,
+                          ),
                   ),
                 ),
               ),
             ],
           ),
+        ),
+        const SizedBox(width: 8),
+        // 상태 바
+        Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            GameStatusBar(
+              elapsedSeconds: _elapsedSeconds,
+              failureCount: _failureCount,
+              isPaused: _isPaused,
+              onPauseToggle: _togglePause,
+              isCompact: true,
+            ),
+          ],
         ),
       ],
     );
