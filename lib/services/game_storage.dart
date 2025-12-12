@@ -97,6 +97,8 @@ class GameStorage {
       'difficulty': state.difficulty.index,
       'mistakes': state.mistakes,
       'isCompleted': state.isCompleted,
+      'elapsedSeconds': state.elapsedSeconds,
+      'failureCount': state.failureCount,
     };
   }
 
@@ -128,6 +130,8 @@ class GameStorage {
       difficulty: Difficulty.values[json['difficulty'] as int],
       mistakes: json['mistakes'] as int,
       isCompleted: json['isCompleted'] as bool,
+      elapsedSeconds: (json['elapsedSeconds'] as int?) ?? 0,
+      failureCount: (json['failureCount'] as int?) ?? 0,
     );
   }
 
@@ -147,6 +151,8 @@ class GameStorage {
       'difficulty': state.difficulty.index,
       'selectedBoard': state.selectedBoard,
       'isCompleted': state.isCompleted,
+      'elapsedSeconds': state.elapsedSeconds,
+      'failureCount': state.failureCount,
     };
   }
 
@@ -188,6 +194,8 @@ class GameStorage {
       difficulty: SamuraiDifficulty.values[json['difficulty'] as int],
       selectedBoard: json['selectedBoard'] as int,
       isCompleted: json['isCompleted'] as bool,
+      elapsedSeconds: (json['elapsedSeconds'] as int?) ?? 0,
+      failureCount: (json['failureCount'] as int?) ?? 0,
     );
   }
 }
