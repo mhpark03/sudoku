@@ -52,7 +52,7 @@ class KillerGameState {
   bool isCompleted;
   int elapsedSeconds;
   int failureCount;
-  final List<KillerUndoAction> _undoHistory = [];
+  final List<KillerUndoAction> _undoHistory;
   static const int maxUndoCount = 10;
 
   KillerGameState({
@@ -70,7 +70,8 @@ class KillerGameState {
     this.isCompleted = false,
     this.elapsedSeconds = 0,
     this.failureCount = 0,
-  });
+    List<KillerUndoAction>? undoHistory,
+  }) : _undoHistory = undoHistory ?? [];
 
   /// 생성된 데이터로부터 GameState 생성
   factory KillerGameState.fromGeneratedData(Map<String, dynamic> data) {
@@ -138,6 +139,7 @@ class KillerGameState {
       isCompleted: isCompleted ?? this.isCompleted,
       elapsedSeconds: elapsedSeconds ?? this.elapsedSeconds,
       failureCount: failureCount ?? this.failureCount,
+      undoHistory: _undoHistory,
     );
   }
 

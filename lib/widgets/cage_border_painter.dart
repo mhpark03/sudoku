@@ -13,8 +13,8 @@ class CageBorderPainter extends CustomPainter {
     final cSize = cellSize ?? size.width / 9;
 
     final paint = Paint()
-      ..color = Colors.black87
-      ..strokeWidth = 1.5
+      ..color = Colors.red.shade800
+      ..strokeWidth = 2.5
       ..style = PaintingStyle.stroke;
 
     // Build lookup map for cage IDs
@@ -61,7 +61,7 @@ class CageBorderPainter extends CustomPainter {
   }
 
   void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint) {
-    const dashLength = 3.0;
+    const dashLength = 4.0;
     const gapLength = 2.0;
 
     final dx = end.dx - start.dx;

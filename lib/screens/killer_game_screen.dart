@@ -169,8 +169,24 @@ class _KillerGameScreenState extends State<KillerGameScreen>
           controlState.quickInputNumber != null) {
         if (!_gameState.isFixed[row][col]) {
           if (controlState.isNoteMode) {
-            if (_gameState.currentBoard[row][col] == 0) {
+            int currentValue = _gameState.currentBoard[row][col];
+            bool hasError = currentValue != 0 && _gameState.hasError(row, col);
+
+            if (currentValue == 0 || hasError) {
               _gameState.saveToUndoHistory(row, col);
+
+              // 오류가 있는 셀이면 값을 먼저 삭제
+              if (hasError) {
+                List<List<int>> newBoard =
+                    _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
+                newBoard[row][col] = 0;
+                _gameState = _gameState.copyWith(
+                  currentBoard: newBoard,
+                  selectedRow: row,
+                  selectedCol: col,
+                );
+              }
+
               _gameState.toggleNote(row, col, controlState.quickInputNumber!);
               _gameState =
                   _gameState.copyWith(selectedRow: row, selectedCol: col);
@@ -240,8 +256,20 @@ class _KillerGameScreenState extends State<KillerGameScreen>
       if (_gameState.isFixed[row][col]) return;
 
       if (isNoteMode) {
-        if (_gameState.currentBoard[row][col] == 0) {
+        int currentValue = _gameState.currentBoard[row][col];
+        bool hasError = currentValue != 0 && _gameState.hasError(row, col);
+
+        if (currentValue == 0 || hasError) {
           _gameState.saveToUndoHistory(row, col);
+
+          // 오류가 있는 셀이면 값을 먼저 삭제
+          if (hasError) {
+            List<List<int>> newBoard =
+                _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
+            newBoard[row][col] = 0;
+            _gameState = _gameState.copyWith(currentBoard: newBoard);
+          }
+
           _gameState.toggleNote(row, col, number);
         }
         return;
