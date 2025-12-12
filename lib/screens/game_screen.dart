@@ -47,6 +47,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       // 저장된 게임 불러오기
       _gameState = widget.savedGameState!;
       _selectedDifficulty = _gameState.difficulty;
+      // 저장된 게임 통계 복원
+      _elapsedSeconds = _gameState.elapsedSeconds;
+      _failureCount = _gameState.failureCount;
       _isLoading = false;
       _startTimer();
     } else {
@@ -123,6 +126,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   /// 게임 상태 저장
   void _saveGame() {
     if (!_gameState.isCompleted) {
+      // 현재 게임 통계를 게임 상태에 업데이트
+      _gameState.elapsedSeconds = _elapsedSeconds;
+      _gameState.failureCount = _failureCount;
       GameStorage.saveRegularGame(_gameState);
     } else {
       // 게임 완료 시 저장된 게임 삭제

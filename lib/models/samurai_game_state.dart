@@ -44,6 +44,9 @@ class SamuraiGameState {
   int? selectedRow;
   int? selectedCol;
   bool isCompleted;
+  // 게임 통계
+  int elapsedSeconds;
+  int failureCount;
 
   SamuraiGameState({
     required this.solutions,
@@ -56,6 +59,8 @@ class SamuraiGameState {
     this.selectedRow,
     this.selectedCol,
     this.isCompleted = false,
+    this.elapsedSeconds = 0,
+    this.failureCount = 0,
   });
 
   /// 동기적으로 새 게임 생성 (메인 스레드에서 실행, UI 블로킹 가능)
@@ -116,6 +121,8 @@ class SamuraiGameState {
     int? selectedRow,
     int? selectedCol,
     bool? isCompleted,
+    int? elapsedSeconds,
+    int? failureCount,
     bool clearSelection = false,
   }) {
     return SamuraiGameState(
@@ -129,6 +136,8 @@ class SamuraiGameState {
       selectedRow: clearSelection ? null : (selectedRow ?? this.selectedRow),
       selectedCol: clearSelection ? null : (selectedCol ?? this.selectedCol),
       isCompleted: isCompleted ?? this.isCompleted,
+      elapsedSeconds: elapsedSeconds ?? this.elapsedSeconds,
+      failureCount: failureCount ?? this.failureCount,
     );
   }
 

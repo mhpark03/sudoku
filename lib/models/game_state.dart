@@ -44,6 +44,9 @@ class GameState {
   int? quickInputNumber; // 빠른 입력 모드에서 선택된 숫자
   int mistakes;
   bool isCompleted;
+  // 게임 통계
+  int elapsedSeconds;
+  int failureCount;
 
   GameState({
     required this.solution,
@@ -57,6 +60,8 @@ class GameState {
     this.quickInputNumber,
     this.mistakes = 0,
     this.isCompleted = false,
+    this.elapsedSeconds = 0,
+    this.failureCount = 0,
   });
 
   /// 동기적으로 새 게임 생성 (메인 스레드에서 실행, UI 블로킹 가능)
@@ -107,6 +112,8 @@ class GameState {
     int? quickInputNumber,
     int? mistakes,
     bool? isCompleted,
+    int? elapsedSeconds,
+    int? failureCount,
     bool clearSelection = false,
     bool clearQuickInput = false,
   }) {
@@ -122,6 +129,8 @@ class GameState {
       quickInputNumber: clearQuickInput ? null : (quickInputNumber ?? this.quickInputNumber),
       mistakes: mistakes ?? this.mistakes,
       isCompleted: isCompleted ?? this.isCompleted,
+      elapsedSeconds: elapsedSeconds ?? this.elapsedSeconds,
+      failureCount: failureCount ?? this.failureCount,
     );
   }
 
