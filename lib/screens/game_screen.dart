@@ -356,6 +356,10 @@ class _GameScreenState extends State<GameScreen> {
         setState(() {
           _isQuickInputMode = isQuickInput;
           _quickInputNumber = number;
+          // 빠른 입력 모드에서 숫자 선택 시 셀 선택 초기화
+          if (isQuickInput && number != null) {
+            _gameState = _gameState.copyWith(clearSelection: true);
+          }
         });
       },
       onEraseModeChanged: (isErase) {
