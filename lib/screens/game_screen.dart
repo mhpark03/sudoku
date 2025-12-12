@@ -29,6 +29,7 @@ class _GameScreenState extends State<GameScreen> {
   // 빠른 입력 모드 상태 (하이라이트용)
   bool _isQuickInputMode = false;
   int? _quickInputNumber;
+  bool _isEraseMode = false;
 
   @override
   void initState() {
@@ -83,8 +84,30 @@ class _GameScreenState extends State<GameScreen> {
     if (controlState == null) return;
 
     setState(() {
+      // 지우기 모드일 때
+      if (controlState.isEraseMode) {
+        if (!_gameState.isFixed[row][col]) {
+          if (_gameState.currentBoard[row][col] != 0) {
+            // 값이 있으면 값 지우기
+            List<List<int>> newBoard =
+                _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
+            newBoard[row][col] = 0;
+            _gameState = _gameState.copyWith(
+              currentBoard: newBoard,
+              selectedRow: row,
+              selectedCol: col,
+            );
+          } else {
+            // 값이 없으면 메모 지우기
+            _gameState.clearNotes(row, col);
+            _gameState = _gameState.copyWith(selectedRow: row, selectedCol: col);
+          }
+        } else {
+          _gameState = _gameState.copyWith(selectedRow: row, selectedCol: col);
+        }
+      }
       // 빠른 입력 모드일 때
-      if (controlState.isQuickInputMode && controlState.quickInputNumber != null) {
+      else if (controlState.isQuickInputMode && controlState.quickInputNumber != null) {
         // 고정 셀이 아니면 빠른 입력 숫자로 입력
         if (!_gameState.isFixed[row][col]) {
           // 빠른 입력 + 메모 모드: 메모로 입력
@@ -333,6 +356,11 @@ class _GameScreenState extends State<GameScreen> {
         setState(() {
           _isQuickInputMode = isQuickInput;
           _quickInputNumber = number;
+        });
+      },
+      onEraseModeChanged: (isErase) {
+        setState(() {
+          _isEraseMode = isErase;
         });
       },
       disabledNumbers: _gameState.getCompletedNumbers(),

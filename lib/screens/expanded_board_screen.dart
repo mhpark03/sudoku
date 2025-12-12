@@ -39,6 +39,7 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
   // 빠른 입력 모드 상태 (하이라이트용)
   bool _isQuickInputMode = false;
   int? _quickInputNumber;
+  bool _isEraseMode = false;
 
   @override
   void initState() {
@@ -107,6 +108,11 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
                 _quickInputNumber = number;
               });
             },
+            onEraseModeChanged: (isErase) {
+              setState(() {
+                _isEraseMode = isErase;
+              });
+            },
             disabledNumbers: widget.gameState.getCompletedNumbers(widget.boardIndex),
             isCompact: false,
           ),
@@ -153,6 +159,11 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
                 setState(() {
                   _isQuickInputMode = isQuickInput;
                   _quickInputNumber = number;
+                });
+              },
+              onEraseModeChanged: (isErase) {
+                setState(() {
+                  _isEraseMode = isErase;
                 });
               },
               disabledNumbers: widget.gameState.getCompletedNumbers(widget.boardIndex),
@@ -276,7 +287,22 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
     final controlState = _controlPanelKey.currentState;
 
     setState(() {
-      if (controlState != null && controlState.isQuickInputMode && controlState.quickInputNumber != null) {
+      // 지우기 모드일 때
+      if (controlState != null && controlState.isEraseMode) {
+        if (!isFixed) {
+          if (widget.gameState.currentBoards[widget.boardIndex][row][col] != 0) {
+            // 값이 있으면 값 지우기
+            widget.onValueChanged(widget.boardIndex, row, col, 0);
+          } else {
+            // 값이 없으면 메모 지우기
+            widget.gameState.clearNotes(widget.boardIndex, row, col);
+          }
+        }
+        selectedRow = row;
+        selectedCol = col;
+      }
+      // 빠른 입력 모드일 때
+      else if (controlState != null && controlState.isQuickInputMode && controlState.quickInputNumber != null) {
         if (!isFixed) {
           // 빠른 입력 + 메모 모드: 메모로 입력
           if (controlState.isNoteMode) {
