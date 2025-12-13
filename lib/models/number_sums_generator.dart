@@ -121,6 +121,7 @@ class NumberSumsGenerator {
   }
 
   /// 블록 생성 (연결된 셀들을 그룹화)
+  /// 각 블록은 최소 하나의 정답 셀을 포함하여 합이 0이 되지 않도록 함
   void _generateBlocks(
     List<List<int>> blockIds,
     List<List<int>> solution,
@@ -128,22 +129,36 @@ class NumberSumsGenerator {
     int blockCount,
     List<int> blockSums,
   ) {
-    // 게임 영역의 모든 셀을 수집
-    final unassigned = <(int, int)>[];
+    // 정답 셀과 틀린 셀을 분리
+    final correctCells = <(int, int)>[];
+    final wrongCells = <(int, int)>[];
+
     for (int row = 1; row < gridSize; row++) {
       for (int col = 1; col < gridSize; col++) {
-        unassigned.add((row, col));
+        if (solution[row][col] > 0) {
+          correctCells.add((row, col));
+        } else {
+          wrongCells.add((row, col));
+        }
       }
     }
 
-    final totalCells = unassigned.length;
-    final avgBlockSize = totalCells ~/ blockCount;
+    // 정답 셀을 섞음
+    correctCells.shuffle(_random);
+
+    // 블록 수가 정답 셀 수보다 많으면 조정
+    final actualBlockCount = min(blockCount, correctCells.length);
+
+    final totalCells = correctCells.length + wrongCells.length;
+    final avgBlockSize = totalCells ~/ actualBlockCount;
 
     int currentBlockId = 0;
+    final unassigned = <(int, int)>{...correctCells, ...wrongCells};
 
-    while (unassigned.isNotEmpty && currentBlockId < blockCount) {
+    // 각 블록은 정답 셀에서 시작
+    while (currentBlockId < actualBlockCount && correctCells.isNotEmpty) {
       // 남은 블록 수
-      int remainingBlocks = blockCount - currentBlockId;
+      int remainingBlocks = actualBlockCount - currentBlockId;
 
       // 이 블록의 크기 결정
       int blockSize;
@@ -157,10 +172,19 @@ class NumberSumsGenerator {
         blockSize = minSize + _random.nextInt(maxSize - minSize + 1);
       }
 
-      // 시작점 선택
-      final startIdx = _random.nextInt(unassigned.length);
-      final start = unassigned[startIdx];
-      unassigned.removeAt(startIdx);
+      // 정답 셀에서 시작 (블록 합이 0이 되지 않도록)
+      (int, int)? start;
+      for (final cell in correctCells) {
+        if (unassigned.contains(cell)) {
+          start = cell;
+          break;
+        }
+      }
+
+      if (start == null) break;
+
+      unassigned.remove(start);
+      correctCells.remove(start);
 
       blockIds[start.$1][start.$2] = currentBlockId;
       final blockCells = [start];
@@ -189,6 +213,7 @@ class NumberSumsGenerator {
         // 인접 셀 중 하나 선택
         final nextCell = adjacentCells[_random.nextInt(adjacentCells.length)];
         unassigned.remove(nextCell);
+        correctCells.remove(nextCell); // 정답 셀 목록에서도 제거
         blockIds[nextCell.$1][nextCell.$2] = currentBlockId;
         blockCells.add(nextCell);
         blockSum += solution[nextCell.$1][nextCell.$2];
@@ -200,7 +225,8 @@ class NumberSumsGenerator {
 
     // 남은 셀이 있으면 가장 가까운 블록에 할당
     while (unassigned.isNotEmpty) {
-      final cell = unassigned.removeAt(0);
+      final cell = unassigned.first;
+      unassigned.remove(cell);
 
       // 인접한 블록 찾기
       int nearestBlockId = 0;
