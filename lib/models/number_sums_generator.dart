@@ -6,110 +6,103 @@ class NumberSumsGenerator {
   final Random _random = Random();
 
   Map<String, dynamic> generatePuzzle(NumberSumsDifficulty difficulty) {
-    int gameSize; // 실제 게임 그리드 크기 (6x6 등)
-    double wrongRatio;
+    int gameSize;
+    double fillRatio; // 정답 셀 비율
+    double wrongRatio; // 빈 셀 중 틀린 숫자로 채울 비율
 
     switch (difficulty) {
       case NumberSumsDifficulty.easy:
         gameSize = 5;
-        wrongRatio = 0.25;
+        fillRatio = 0.6; // 60% 정답 셀
+        wrongRatio = 0.7; // 빈 셀의 70%를 틀린 숫자로
         break;
       case NumberSumsDifficulty.medium:
         gameSize = 6;
-        wrongRatio = 0.30;
+        fillRatio = 0.55;
+        wrongRatio = 0.8;
         break;
       case NumberSumsDifficulty.hard:
         gameSize = 7;
-        wrongRatio = 0.35;
+        fillRatio = 0.5;
+        wrongRatio = 0.9;
         break;
     }
 
-    return _generateEliminationPuzzle(gameSize, difficulty, wrongRatio);
+    return _generateEliminationPuzzle(gameSize, difficulty, fillRatio, wrongRatio);
   }
 
   Map<String, dynamic> _generateEliminationPuzzle(
-      int gameSize, NumberSumsDifficulty difficulty, double wrongRatio) {
-    // 전체 그리드 크기 = gameSize + 1 (헤더 행/열 포함)
+      int gameSize, NumberSumsDifficulty difficulty, double fillRatio, double wrongRatio) {
     final int gridSize = gameSize + 1;
 
-    // 정답 보드 생성 (gameSize x gameSize, 1-9 랜덤)
+    // 1. 정답 패턴 생성 (어떤 셀에 정답 숫자가 있는지)
+    // solution: 정답 숫자가 있는 셀만 값이 있고, 나머지는 0
     final solution = List.generate(
       gridSize,
-      (row) => List.generate(gridSize, (col) {
-        if (row == 0 || col == 0) return 0; // 헤더는 0
-        return _random.nextInt(9) + 1; // 1-9
-      }),
+      (row) => List.generate(gridSize, (col) => 0),
     );
 
-    // cellTypes: 0 = 헤더/단서, 1 = 입력 셀
+    // cellTypes: 0 = 헤더, 1 = 정답 셀, 2 = 빈 셀 (틀린 숫자로 채워질)
     final cellTypes = List.generate(
       gridSize,
       (row) => List.generate(gridSize, (col) {
-        if (row == 0 || col == 0) return 0;
-        return 1;
+        if (row == 0 || col == 0) return 0; // 헤더
+        return 1; // 일단 모두 입력 셀로
       }),
     );
 
-    // 틀린 숫자 배치
+    // 정답 셀 위치 결정
+    final allCells = <(int, int)>[];
+    for (int row = 1; row < gridSize; row++) {
+      for (int col = 1; col < gridSize; col++) {
+        allCells.add((row, col));
+      }
+    }
+
+    int correctCellCount = (allCells.length * fillRatio).round();
+    correctCellCount = max(correctCellCount, gameSize); // 최소 gameSize개
+
+    allCells.shuffle(_random);
+    final correctCells = allCells.take(correctCellCount).toSet();
+    final emptyCells = allCells.skip(correctCellCount).toList();
+
+    // 정답 셀에 1-9 숫자 배치 (행/열 내 중복 허용)
+    for (final (row, col) in correctCells) {
+      solution[row][col] = _random.nextInt(9) + 1;
+    }
+
+    // 2. 행/열 합계 계산 (정답 셀 숫자만)
+    final rowSums = List<int>.filled(gridSize, 0);
+    final colSums = List<int>.filled(gridSize, 0);
+
+    for (int row = 1; row < gridSize; row++) {
+      for (int col = 1; col < gridSize; col++) {
+        rowSums[row] += solution[row][col];
+        colSums[col] += solution[row][col];
+      }
+    }
+
+    // 3. 퍼즐 보드 생성: 정답 복사 + 빈 셀에 틀린 숫자 채우기
+    final puzzle = solution.map((row) => List<int>.from(row)).toList();
     final wrongCells = List.generate(
       gridSize,
       (_) => List.generate(gridSize, (_) => false),
     );
 
-    // 입력 셀 목록
-    final inputCells = <(int, int)>[];
-    for (int row = 1; row < gridSize; row++) {
-      for (int col = 1; col < gridSize; col++) {
-        inputCells.add((row, col));
-      }
-    }
-
-    // 틀린 숫자 개수
-    int wrongCount = (inputCells.length * wrongRatio).round();
+    // 빈 셀 중 일부에 틀린 숫자 채우기
+    int wrongCount = (emptyCells.length * wrongRatio).round();
     wrongCount = max(wrongCount, 2);
 
-    // 퍼즐 보드 = 정답 복사
-    final puzzle = solution.map((row) => List<int>.from(row)).toList();
-
-    // 랜덤하게 틀린 숫자 배치
-    inputCells.shuffle(_random);
+    emptyCells.shuffle(_random);
     int addedWrong = 0;
 
-    for (final (row, col) in inputCells) {
+    for (final (row, col) in emptyCells) {
       if (addedWrong >= wrongCount) break;
 
-      int correctValue = solution[row][col];
-
-      // 다른 숫자로 교체
-      List<int> wrongOptions = [];
-      for (int n = 1; n <= 9; n++) {
-        if (n != correctValue) wrongOptions.add(n);
-      }
-      wrongOptions.shuffle(_random);
-
-      puzzle[row][col] = wrongOptions.first;
+      // 틀린 숫자 생성 (1-9)
+      puzzle[row][col] = _random.nextInt(9) + 1;
       wrongCells[row][col] = true;
       addedWrong++;
-    }
-
-    // 행 합계 계산 (각 행의 맞는 숫자 합)
-    final rowSums = List<int>.filled(gridSize, 0);
-    for (int row = 1; row < gridSize; row++) {
-      int sum = 0;
-      for (int col = 1; col < gridSize; col++) {
-        sum += solution[row][col]; // 정답 기준 합계
-      }
-      rowSums[row] = sum;
-    }
-
-    // 열 합계 계산 (각 열의 맞는 숫자 합)
-    final colSums = List<int>.filled(gridSize, 0);
-    for (int col = 1; col < gridSize; col++) {
-      int sum = 0;
-      for (int row = 1; row < gridSize; row++) {
-        sum += solution[row][col]; // 정답 기준 합계
-      }
-      colSums[col] = sum;
     }
 
     return {
