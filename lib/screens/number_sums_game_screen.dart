@@ -282,13 +282,13 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
             String label;
             switch (difficulty) {
               case NumberSumsDifficulty.easy:
-                label = '쉬움 (6x6)';
+                label = '쉬움 (5x5)';
                 break;
               case NumberSumsDifficulty.medium:
-                label = '보통 (8x8)';
+                label = '보통 (6x6)';
                 break;
               case NumberSumsDifficulty.hard:
-                label = '어려움 (10x10)';
+                label = '어려움 (7x7)';
                 break;
             }
             return ListTile(

@@ -17,23 +17,18 @@ class NumberSumsUndoAction {
     required this.col,
     required this.previousValue,
   });
-
-  static String cellKey(int row, int col) => '${row}_$col';
-
-  static (int, int) parseKey(String key) {
-    final parts = key.split('_');
-    return (int.parse(parts[0]), int.parse(parts[1]));
-  }
 }
 
 class NumberSumsGameState {
   final List<List<int>> solution;
-  final List<List<int>> puzzle; // 틀린 숫자가 포함된 초기 퍼즐
+  final List<List<int>> puzzle;
   final List<List<int>> currentBoard;
-  final List<List<int>> cellTypes; // 0 = blocked, 1 = input
-  final List<List<bool>> wrongCells; // 틀린 숫자 셀 표시
-  final List<NumberSumsClue> clues;
-  final int gridSize;
+  final List<List<int>> cellTypes; // 0 = 헤더, 1 = 입력 셀
+  final List<List<bool>> wrongCells;
+  final List<int> rowSums; // 각 행의 정답 합계
+  final List<int> colSums; // 각 열의 정답 합계
+  final int gridSize; // 전체 그리드 크기 (헤더 포함)
+  final int gameSize; // 실제 게임 그리드 크기
   final NumberSumsDifficulty difficulty;
   int? selectedRow;
   int? selectedCol;
@@ -50,8 +45,10 @@ class NumberSumsGameState {
     required this.currentBoard,
     required this.cellTypes,
     required this.wrongCells,
-    required this.clues,
+    required this.rowSums,
+    required this.colSums,
     required this.gridSize,
+    required this.gameSize,
     required this.difficulty,
     this.selectedRow,
     this.selectedCol,
@@ -62,9 +59,9 @@ class NumberSumsGameState {
     List<NumberSumsUndoAction>? undoHistory,
   }) : _undoHistory = undoHistory ?? [];
 
-  /// 생성된 데이터로부터 GameState 생성
   factory NumberSumsGameState.fromGeneratedData(Map<String, dynamic> data) {
     final gridSize = data['gridSize'] as int;
+    final gameSize = data['gameSize'] as int;
     final solution = (data['solution'] as List)
         .map((row) => List<int>.from(row as List))
         .toList();
@@ -74,18 +71,15 @@ class NumberSumsGameState {
     final cellTypes = (data['cellTypes'] as List)
         .map((row) => List<int>.from(row as List))
         .toList();
-    final clues = (data['clues'] as List)
-        .map((c) => NumberSumsClue.fromJson(c as Map<String, dynamic>))
-        .toList();
     final difficulty = NumberSumsDifficulty.values[data['difficulty'] as int];
 
-    // wrongCells 파싱
-    final wrongCellsData = data['wrongCells'] as List?;
-    final wrongCells = wrongCellsData != null
-        ? (wrongCellsData as List)
-            .map((row) => (row as List).map((v) => v == 1).toList())
-            .toList()
-        : List.generate(gridSize, (_) => List.filled(gridSize, false));
+    final wrongCellsData = data['wrongCells'] as List;
+    final wrongCells = wrongCellsData
+        .map((row) => (row as List).map((v) => v == 1).toList())
+        .toList();
+
+    final rowSums = List<int>.from(data['rowSums'] as List);
+    final colSums = List<int>.from(data['colSums'] as List);
 
     final currentBoard = puzzle.map((row) => List<int>.from(row)).toList();
 
@@ -95,8 +89,10 @@ class NumberSumsGameState {
       currentBoard: currentBoard,
       cellTypes: cellTypes,
       wrongCells: wrongCells,
-      clues: clues,
+      rowSums: rowSums,
+      colSums: colSums,
       gridSize: gridSize,
+      gameSize: gameSize,
       difficulty: difficulty,
     );
   }
@@ -107,8 +103,10 @@ class NumberSumsGameState {
     List<List<int>>? currentBoard,
     List<List<int>>? cellTypes,
     List<List<bool>>? wrongCells,
-    List<NumberSumsClue>? clues,
+    List<int>? rowSums,
+    List<int>? colSums,
     int? gridSize,
+    int? gameSize,
     NumberSumsDifficulty? difficulty,
     int? selectedRow,
     int? selectedCol,
@@ -124,8 +122,10 @@ class NumberSumsGameState {
       currentBoard: currentBoard ?? this.currentBoard,
       cellTypes: cellTypes ?? this.cellTypes,
       wrongCells: wrongCells ?? this.wrongCells,
-      clues: clues ?? this.clues,
+      rowSums: rowSums ?? this.rowSums,
+      colSums: colSums ?? this.colSums,
       gridSize: gridSize ?? this.gridSize,
+      gameSize: gameSize ?? this.gameSize,
       difficulty: difficulty ?? this.difficulty,
       selectedRow: clearSelection ? null : (selectedRow ?? this.selectedRow),
       selectedCol: clearSelection ? null : (selectedCol ?? this.selectedCol),
@@ -137,57 +137,14 @@ class NumberSumsGameState {
     );
   }
 
-  /// Check if cell is input type
   bool isInputCell(int row, int col) {
     return cellTypes[row][col] == 1;
   }
 
-  /// 이 셀이 틀린 숫자인지 확인
   bool isWrongCell(int row, int col) {
     return wrongCells[row][col];
   }
 
-  /// 이 셀이 현재 정답 상태인지 (제거되지 않은 올바른 숫자)
-  bool isCorrectCell(int row, int col) {
-    if (cellTypes[row][col] != 1) return false;
-    return currentBoard[row][col] == solution[row][col];
-  }
-
-  /// Get clue at position (if any)
-  NumberSumsClue? getClueAt(int row, int col) {
-    for (var clue in clues) {
-      if (clue.row == row && clue.col == col) return clue;
-    }
-    return null;
-  }
-
-  /// Get horizontal run info for a cell
-  (int startCol, int endCol) getHorizontalRun(int row, int col) {
-    int startCol = col;
-    while (startCol > 0 && cellTypes[row][startCol - 1] == 1) {
-      startCol--;
-    }
-    int endCol = col;
-    while (endCol < gridSize - 1 && cellTypes[row][endCol + 1] == 1) {
-      endCol++;
-    }
-    return (startCol, endCol);
-  }
-
-  /// Get vertical run info for a cell
-  (int startRow, int endRow) getVerticalRun(int row, int col) {
-    int startRow = row;
-    while (startRow > 0 && cellTypes[startRow - 1][col] == 1) {
-      startRow--;
-    }
-    int endRow = row;
-    while (endRow < gridSize - 1 && cellTypes[endRow + 1][col] == 1) {
-      endRow++;
-    }
-    return (startRow, endRow);
-  }
-
-  /// 현재 상태를 Undo 히스토리에 저장
   void saveToUndoHistory(int row, int col) {
     final action = NumberSumsUndoAction(
       row: row,
@@ -200,7 +157,6 @@ class NumberSumsGameState {
     }
   }
 
-  /// Undo 히스토리에서 pop하고 액션 반환 (내부 상태도 복원)
   NumberSumsUndoAction? popFromUndoHistory() {
     if (_undoHistory.isEmpty) return null;
 
@@ -210,34 +166,18 @@ class NumberSumsGameState {
   }
 
   bool get canUndo => _undoHistory.isNotEmpty;
-  int get undoCount => _undoHistory.length;
-
-  void clearUndoHistory() {
-    _undoHistory.clear();
-  }
 
   bool get hasSelection => selectedRow != null && selectedCol != null;
-
-  int? get selectedValue {
-    if (!hasSelection) return null;
-    return currentBoard[selectedRow!][selectedCol!];
-  }
 
   bool isSelected(int row, int col) {
     return selectedRow == row && selectedCol == col;
   }
 
-  bool isSameValue(int row, int col) {
-    if (!hasSelection) return false;
-    int cellValue = currentBoard[row][col];
-    return cellValue != 0 && cellValue == selectedValue;
-  }
-
   /// 남은 틀린 숫자 개수
   int get remainingWrongCount {
     int count = 0;
-    for (int row = 0; row < gridSize; row++) {
-      for (int col = 0; col < gridSize; col++) {
+    for (int row = 1; row < gridSize; row++) {
+      for (int col = 1; col < gridSize; col++) {
         if (wrongCells[row][col] && currentBoard[row][col] != 0) {
           count++;
         }
@@ -246,12 +186,11 @@ class NumberSumsGameState {
     return count;
   }
 
-  /// 보드가 완성되었는지 확인 (모든 틀린 숫자가 제거됨)
+  /// 보드가 완성되었는지 확인
   bool checkCompletion() {
     return NumberSumsGenerator.isBoardComplete(
       currentBoard,
       solution,
-      cellTypes,
       gridSize,
     );
   }
