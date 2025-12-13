@@ -368,6 +368,21 @@ class NumberSumsGameState {
     return true;
   }
 
+  /// Undo 히스토리에서 pop하고 액션 반환 (내부 상태도 복원)
+  NumberSumsUndoAction? popFromUndoHistory() {
+    if (_undoHistory.isEmpty) return null;
+
+    final action = _undoHistory.removeLast();
+    currentBoard[action.row][action.col] = action.previousValue;
+    notes[action.row][action.col] = Set<int>.from(action.previousNotes);
+
+    for (final entry in action.affectedCellsNotes.entries) {
+      final (r, c) = NumberSumsUndoAction.parseKey(entry.key);
+      notes[r][c] = Set<int>.from(entry.value);
+    }
+    return action;
+  }
+
   bool get canUndo => _undoHistory.isNotEmpty;
   int get undoCount => _undoHistory.length;
 
