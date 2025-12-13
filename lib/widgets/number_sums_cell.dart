@@ -8,8 +8,6 @@ class NumberSumsInputCell extends StatelessWidget {
   final bool hasError;
   final Set<int> notes;
   final VoidCallback onTap;
-  final bool isQuickInputHighlight;
-  final bool isQuickInputNoteHighlight;
 
   const NumberSumsInputCell({
     super.key,
@@ -20,23 +18,23 @@ class NumberSumsInputCell extends StatelessWidget {
     required this.hasError,
     required this.notes,
     required this.onTap,
-    this.isQuickInputHighlight = false,
-    this.isQuickInputNoteHighlight = false,
   });
 
   @override
   Widget build(BuildContext context) {
     Color backgroundColor;
+    Color borderColor = Colors.grey.shade300;
+
     if (isSelected) {
-      backgroundColor = Colors.orange.shade300;
+      backgroundColor = const Color(0xFFFFF3C4); // 연한 노란색
+      borderColor = const Color(0xFFFFD93D);
     } else if (hasError) {
-      backgroundColor = Colors.red.shade100;
+      backgroundColor = const Color(0xFFFFE0E0); // 연한 빨간색
+      borderColor = Colors.red.shade300;
     } else if (isSameValue) {
-      backgroundColor = Colors.orange.shade100;
+      backgroundColor = const Color(0xFFE8F4FD); // 연한 파란색
     } else if (isHighlighted) {
-      backgroundColor = Colors.orange.shade50;
-    } else if (isQuickInputHighlight || isQuickInputNoteHighlight) {
-      backgroundColor = Colors.orange.shade200;
+      backgroundColor = const Color(0xFFFFF9E6); // 아주 연한 노란색
     } else {
       backgroundColor = Colors.white;
     }
@@ -46,26 +44,26 @@ class NumberSumsInputCell extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: backgroundColor,
-          border: Border.all(color: Colors.grey.shade400, width: 0.5),
+          border: Border.all(color: borderColor, width: 0.5),
         ),
-        child: value != 0
-            ? Center(
-                child: FittedBox(
+        child: Center(
+          child: value != 0
+              ? FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Padding(
-                    padding: const EdgeInsets.all(2),
+                    padding: const EdgeInsets.all(4),
                     child: Text(
                       '$value',
                       style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: hasError ? Colors.red : Colors.black87,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w600,
+                        color: hasError ? Colors.red : const Color(0xFF333333),
                       ),
                     ),
                   ),
-                ),
-              )
-            : _buildNotes(),
+                )
+              : _buildNotes(),
+        ),
       ),
     );
   }
@@ -77,7 +75,7 @@ class NumberSumsInputCell extends StatelessWidget {
       builder: (context, constraints) {
         final cellSize = constraints.maxWidth;
         final noteSize = cellSize / 3;
-        final fontSize = noteSize * 0.6;
+        final fontSize = noteSize * 0.55;
 
         return Stack(
           children: notes.map((note) {
@@ -93,12 +91,7 @@ class NumberSumsInputCell extends StatelessWidget {
                   '$note',
                   style: TextStyle(
                     fontSize: fontSize,
-                    color: isQuickInputNoteHighlight && notes.contains(note)
-                        ? Colors.orange.shade800
-                        : Colors.grey.shade600,
-                    fontWeight: isQuickInputNoteHighlight && notes.contains(note)
-                        ? FontWeight.bold
-                        : FontWeight.normal,
+                    color: Colors.grey.shade500,
                   ),
                 ),
               ),
@@ -124,47 +117,47 @@ class NumberSumsClueCell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey.shade800,
-        border: Border.all(color: Colors.grey.shade600, width: 0.5),
+        color: const Color(0xFFF5F0E6), // 베이지/크림색
+        border: Border.all(color: Colors.grey.shade300, width: 0.5),
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final size = constraints.maxWidth;
-          final fontSize = size * 0.28;
+          final fontSize = size * 0.26;
 
           return Stack(
             children: [
-              // Diagonal line using CustomPaint
+              // Diagonal line
               Positioned.fill(
                 child: CustomPaint(
                   painter: _DiagonalLinePainter(),
                 ),
               ),
-              // Down sum (bottom-left triangle) - 아래 방향 합계
+              // Down sum (bottom-left triangle)
               if (downSum != null)
                 Positioned(
-                  left: 2,
+                  left: 3,
                   bottom: 2,
                   child: Text(
                     '$downSum',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: const Color(0xFF666666),
                       fontSize: fontSize,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
-              // Right sum (top-right triangle) - 오른쪽 방향 합계
+              // Right sum (top-right triangle)
               if (rightSum != null)
                 Positioned(
-                  right: 2,
+                  right: 3,
                   top: 2,
                   child: Text(
                     '$rightSum',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: const Color(0xFF666666),
                       fontSize: fontSize,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
@@ -180,8 +173,8 @@ class _DiagonalLinePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.grey.shade500
-      ..strokeWidth = 1.5;
+      ..color = const Color(0xFFCCCCCC)
+      ..strokeWidth = 1.0;
 
     canvas.drawLine(
       const Offset(0, 0),
@@ -201,8 +194,8 @@ class NumberSumsBlockedCell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey.shade800,
-        border: Border.all(color: Colors.grey.shade600, width: 0.5),
+        color: const Color(0xFFF5F0E6), // 베이지/크림색
+        border: Border.all(color: Colors.grey.shade300, width: 0.5),
       ),
     );
   }
