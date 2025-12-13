@@ -23,6 +23,7 @@ class NumberSumsUndoAction {
 enum NumberSumsGameMode {
   select, // 선택 모드: 올바른 수 찾기
   remove, // 제거 모드: 틀린 수 제거
+  hint, // 힌트 모드: 자동으로 정답 처리
 }
 
 class NumberSumsGameState {

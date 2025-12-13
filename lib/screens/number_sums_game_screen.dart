@@ -146,13 +146,11 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
           // 틀린 수를 올바른 수로 선택 -> 실패!
           _failureCount++;
         }
-      } else {
+      } else if (_gameMode == NumberSumsGameMode.remove) {
         // 제거 모드: 틀린 수인지 확인
         bool isWrong = _gameState.isWrongCell(row, col);
         if (isWrong) {
           // 틀린 수! 제거
-          _gameState.saveToUndoHistory(row, col);
-
           List<List<int>> newBoard =
               _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
           newBoard[row][col] = 0;
@@ -177,24 +175,40 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
           // 올바른 수를 제거하려고 함 -> 실패!
           _failureCount++;
         }
+      } else if (_gameMode == NumberSumsGameMode.hint) {
+        // 힌트 모드: 자동으로 정답 처리
+        bool isWrong = _gameState.isWrongCell(row, col);
+        if (isWrong) {
+          // 틀린 수 -> 제거
+          List<List<int>> newBoard =
+              _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
+          newBoard[row][col] = 0;
+
+          bool isComplete = NumberSumsGenerator.isBoardComplete(
+            newBoard,
+            _gameState.solution,
+            _gameState.gridSize,
+          );
+
+          _gameState = _gameState.copyWith(
+            currentBoard: newBoard,
+            isCompleted: isComplete,
+          );
+
+          if (isComplete) {
+            _timer?.cancel();
+            _showCompletionDialog();
+          }
+        } else {
+          // 올바른 수 -> 동그라미 표시
+          List<List<bool>> newMarkedCorrect =
+              _gameState.markedCorrectCells.map((r) => List<bool>.from(r)).toList();
+          newMarkedCorrect[row][col] = true;
+          _gameState = _gameState.copyWith(markedCorrectCells: newMarkedCorrect);
+        }
       }
     });
     _saveGame();
-  }
-
-  void _onUndo() {
-    if (_isPaused) return;
-
-    final undoItem = _gameState.popFromUndoHistory();
-    if (undoItem != null) {
-      setState(() {
-        _gameState = _gameState.copyWith(
-          selectedRow: undoItem.row,
-          selectedCol: undoItem.col,
-        );
-      });
-      _saveGame();
-    }
   }
 
   void _setGameMode(NumberSumsGameMode mode) {
@@ -456,8 +470,10 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
     String helpMessage;
     if (_gameMode == NumberSumsGameMode.select) {
       helpMessage = '올바른 숫자를 선택하세요! (남은 틀린 숫자: $remainingWrong)';
-    } else {
+    } else if (_gameMode == NumberSumsGameMode.remove) {
       helpMessage = '틀린 숫자를 제거하세요! (남은 개수: $remainingWrong)';
+    } else {
+      helpMessage = '힌트: 셀을 선택하면 자동으로 처리됩니다 (남은 개수: $remainingWrong)';
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -501,10 +517,11 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
             isSelected: _gameMode == NumberSumsGameMode.remove,
             onTap: () => _setGameMode(NumberSumsGameMode.remove),
           ),
-          _buildToolButton(
-            icon: Icons.undo,
-            label: '되돌리기',
-            onTap: _onUndo,
+          _buildModeButton(
+            icon: Icons.lightbulb_outline,
+            label: '힌트',
+            isSelected: _gameMode == NumberSumsGameMode.hint,
+            onTap: () => _setGameMode(NumberSumsGameMode.hint),
           ),
         ],
       ),
@@ -544,41 +561,6 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: isSelected ? Colors.deepOrange : Colors.white70,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildToolButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              color: Colors.white70,
-              size: 24,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.white70,
               ),
             ),
           ],
