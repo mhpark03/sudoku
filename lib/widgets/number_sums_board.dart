@@ -71,6 +71,7 @@ class NumberSumsBoard extends StatelessWidget {
       value: value,
       isSelected: gameState.isSelected(row, col),
       isEmpty: value == 0,
+      isMarkedCorrect: gameState.isMarkedCorrect(row, col),
       onTap: () => onCellTap(row, col),
     );
   }

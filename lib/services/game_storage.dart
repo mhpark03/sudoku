@@ -340,6 +340,7 @@ class GameStorage {
       'currentBoard': state.currentBoard,
       'cellTypes': state.cellTypes,
       'wrongCells': state.wrongCells.map((row) => row.map((v) => v ? 1 : 0).toList()).toList(),
+      'markedCorrectCells': state.markedCorrectCells.map((row) => row.map((v) => v ? 1 : 0).toList()).toList(),
       'rowSums': state.rowSums,
       'colSums': state.colSums,
       'gridSize': state.gridSize,
@@ -373,6 +374,12 @@ class GameStorage {
             .map((row) => (row as List).map((v) => v == 1).toList())
             .toList()
         : List.generate(gridSize, (_) => List.filled(gridSize, false));
+    final markedCorrectCellsData = json['markedCorrectCells'] as List?;
+    final markedCorrectCells = markedCorrectCellsData != null
+        ? (markedCorrectCellsData as List)
+            .map((row) => (row as List).map((v) => v == 1).toList())
+            .toList()
+        : List.generate(gridSize, (_) => List.filled(gridSize, false));
     final rowSums = List<int>.from((json['rowSums'] as List?) ?? List.filled(gridSize, 0));
     final colSums = List<int>.from((json['colSums'] as List?) ?? List.filled(gridSize, 0));
 
@@ -382,6 +389,7 @@ class GameStorage {
       currentBoard: currentBoard,
       cellTypes: cellTypes,
       wrongCells: wrongCells,
+      markedCorrectCells: markedCorrectCells,
       rowSums: rowSums,
       colSums: colSums,
       gridSize: gridSize,

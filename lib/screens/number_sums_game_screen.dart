@@ -31,6 +31,7 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
   int _failureCount = 0;
   bool _isPaused = false;
   bool _isBackgrounded = false;
+  NumberSumsGameMode _gameMode = NumberSumsGameMode.select; // 현재 게임 모드
 
   @override
   void initState() {
@@ -129,53 +130,53 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
     if (_isPaused) return;
     if (_gameState.cellTypes[row][col] != 1) return;
     if (_gameState.currentBoard[row][col] == 0) return; // 이미 제거된 셀
+    if (_gameState.isMarkedCorrect(row, col)) return; // 이미 정답으로 표시됨
 
     setState(() {
-      _gameState = _gameState.copyWith(selectedRow: row, selectedCol: col);
-    });
-  }
+      if (_gameMode == NumberSumsGameMode.select) {
+        // 선택 모드: 올바른 수인지 확인
+        bool isWrong = _gameState.isWrongCell(row, col);
+        if (!isWrong) {
+          // 올바른 수! 동그라미 표시
+          List<List<bool>> newMarkedCorrect =
+              _gameState.markedCorrectCells.map((r) => List<bool>.from(r)).toList();
+          newMarkedCorrect[row][col] = true;
+          _gameState = _gameState.copyWith(markedCorrectCells: newMarkedCorrect);
+        } else {
+          // 틀린 수를 올바른 수로 선택 -> 실패!
+          _failureCount++;
+        }
+      } else {
+        // 제거 모드: 틀린 수인지 확인
+        bool isWrong = _gameState.isWrongCell(row, col);
+        if (isWrong) {
+          // 틀린 수! 제거
+          _gameState.saveToUndoHistory(row, col);
 
-  void _onErase() {
-    if (_isPaused) return;
-    if (!_gameState.hasSelection) return;
+          List<List<int>> newBoard =
+              _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
+          newBoard[row][col] = 0;
 
-    int row = _gameState.selectedRow!;
-    int col = _gameState.selectedCol!;
+          // 완성 체크
+          bool isComplete = NumberSumsGenerator.isBoardComplete(
+            newBoard,
+            _gameState.solution,
+            _gameState.gridSize,
+          );
 
-    if (_gameState.currentBoard[row][col] == 0) return; // 이미 비어있음
+          _gameState = _gameState.copyWith(
+            currentBoard: newBoard,
+            isCompleted: isComplete,
+          );
 
-    setState(() {
-      // Undo 저장
-      _gameState.saveToUndoHistory(row, col);
-
-      // 올바른 숫자를 지웠는지 확인
-      bool isWrong = _gameState.isWrongCell(row, col);
-      if (!isWrong) {
-        // 올바른 숫자를 지움 -> 실패!
-        _failureCount++;
-      }
-
-      // 숫자 제거
-      List<List<int>> newBoard =
-          _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
-      newBoard[row][col] = 0;
-
-      // 완성 체크
-      bool isComplete = NumberSumsGenerator.isBoardComplete(
-        newBoard,
-        _gameState.solution,
-        _gameState.gridSize,
-      );
-
-      _gameState = _gameState.copyWith(
-        currentBoard: newBoard,
-        isCompleted: isComplete,
-        clearSelection: true,
-      );
-
-      if (isComplete) {
-        _timer?.cancel();
-        _showCompletionDialog();
+          if (isComplete) {
+            _timer?.cancel();
+            _showCompletionDialog();
+          }
+        } else {
+          // 올바른 수를 제거하려고 함 -> 실패!
+          _failureCount++;
+        }
       }
     });
     _saveGame();
@@ -194,6 +195,12 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
       });
       _saveGame();
     }
+  }
+
+  void _setGameMode(NumberSumsGameMode mode) {
+    setState(() {
+      _gameMode = mode;
+    });
   }
 
   void _showCompletionDialog() {
@@ -446,10 +453,16 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
 
   Widget _buildHelpText() {
     final remainingWrong = _gameState.remainingWrongCount;
+    String helpMessage;
+    if (_gameMode == NumberSumsGameMode.select) {
+      helpMessage = '올바른 숫자를 선택하세요! (남은 틀린 숫자: $remainingWrong)';
+    } else {
+      helpMessage = '틀린 숫자를 제거하세요! (남은 개수: $remainingWrong)';
+    }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Text(
-        '틀린 숫자를 찾아서 지우세요! (남은 개수: $remainingWrong)',
+        helpMessage,
         style: TextStyle(
           fontSize: 14,
           color: Colors.white.withValues(alpha: 0.7),
@@ -476,38 +489,44 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
+          _buildModeButton(
+            icon: Icons.check_circle_outline,
+            label: '선택',
+            isSelected: _gameMode == NumberSumsGameMode.select,
+            onTap: () => _setGameMode(NumberSumsGameMode.select),
+          ),
+          _buildModeButton(
+            icon: Icons.remove_circle_outline,
+            label: '제거',
+            isSelected: _gameMode == NumberSumsGameMode.remove,
+            onTap: () => _setGameMode(NumberSumsGameMode.remove),
+          ),
           _buildToolButton(
             icon: Icons.undo,
             label: '되돌리기',
             onTap: _onUndo,
-          ),
-          _buildToolButton(
-            icon: Icons.backspace_outlined,
-            label: '지우기',
-            onTap: _onErase,
-            isHighlighted: _gameState.hasSelection,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildToolButton({
+  Widget _buildModeButton({
     required IconData icon,
     required String label,
+    required bool isSelected,
     required VoidCallback onTap,
-    bool isHighlighted = false,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         decoration: BoxDecoration(
-          color: isHighlighted
+          color: isSelected
               ? Colors.deepOrange.withValues(alpha: 0.3)
               : Colors.white.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
-          border: isHighlighted
+          border: isSelected
               ? Border.all(color: Colors.deepOrange, width: 2)
               : null,
         ),
@@ -515,7 +534,7 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
           children: [
             Icon(
               icon,
-              color: isHighlighted ? Colors.deepOrange : Colors.white70,
+              color: isSelected ? Colors.deepOrange : Colors.white70,
               size: 24,
             ),
             const SizedBox(width: 8),
@@ -524,7 +543,42 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: isHighlighted ? Colors.deepOrange : Colors.white70,
+                color: isSelected ? Colors.deepOrange : Colors.white70,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildToolButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: Colors.white70,
+              size: 24,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.white70,
               ),
             ),
           ],
