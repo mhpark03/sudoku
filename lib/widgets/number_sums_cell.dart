@@ -26,15 +26,15 @@ class NumberSumsInputCell extends StatelessWidget {
     Color borderColor = Colors.grey.shade300;
 
     if (isSelected) {
-      backgroundColor = const Color(0xFFFFF3C4); // 연한 노란색
+      backgroundColor = const Color(0xFFFFF3C4);
       borderColor = const Color(0xFFFFD93D);
     } else if (hasError) {
-      backgroundColor = const Color(0xFFFFE0E0); // 연한 빨간색
+      backgroundColor = const Color(0xFFFFE0E0);
       borderColor = Colors.red.shade300;
     } else if (isSameValue) {
-      backgroundColor = const Color(0xFFE8F4FD); // 연한 파란색
+      backgroundColor = const Color(0xFFE8F4FD);
     } else if (isHighlighted) {
-      backgroundColor = const Color(0xFFFFF9E6); // 아주 연한 노란색
+      backgroundColor = const Color(0xFFFFF9E6);
     } else {
       backgroundColor = Colors.white;
     }
@@ -117,47 +117,64 @@ class NumberSumsClueCell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F0E6), // 베이지/크림색
+        color: const Color(0xFFF5F0E6),
         border: Border.all(color: Colors.grey.shade300, width: 0.5),
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final size = constraints.maxWidth;
-          final fontSize = size * 0.26;
+          final width = constraints.maxWidth;
+          final height = constraints.maxHeight;
+          final fontSize = width * 0.30;
 
           return Stack(
             children: [
-              // Diagonal line
+              // Diagonal line from top-left to bottom-right
               Positioned.fill(
                 child: CustomPaint(
                   painter: _DiagonalLinePainter(),
                 ),
               ),
-              // Down sum (bottom-left triangle)
+              // Down sum (bottom-left triangle) - 아래쪽 셀들의 합
               if (downSum != null)
                 Positioned(
-                  left: 3,
-                  bottom: 2,
-                  child: Text(
-                    '$downSum',
-                    style: TextStyle(
-                      color: const Color(0xFF666666),
-                      fontSize: fontSize,
-                      fontWeight: FontWeight.w500,
+                  left: 2,
+                  top: height * 0.5,
+                  width: width * 0.5,
+                  height: height * 0.5 - 2,
+                  child: Align(
+                    alignment: Alignment.center,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        '$downSum',
+                        style: TextStyle(
+                          color: const Color(0xFF555555),
+                          fontSize: fontSize,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              // Right sum (top-right triangle)
+              // Right sum (top-right triangle) - 오른쪽 셀들의 합
               if (rightSum != null)
                 Positioned(
-                  right: 3,
+                  left: width * 0.5,
                   top: 2,
-                  child: Text(
-                    '$rightSum',
-                    style: TextStyle(
-                      color: const Color(0xFF666666),
-                      fontSize: fontSize,
-                      fontWeight: FontWeight.w500,
+                  width: width * 0.5 - 2,
+                  height: height * 0.5,
+                  child: Align(
+                    alignment: Alignment.center,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        '$rightSum',
+                        style: TextStyle(
+                          color: const Color(0xFF555555),
+                          fontSize: fontSize,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -194,7 +211,7 @@ class NumberSumsBlockedCell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F0E6), // 베이지/크림색
+        color: const Color(0xFFF5F0E6),
         border: Border.all(color: Colors.grey.shade300, width: 0.5),
       ),
     );
