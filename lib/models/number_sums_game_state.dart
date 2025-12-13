@@ -207,6 +207,24 @@ class NumberSumsGameState {
     return count;
   }
 
+  /// 현재 보드 기준 행의 합계 (남아있는 숫자만)
+  int getCurrentRowSum(int row) {
+    int sum = 0;
+    for (int col = 1; col < gridSize; col++) {
+      sum += currentBoard[row][col];
+    }
+    return sum;
+  }
+
+  /// 현재 보드 기준 열의 합계 (남아있는 숫자만)
+  int getCurrentColSum(int col) {
+    int sum = 0;
+    for (int row = 1; row < gridSize; row++) {
+      sum += currentBoard[row][col];
+    }
+    return sum;
+  }
+
   /// 보드가 완성되었는지 확인
   bool checkCompletion() {
     return NumberSumsGenerator.isBoardComplete(

@@ -22,13 +22,11 @@ class NumberSumsInputCell extends StatelessWidget {
     Color backgroundColor;
     Color borderColor = const Color(0xFF4A4A4A);
 
-    if (isEmpty) {
-      backgroundColor = const Color(0xFF3A3A3A);
-    } else if (isSelected) {
+    if (isSelected) {
       backgroundColor = const Color(0xFFFFEB3B);
       borderColor = const Color(0xFFFF9800);
     } else {
-      backgroundColor = Colors.white;
+      backgroundColor = Colors.white; // 제거된 셀도 흰색 배경 유지
     }
 
     return GestureDetector(
@@ -110,22 +108,24 @@ class NumberSumsSumCell extends StatelessWidget {
         color: const Color(0xFF2D2D2D),
         border: Border.all(color: const Color(0xFF4A4A4A), width: 1),
       ),
-      child: Center(
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Padding(
-            padding: const EdgeInsets.all(4),
-            child: Text(
-              '$sum',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+      child: sum > 0
+          ? Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Text(
+                    '$sum',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
-        ),
-      ),
+            )
+          : null,
     );
   }
 }
