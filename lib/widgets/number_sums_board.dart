@@ -72,12 +72,19 @@ class NumberSumsBoard extends StatelessWidget {
     // 입력 셀
     final value = gameState.currentBoard[row][col];
     final isError = errorRow == row && errorCol == col;
+    final blockColor = gameState.getBlockColor(row, col);
+    final blockId = gameState.getBlockId(row, col);
+    final isFirstCell = gameState.isBlockFirstCell(row, col);
+    final blockSum = isFirstCell ? gameState.getCurrentBlockSum(blockId) : null;
+
     return NumberSumsInputCell(
       value: value,
       isSelected: gameState.isSelected(row, col),
       isEmpty: value == 0,
       isMarkedCorrect: gameState.isMarkedCorrect(row, col),
       isError: isError,
+      blockColor: blockColor,
+      blockSum: blockSum,
       onTap: () => onCellTap(row, col),
     );
   }
