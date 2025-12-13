@@ -64,12 +64,10 @@ class NumberSumsInputCell extends StatelessWidget {
 /// 합계를 표시하는 헤더 셀
 class NumberSumsSumCell extends StatelessWidget {
   final int sum;
-  final bool isColumnSum; // true = 열 합계(상단), false = 행 합계(좌측)
 
   const NumberSumsSumCell({
     super.key,
     required this.sum,
-    required this.isColumnSum,
   });
 
   @override
@@ -79,78 +77,36 @@ class NumberSumsSumCell extends StatelessWidget {
         color: const Color(0xFF2D2D2D),
         border: Border.all(color: const Color(0xFF4A4A4A), width: 1),
       ),
-      child: Stack(
-        children: [
-          // 대각선
-          Positioned.fill(
-            child: CustomPaint(
-              painter: _DiagonalLinePainter(),
+      child: Center(
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Padding(
+            padding: const EdgeInsets.all(4),
+            child: Text(
+              '$sum',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
           ),
-          // 합계 숫자
-          Positioned.fill(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final size = constraints.maxWidth;
-                final fontSize = (size * 0.35).clamp(10.0, 16.0);
-
-                return Stack(
-                  children: [
-                    if (isColumnSum)
-                      // 열 합계는 아래 삼각형 (좌하단)
-                      Positioned(
-                        left: size * 0.1,
-                        bottom: size * 0.1,
-                        child: Text(
-                          '$sum',
-                          style: TextStyle(
-                            fontSize: fontSize,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      )
-                    else
-                      // 행 합계는 위 삼각형 (우상단)
-                      Positioned(
-                        right: size * 0.1,
-                        top: size * 0.1,
-                        child: Text(
-                          '$sum',
-                          style: TextStyle(
-                            fontSize: fontSize,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                  ],
-                );
-              },
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class _DiagonalLinePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFF5A5A5A)
-      ..strokeWidth = 1.5;
+/// 코너 셀 (투명하게 처리)
+class NumberSumsCornerCell extends StatelessWidget {
+  const NumberSumsCornerCell({super.key});
 
-    canvas.drawLine(
-      const Offset(0, 0),
-      Offset(size.width, size.height),
-      paint,
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFF1A1A2E), // 배경색과 동일하게
     );
   }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 /// 블록 셀 (코너 등)

@@ -50,25 +50,19 @@ class NumberSumsBoard extends StatelessWidget {
   }
 
   Widget _buildCell(int row, int col) {
-    // (0, 0) = 코너 셀 (빈 검정 셀)
+    // (0, 0) = 코너 셀 (투명하게)
     if (row == 0 && col == 0) {
-      return const NumberSumsBlockedCell();
+      return const NumberSumsCornerCell();
     }
 
     // 첫 번째 행 (열 합계 표시)
     if (row == 0 && col > 0) {
-      return NumberSumsSumCell(
-        sum: gameState.colSums[col],
-        isColumnSum: true,
-      );
+      return NumberSumsSumCell(sum: gameState.colSums[col]);
     }
 
     // 첫 번째 열 (행 합계 표시)
     if (col == 0 && row > 0) {
-      return NumberSumsSumCell(
-        sum: gameState.rowSums[row],
-        isColumnSum: false,
-      );
+      return NumberSumsSumCell(sum: gameState.rowSums[row]);
     }
 
     // 입력 셀
