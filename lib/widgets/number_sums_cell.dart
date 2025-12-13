@@ -131,11 +131,13 @@ class _CirclePainter extends CustomPainter {
 
 /// 합계를 표시하는 헤더 셀
 class NumberSumsSumCell extends StatelessWidget {
-  final int sum;
+  final int totalSum; // 전체 합
+  final int remainingSum; // 남은 합
 
   const NumberSumsSumCell({
     super.key,
-    required this.sum,
+    required this.totalSum,
+    required this.remainingSum,
   });
 
   @override
@@ -145,22 +147,41 @@ class NumberSumsSumCell extends StatelessWidget {
         color: const Color(0xFF2D2D2D),
         border: Border.all(color: const Color(0xFF4A4A4A), width: 1),
       ),
-      child: sum > 0
-          ? Center(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Padding(
-                  padding: const EdgeInsets.all(4),
-                  child: Text(
-                    '$sum',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+      child: totalSum > 0
+          ? Stack(
+              children: [
+                // 전체 합 (중앙에 크게)
+                Center(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Text(
+                        '$totalSum',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
+                // 남은 합 (우하단에 작게, 아랫첨자 형태)
+                if (remainingSum > 0 && remainingSum != totalSum)
+                  Positioned(
+                    right: 2,
+                    bottom: 1,
+                    child: Text(
+                      '$remainingSum',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.yellow.shade300,
+                      ),
+                    ),
+                  ),
+              ],
             )
           : null,
     );
