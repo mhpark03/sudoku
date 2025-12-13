@@ -5,11 +5,15 @@ import 'number_sums_cell.dart';
 class NumberSumsBoard extends StatelessWidget {
   final NumberSumsGameState gameState;
   final Function(int row, int col) onCellTap;
+  final int? errorRow;
+  final int? errorCol;
 
   const NumberSumsBoard({
     super.key,
     required this.gameState,
     required this.onCellTap,
+    this.errorRow,
+    this.errorCol,
   });
 
   @override
@@ -67,11 +71,13 @@ class NumberSumsBoard extends StatelessWidget {
 
     // 입력 셀
     final value = gameState.currentBoard[row][col];
+    final isError = errorRow == row && errorCol == col;
     return NumberSumsInputCell(
       value: value,
       isSelected: gameState.isSelected(row, col),
       isEmpty: value == 0,
       isMarkedCorrect: gameState.isMarkedCorrect(row, col),
+      isError: isError,
       onTap: () => onCellTap(row, col),
     );
   }

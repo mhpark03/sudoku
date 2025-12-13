@@ -6,6 +6,7 @@ class NumberSumsInputCell extends StatelessWidget {
   final bool isSelected;
   final bool isEmpty;
   final bool isMarkedCorrect;
+  final bool isError;
   final VoidCallback onTap;
 
   const NumberSumsInputCell({
@@ -14,6 +15,7 @@ class NumberSumsInputCell extends StatelessWidget {
     required this.isSelected,
     required this.isEmpty,
     this.isMarkedCorrect = false,
+    this.isError = false,
     required this.onTap,
   });
 
@@ -27,6 +29,16 @@ class NumberSumsInputCell extends StatelessWidget {
       borderColor = const Color(0xFFFF9800);
     } else {
       backgroundColor = Colors.white; // 제거된 셀도 흰색 배경 유지
+    }
+
+    // 텍스트 색상 결정
+    Color textColor;
+    if (isError) {
+      textColor = Colors.red;
+    } else if (isSelected) {
+      textColor = const Color(0xFF1A237E);
+    } else {
+      textColor = const Color(0xFF333333);
     }
 
     return GestureDetector(
@@ -57,9 +69,7 @@ class NumberSumsInputCell extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: isSelected
-                                ? const Color(0xFF1A237E)
-                                : const Color(0xFF333333),
+                            color: textColor,
                           ),
                         ),
                       ),
