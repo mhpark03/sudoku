@@ -59,14 +59,20 @@ class NumberSumsBoard extends StatelessWidget {
       return const NumberSumsCornerCell();
     }
 
-    // 첫 번째 행 (열 합계 표시) - 남아있는 숫자의 합
+    // 첫 번째 행 (열 합계 표시) - 전체 합 + 남은 합
     if (row == 0 && col > 0) {
-      return NumberSumsSumCell(sum: gameState.getCurrentColSum(col));
+      return NumberSumsSumCell(
+        totalSum: gameState.colSums[col],
+        remainingSum: gameState.getCurrentColSum(col),
+      );
     }
 
-    // 첫 번째 열 (행 합계 표시) - 남아있는 숫자의 합
+    // 첫 번째 열 (행 합계 표시) - 전체 합 + 남은 합
     if (col == 0 && row > 0) {
-      return NumberSumsSumCell(sum: gameState.getCurrentRowSum(row));
+      return NumberSumsSumCell(
+        totalSum: gameState.rowSums[row],
+        remainingSum: gameState.getCurrentRowSum(row),
+      );
     }
 
     // 입력 셀
@@ -75,7 +81,8 @@ class NumberSumsBoard extends StatelessWidget {
     final blockColor = gameState.getBlockColor(row, col);
     final blockId = gameState.getBlockId(row, col);
     final isFirstCell = gameState.isBlockFirstCell(row, col);
-    final blockSum = isFirstCell ? gameState.getCurrentBlockSum(blockId) : null;
+    // 블록 합은 전체 합 표시 (blockSums 사용)
+    final blockSum = isFirstCell && blockId >= 0 ? gameState.blockSums[blockId] : null;
 
     return NumberSumsInputCell(
       value: value,
