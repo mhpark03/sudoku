@@ -23,18 +23,18 @@ class NumberSumsInputCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Color backgroundColor;
-    Color borderColor = Colors.grey.shade300;
+    Color borderColor = const Color(0xFF4A4A4A);
 
     if (isSelected) {
-      backgroundColor = const Color(0xFFFFF3C4);
-      borderColor = const Color(0xFFFFD93D);
+      backgroundColor = const Color(0xFFFFEB3B); // Bright yellow for selection
+      borderColor = const Color(0xFFFF9800);
     } else if (hasError) {
-      backgroundColor = const Color(0xFFFFE0E0);
-      borderColor = Colors.red.shade300;
+      backgroundColor = const Color(0xFFFFCDD2);
+      borderColor = Colors.red;
     } else if (isSameValue) {
-      backgroundColor = const Color(0xFFE8F4FD);
+      backgroundColor = const Color(0xFFE3F2FD);
     } else if (isHighlighted) {
-      backgroundColor = const Color(0xFFFFF9E6);
+      backgroundColor = const Color(0xFFFFF8E1);
     } else {
       backgroundColor = Colors.white;
     }
@@ -44,20 +44,20 @@ class NumberSumsInputCell extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: backgroundColor,
-          border: Border.all(color: borderColor, width: 0.5),
+          border: Border.all(color: borderColor, width: 1),
         ),
         child: Center(
           child: value != 0
               ? FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Padding(
-                    padding: const EdgeInsets.all(4),
+                    padding: const EdgeInsets.all(2),
                     child: Text(
                       '$value',
                       style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w600,
-                        color: hasError ? Colors.red : const Color(0xFF333333),
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: hasError ? Colors.red : const Color(0xFF1A237E),
                       ),
                     ),
                   ),
@@ -75,7 +75,7 @@ class NumberSumsInputCell extends StatelessWidget {
       builder: (context, constraints) {
         final cellSize = constraints.maxWidth;
         final noteSize = cellSize / 3;
-        final fontSize = noteSize * 0.55;
+        final fontSize = noteSize * 0.5;
 
         return Stack(
           children: notes.map((note) {
@@ -91,7 +91,8 @@ class NumberSumsInputCell extends StatelessWidget {
                   '$note',
                   style: TextStyle(
                     fontSize: fontSize,
-                    color: Colors.grey.shade500,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.blueGrey.shade600,
                   ),
                 ),
               ),
@@ -115,63 +116,56 @@ class NumberSumsClueCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFE8E0D5), // 좀 더 어두운 베이지색
-        border: Border.all(color: Colors.grey.shade400, width: 0.5),
-      ),
-      child: Stack(
-        children: [
-          // Diagonal line from top-left to bottom-right
-          Positioned.fill(
-            child: CustomPaint(
-              painter: _DiagonalLinePainter(),
-            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final size = constraints.maxWidth;
+        final fontSize = (size * 0.28).clamp(8.0, 14.0);
+
+        return Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF2D2D2D), // Dark background
+            border: Border.all(color: const Color(0xFF4A4A4A), width: 1),
           ),
-          // Down sum (bottom-left) - 킬러 스도쿠 스타일 배지
-          if (downSum != null)
-            Positioned(
-              left: 2,
-              bottom: 2,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-                decoration: BoxDecoration(
-                  color: Colors.amber.shade100,
-                  borderRadius: BorderRadius.circular(3),
-                ),
-                child: Text(
-                  '$downSum',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.brown.shade700,
-                  ),
+          child: Stack(
+            children: [
+              // Diagonal line from top-left to bottom-right
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _DiagonalLinePainter(),
                 ),
               ),
-            ),
-          // Right sum (top-right) - 킬러 스도쿠 스타일 배지
-          if (rightSum != null)
-            Positioned(
-              right: 2,
-              top: 2,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-                decoration: BoxDecoration(
-                  color: Colors.amber.shade100,
-                  borderRadius: BorderRadius.circular(3),
-                ),
-                child: Text(
-                  '$rightSum',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.brown.shade700,
+              // Down sum (bottom-left triangle area)
+              if (downSum != null)
+                Positioned(
+                  left: size * 0.08,
+                  bottom: size * 0.08,
+                  child: Text(
+                    '$downSum',
+                    style: TextStyle(
+                      fontSize: fontSize,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
-              ),
-            ),
-        ],
-      ),
+              // Right sum (top-right triangle area)
+              if (rightSum != null)
+                Positioned(
+                  right: size * 0.08,
+                  top: size * 0.08,
+                  child: Text(
+                    '$rightSum',
+                    style: TextStyle(
+                      fontSize: fontSize,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -180,7 +174,7 @@ class _DiagonalLinePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFFBBB0A0)
+      ..color = const Color(0xFF5A5A5A)
       ..strokeWidth = 1.5;
 
     canvas.drawLine(
@@ -201,8 +195,8 @@ class NumberSumsBlockedCell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFE8E0D5),
-        border: Border.all(color: Colors.grey.shade400, width: 0.5),
+        color: const Color(0xFF2D2D2D),
+        border: Border.all(color: const Color(0xFF4A4A4A), width: 1),
       ),
     );
   }
