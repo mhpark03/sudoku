@@ -50,12 +50,18 @@ class NumberSumsInputCell extends StatelessWidget {
         ),
         child: value != 0
             ? Center(
-                child: Text(
-                  '$value',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: hasError ? Colors.red : Colors.black87,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Padding(
+                    padding: const EdgeInsets.all(2),
+                    child: Text(
+                      '$value',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: hasError ? Colors.red : Colors.black87,
+                      ),
+                    ),
                   ),
                 ),
               )
@@ -71,7 +77,7 @@ class NumberSumsInputCell extends StatelessWidget {
       builder: (context, constraints) {
         final cellSize = constraints.maxWidth;
         final noteSize = cellSize / 3;
-        final fontSize = noteSize * 0.65;
+        final fontSize = noteSize * 0.6;
 
         return Stack(
           children: notes.map((note) {
@@ -121,79 +127,71 @@ class NumberSumsClueCell extends StatelessWidget {
         color: Colors.grey.shade800,
         border: Border.all(color: Colors.grey.shade600, width: 0.5),
       ),
-      child: CustomPaint(
-        painter: _ClueCellPainter(
-          downSum: downSum,
-          rightSum: rightSum,
-        ),
-        child: const SizedBox.expand(),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final size = constraints.maxWidth;
+          final fontSize = size * 0.28;
+
+          return Stack(
+            children: [
+              // Diagonal line using CustomPaint
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _DiagonalLinePainter(),
+                ),
+              ),
+              // Down sum (bottom-left triangle) - 아래 방향 합계
+              if (downSum != null)
+                Positioned(
+                  left: 2,
+                  bottom: 2,
+                  child: Text(
+                    '$downSum',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: fontSize,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              // Right sum (top-right triangle) - 오른쪽 방향 합계
+              if (rightSum != null)
+                Positioned(
+                  right: 2,
+                  top: 2,
+                  child: Text(
+                    '$rightSum',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: fontSize,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }
 }
 
-class _ClueCellPainter extends CustomPainter {
-  final int? downSum;
-  final int? rightSum;
-
-  _ClueCellPainter({this.downSum, this.rightSum});
-
+class _DiagonalLinePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.grey.shade400
-      ..strokeWidth = 1;
+      ..color = Colors.grey.shade500
+      ..strokeWidth = 1.5;
 
-    // Draw diagonal line
     canvas.drawLine(
-      Offset(0, 0),
+      const Offset(0, 0),
       Offset(size.width, size.height),
       paint,
     );
-
-    final textStyle = TextStyle(
-      color: Colors.white,
-      fontSize: size.width * 0.28,
-      fontWeight: FontWeight.bold,
-    );
-
-    // Draw down sum (bottom-left area)
-    if (downSum != null) {
-      final textSpan = TextSpan(text: '$downSum', style: textStyle);
-      final textPainter = TextPainter(
-        text: textSpan,
-        textDirection: TextDirection.ltr,
-      );
-      textPainter.layout();
-
-      final offset = Offset(
-        size.width * 0.12,
-        size.height * 0.55,
-      );
-      textPainter.paint(canvas, offset);
-    }
-
-    // Draw right sum (top-right area)
-    if (rightSum != null) {
-      final textSpan = TextSpan(text: '$rightSum', style: textStyle);
-      final textPainter = TextPainter(
-        text: textSpan,
-        textDirection: TextDirection.ltr,
-      );
-      textPainter.layout();
-
-      final offset = Offset(
-        size.width * 0.55,
-        size.height * 0.12,
-      );
-      textPainter.paint(canvas, offset);
-    }
   }
 
   @override
-  bool shouldRepaint(covariant _ClueCellPainter oldDelegate) {
-    return oldDelegate.downSum != downSum || oldDelegate.rightSum != rightSum;
-  }
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class NumberSumsBlockedCell extends StatelessWidget {
