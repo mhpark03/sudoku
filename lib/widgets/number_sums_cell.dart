@@ -56,21 +56,7 @@ class NumberSumsInputCell extends StatelessWidget {
         ),
         child: Stack(
           children: [
-            // 블록 합계 (왼쪽 상단에 표시)
-            if (blockSum != null && blockSum! > 0)
-              Positioned(
-                top: 2,
-                left: 3,
-                child: Text(
-                  '$blockSum',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF444444),
-                  ),
-                ),
-              ),
-            // 정답 표시 동그라미
+            // 정답 표시 동그라미 (맨 아래)
             if (isMarkedCorrect && !isEmpty)
               Positioned.fill(
                 child: CustomPaint(
@@ -96,6 +82,27 @@ class NumberSumsInputCell extends StatelessWidget {
                     )
                   : null,
             ),
+            // 블록 합계 (맨 위에 표시, 배경 포함)
+            if (blockSum != null && blockSum! > 0)
+              Positioned(
+                top: 1,
+                left: 1,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 0),
+                  decoration: BoxDecoration(
+                    color: backgroundColor.withValues(alpha: 0.9),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                  child: Text(
+                    '$blockSum',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF333333),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

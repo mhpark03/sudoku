@@ -224,26 +224,60 @@ class NumberSumsGenerator {
       currentBlockId++;
     }
 
-    // 남은 셀이 있으면 가장 가까운 블록에 할당
+    // 남은 셀이 있으면 인접한 블록에 할당 (반복적으로 처리)
+    int maxIterations = unassigned.length * 2; // 무한 루프 방지
+    int iterations = 0;
+
+    while (unassigned.isNotEmpty && iterations < maxIterations) {
+      iterations++;
+      final cellsToProcess = unassigned.toList();
+
+      for (final cell in cellsToProcess) {
+        // 인접한 블록 찾기
+        int? foundBlockId;
+        final neighbors = [
+          (cell.$1 - 1, cell.$2),
+          (cell.$1 + 1, cell.$2),
+          (cell.$1, cell.$2 - 1),
+          (cell.$1, cell.$2 + 1),
+        ];
+
+        for (final neighbor in neighbors) {
+          if (neighbor.$1 >= 1 && neighbor.$1 < gridSize &&
+              neighbor.$2 >= 1 && neighbor.$2 < gridSize &&
+              blockIds[neighbor.$1][neighbor.$2] >= 0) {
+            foundBlockId = blockIds[neighbor.$1][neighbor.$2];
+            break;
+          }
+        }
+
+        // 인접한 블록을 찾았으면 할당
+        if (foundBlockId != null) {
+          unassigned.remove(cell);
+          blockIds[cell.$1][cell.$2] = foundBlockId;
+          blockSums[foundBlockId] += solution[cell.$1][cell.$2];
+        }
+      }
+    }
+
+    // 여전히 미할당 셀이 있으면 가장 가까운 블록에 강제 할당
     while (unassigned.isNotEmpty) {
       final cell = unassigned.first;
       unassigned.remove(cell);
 
-      // 인접한 블록 찾기
+      // 가장 가까운 할당된 셀 찾기
       int nearestBlockId = 0;
-      final neighbors = [
-        (cell.$1 - 1, cell.$2),
-        (cell.$1 + 1, cell.$2),
-        (cell.$1, cell.$2 - 1),
-        (cell.$1, cell.$2 + 1),
-      ];
+      int minDistance = 999999;
 
-      for (final neighbor in neighbors) {
-        if (neighbor.$1 >= 1 && neighbor.$1 < gridSize &&
-            neighbor.$2 >= 1 && neighbor.$2 < gridSize &&
-            blockIds[neighbor.$1][neighbor.$2] >= 0) {
-          nearestBlockId = blockIds[neighbor.$1][neighbor.$2];
-          break;
+      for (int r = 1; r < gridSize; r++) {
+        for (int c = 1; c < gridSize; c++) {
+          if (blockIds[r][c] >= 0) {
+            int distance = (cell.$1 - r).abs() + (cell.$2 - c).abs();
+            if (distance < minDistance) {
+              minDistance = distance;
+              nearestBlockId = blockIds[r][c];
+            }
+          }
         }
       }
 
