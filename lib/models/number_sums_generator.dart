@@ -14,17 +14,17 @@ class NumberSumsGenerator {
       case NumberSumsDifficulty.easy:
         gameSize = 5;
         fillRatio = 0.6; // 60% 정답 셀
-        blockCount = 6;
+        blockCount = 4; // 25칸 / 4블록 = 약 6칸씩
         break;
       case NumberSumsDifficulty.medium:
         gameSize = 6;
         fillRatio = 0.55;
-        blockCount = 8;
+        blockCount = 5; // 36칸 / 5블록 = 약 7칸씩
         break;
       case NumberSumsDifficulty.hard:
         gameSize = 7;
         fillRatio = 0.5;
-        blockCount = 10;
+        blockCount = 6; // 49칸 / 6블록 = 약 8칸씩
         break;
     }
 
@@ -160,14 +160,15 @@ class NumberSumsGenerator {
       // 남은 블록 수
       int remainingBlocks = actualBlockCount - currentBlockId;
 
-      // 이 블록의 크기 결정
+      // 이 블록의 크기 결정 (최소 4칸 이상)
       int blockSize;
+      const int minBlockSize = 4;
       if (remainingBlocks == 1) {
         blockSize = unassigned.length;
       } else {
-        // 평균 크기 주변에서 랜덤하게
-        int minSize = max(2, avgBlockSize - 2);
-        int maxSize = min(unassigned.length - (remainingBlocks - 1) * 2, avgBlockSize + 2);
+        // 평균 크기 주변에서 랜덤하게 (최소 4칸)
+        int minSize = max(minBlockSize, avgBlockSize - 2);
+        int maxSize = min(unassigned.length - (remainingBlocks - 1) * minBlockSize, avgBlockSize + 2);
         maxSize = max(maxSize, minSize);
         blockSize = minSize + _random.nextInt(maxSize - minSize + 1);
       }
