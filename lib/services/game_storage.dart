@@ -5,11 +5,14 @@ import '../models/samurai_game_state.dart';
 import '../models/killer_game_state.dart';
 import '../models/killer_cage.dart';
 import '../models/killer_sudoku_generator.dart';
+import '../models/number_sums_game_state.dart';
+import '../models/number_sums_generator.dart';
 
 class GameStorage {
   static const String _regularGameKey = 'regular_game_state';
   static const String _samuraiGameKey = 'samurai_game_state';
   static const String _killerGameKey = 'killer_game_state';
+  static const String _numberSumsGameKey = 'number_sums_game_state';
 
   /// 일반 스도쿠 게임 저장
   static Future<void> saveRegularGame(GameState gameState) async {
@@ -97,12 +100,41 @@ class GameStorage {
     await prefs.remove(_killerGameKey);
   }
 
+  /// 넘버 썸즈 게임 저장
+  static Future<void> saveNumberSumsGame(NumberSumsGameState gameState) async {
+    final prefs = await SharedPreferences.getInstance();
+    final json = _numberSumsGameStateToJson(gameState);
+    await prefs.setString(_numberSumsGameKey, jsonEncode(json));
+  }
+
+  /// 넘버 썸즈 게임 불러오기
+  static Future<NumberSumsGameState?> loadNumberSumsGame() async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonString = prefs.getString(_numberSumsGameKey);
+    if (jsonString == null) return null;
+
+    try {
+      final json = jsonDecode(jsonString) as Map<String, dynamic>;
+      return _numberSumsGameStateFromJson(json);
+    } catch (e) {
+      await prefs.remove(_numberSumsGameKey);
+      return null;
+    }
+  }
+
+  /// 넘버 썸즈 게임 삭제
+  static Future<void> deleteNumberSumsGame() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_numberSumsGameKey);
+  }
+
   /// 모든 저장된 게임 삭제
   static Future<void> deleteAllGames() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_regularGameKey);
     await prefs.remove(_samuraiGameKey);
     await prefs.remove(_killerGameKey);
+    await prefs.remove(_numberSumsGameKey);
   }
 
   /// 저장된 게임이 있는지 확인
@@ -119,6 +151,11 @@ class GameStorage {
   static Future<bool> hasKillerGame() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.containsKey(_killerGameKey);
+  }
+
+  static Future<bool> hasNumberSumsGame() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.containsKey(_numberSumsGameKey);
   }
 
   // ========== GameState 직렬화 ==========
@@ -287,6 +324,66 @@ class GameStorage {
       notes: notes,
       cages: cages,
       difficulty: KillerDifficulty.values[json['difficulty'] as int],
+      mistakes: json['mistakes'] as int,
+      isCompleted: json['isCompleted'] as bool,
+      elapsedSeconds: (json['elapsedSeconds'] as int?) ?? 0,
+      failureCount: (json['failureCount'] as int?) ?? 0,
+    );
+  }
+
+  // ========== NumberSumsGameState 직렬화 ==========
+
+  static Map<String, dynamic> _numberSumsGameStateToJson(NumberSumsGameState state) {
+    return {
+      'solution': state.solution,
+      'puzzle': state.puzzle,
+      'currentBoard': state.currentBoard,
+      'cellTypes': state.cellTypes,
+      'notes': state.notes
+          .map((row) => row.map((set) => set.toList()).toList())
+          .toList(),
+      'clues': state.clues.map((c) => c.toJson()).toList(),
+      'gridSize': state.gridSize,
+      'difficulty': state.difficulty.index,
+      'mistakes': state.mistakes,
+      'isCompleted': state.isCompleted,
+      'elapsedSeconds': state.elapsedSeconds,
+      'failureCount': state.failureCount,
+    };
+  }
+
+  static NumberSumsGameState _numberSumsGameStateFromJson(Map<String, dynamic> json) {
+    final gridSize = json['gridSize'] as int;
+    final solution = (json['solution'] as List)
+        .map((row) => (row as List).map((e) => e as int).toList())
+        .toList();
+    final puzzle = (json['puzzle'] as List)
+        .map((row) => (row as List).map((e) => e as int).toList())
+        .toList();
+    final currentBoard = (json['currentBoard'] as List)
+        .map((row) => (row as List).map((e) => e as int).toList())
+        .toList();
+    final cellTypes = (json['cellTypes'] as List)
+        .map((row) => (row as List).map((e) => e as int).toList())
+        .toList();
+    final notes = (json['notes'] as List)
+        .map((row) => (row as List)
+            .map((set) => (set as List).map((e) => e as int).toSet())
+            .toList())
+        .toList();
+    final clues = (json['clues'] as List)
+        .map((c) => NumberSumsClue.fromJson(c as Map<String, dynamic>))
+        .toList();
+
+    return NumberSumsGameState(
+      solution: solution,
+      puzzle: puzzle,
+      currentBoard: currentBoard,
+      cellTypes: cellTypes,
+      notes: notes,
+      clues: clues,
+      gridSize: gridSize,
+      difficulty: NumberSumsDifficulty.values[json['difficulty'] as int],
       mistakes: json['mistakes'] as int,
       isCompleted: json['isCompleted'] as bool,
       elapsedSeconds: (json['elapsedSeconds'] as int?) ?? 0,
