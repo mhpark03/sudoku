@@ -286,22 +286,39 @@ class NumberSumsGameState {
     return sum;
   }
 
-  /// 블록이 완료되었는지 확인 (모든 올바른 수가 정답 처리됨 = 합이 0)
+  /// 블록의 모든 셀이 결정되었는지 확인
+  /// (정답 셀은 마킹됨, 틀린 셀은 제거됨)
   bool isBlockComplete(int blockId) {
     if (blockId < 0 || blockId >= blockSums.length) return false;
 
-    // 현재 블록 합이 0이면 완료 (모든 정답 셀이 마킹됨)
-    return getCurrentBlockSum(blockId) == 0;
+    for (int row = 1; row < gridSize; row++) {
+      for (int col = 1; col < gridSize; col++) {
+        if (blockIds[row][col] == blockId) {
+          // 이 셀이 결정되지 않았는지 확인
+          bool isCorrectCell = !wrongCells[row][col];
+          bool isWrongCell = wrongCells[row][col];
+
+          if (isCorrectCell && !markedCorrectCells[row][col]) {
+            // 정답 셀인데 아직 마킹되지 않음
+            return false;
+          }
+          if (isWrongCell && currentBoard[row][col] != 0) {
+            // 틀린 셀인데 아직 제거되지 않음
+            return false;
+          }
+        }
+      }
+    }
+    return true;
   }
 
-  /// 셀의 블록 색상 가져오기 (블록 합이 0이면 배경색 제거)
+  /// 셀의 블록 색상 가져오기 (모든 셀이 결정되면 배경색 제거)
   int? getBlockColor(int row, int col) {
     final blockId = getBlockId(row, col);
     if (blockId < 0) return null;
 
-    // 블록 합이 0이면 배경색 없음 (흰색)
-    // 모든 정답 셀이 마킹된 상태 = 남은 셀은 모두 틀린 수
-    if (getCurrentBlockSum(blockId) == 0) return null;
+    // 블록의 모든 셀이 결정되면 배경색 없음 (흰색)
+    if (isBlockComplete(blockId)) return null;
 
     return blockColors[blockId % blockColors.length];
   }
