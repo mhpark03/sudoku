@@ -418,6 +418,17 @@ class _KillerGameScreenState extends State<KillerGameScreen>
     return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
   }
 
+  String _getDifficultyText() {
+    switch (_selectedDifficulty) {
+      case KillerDifficulty.easy:
+        return '쉬움';
+      case KillerDifficulty.medium:
+        return '보통';
+      case KillerDifficulty.hard:
+        return '어려움';
+    }
+  }
+
   void _showDifficultyDialog() {
     showDialog(
       context: context,
@@ -554,6 +565,8 @@ class _KillerGameScreenState extends State<KillerGameScreen>
                                   isPaused: _isPaused,
                                   onPauseToggle: _togglePause,
                                   isCompact: true,
+                                  difficultyText: _getDifficultyText(),
+                                  themeColor: Colors.teal,
                                 ),
                                 const SizedBox(height: 8),
                                 Expanded(
@@ -591,6 +604,8 @@ class _KillerGameScreenState extends State<KillerGameScreen>
                             isPaused: _isPaused,
                             onPauseToggle: _togglePause,
                             isCompact: false,
+                            difficultyText: _getDifficultyText(),
+                            themeColor: Colors.teal,
                           ),
                           const SizedBox(height: 12),
                           _isPaused
