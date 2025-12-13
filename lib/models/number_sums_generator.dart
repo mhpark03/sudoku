@@ -51,7 +51,7 @@ class NumberSumsGenerator {
       }),
     );
 
-    // 정답 셀 위치 결정
+    // 정답 셀 위치 결정 - 각 행과 열에 최소 1개의 정답 셀 보장
     final allCells = <(int, int)>[];
     for (int row = 1; row < gridSize; row++) {
       for (int col = 1; col < gridSize; col++) {
@@ -59,12 +59,42 @@ class NumberSumsGenerator {
       }
     }
 
-    int correctCellCount = (allCells.length * fillRatio).round();
-    correctCellCount = max(correctCellCount, gameSize); // 최소 gameSize개
+    // 먼저 각 행과 열에 최소 1개의 정답 셀 배치
+    final correctCellsSet = <(int, int)>{};
+    final rowHasCorrect = List<bool>.filled(gridSize, false);
+    final colHasCorrect = List<bool>.filled(gridSize, false);
 
-    allCells.shuffle(_random);
-    final correctCells = allCells.take(correctCellCount).toSet();
-    final emptyCells = allCells.skip(correctCellCount).toList();
+    // 각 행에 최소 1개
+    for (int row = 1; row < gridSize; row++) {
+      int col = _random.nextInt(gameSize) + 1;
+      correctCellsSet.add((row, col));
+      rowHasCorrect[row] = true;
+      colHasCorrect[col] = true;
+    }
+
+    // 각 열에 최소 1개 (아직 없는 열만)
+    for (int col = 1; col < gridSize; col++) {
+      if (!colHasCorrect[col]) {
+        int row = _random.nextInt(gameSize) + 1;
+        correctCellsSet.add((row, col));
+        colHasCorrect[col] = true;
+      }
+    }
+
+    // 나머지 정답 셀 추가
+    int correctCellCount = (allCells.length * fillRatio).round();
+    correctCellCount = max(correctCellCount, correctCellsSet.length);
+
+    final remainingCells = allCells.where((c) => !correctCellsSet.contains(c)).toList();
+    remainingCells.shuffle(_random);
+
+    int additionalCount = correctCellCount - correctCellsSet.length;
+    for (int i = 0; i < additionalCount && i < remainingCells.length; i++) {
+      correctCellsSet.add(remainingCells[i]);
+    }
+
+    final correctCells = correctCellsSet;
+    final emptyCells = allCells.where((c) => !correctCells.contains(c)).toList();
 
     // 정답 셀에 1-9 숫자 배치 (행/열 내 중복 허용)
     for (final (row, col) in correctCells) {
@@ -283,6 +313,88 @@ class NumberSumsGenerator {
 
       blockIds[cell.$1][cell.$2] = nearestBlockId;
       blockSums[nearestBlockId] += solution[cell.$1][cell.$2];
+    }
+
+    // 5. 작은 블록(4칸 미만) 병합
+    _mergeSmallBlocks(blockIds, solution, gridSize, blockSums);
+  }
+
+  /// 작은 블록을 인접 블록에 병합
+  void _mergeSmallBlocks(
+    List<List<int>> blockIds,
+    List<List<int>> solution,
+    int gridSize,
+    List<int> blockSums,
+  ) {
+    const int minBlockSize = 4;
+
+    // 각 블록의 셀 수 계산
+    Map<int, int> blockCellCounts = {};
+    for (int row = 1; row < gridSize; row++) {
+      for (int col = 1; col < gridSize; col++) {
+        int bid = blockIds[row][col];
+        if (bid >= 0) {
+          blockCellCounts[bid] = (blockCellCounts[bid] ?? 0) + 1;
+        }
+      }
+    }
+
+    // 작은 블록 찾기 및 병합
+    bool merged = true;
+    while (merged) {
+      merged = false;
+
+      for (int smallBlockId in blockCellCounts.keys.toList()) {
+        if ((blockCellCounts[smallBlockId] ?? 0) < minBlockSize &&
+            (blockCellCounts[smallBlockId] ?? 0) > 0) {
+          // 이 블록의 셀들 찾기
+          List<(int, int)> smallBlockCells = [];
+          for (int row = 1; row < gridSize; row++) {
+            for (int col = 1; col < gridSize; col++) {
+              if (blockIds[row][col] == smallBlockId) {
+                smallBlockCells.add((row, col));
+              }
+            }
+          }
+
+          // 인접한 다른 블록 찾기
+          int? targetBlockId;
+          for (final cell in smallBlockCells) {
+            final neighbors = [
+              (cell.$1 - 1, cell.$2),
+              (cell.$1 + 1, cell.$2),
+              (cell.$1, cell.$2 - 1),
+              (cell.$1, cell.$2 + 1),
+            ];
+            for (final neighbor in neighbors) {
+              if (neighbor.$1 >= 1 && neighbor.$1 < gridSize &&
+                  neighbor.$2 >= 1 && neighbor.$2 < gridSize) {
+                int neighborBlockId = blockIds[neighbor.$1][neighbor.$2];
+                if (neighborBlockId >= 0 && neighborBlockId != smallBlockId) {
+                  targetBlockId = neighborBlockId;
+                  break;
+                }
+              }
+            }
+            if (targetBlockId != null) break;
+          }
+
+          // 병합 실행
+          if (targetBlockId != null) {
+            for (final cell in smallBlockCells) {
+              blockIds[cell.$1][cell.$2] = targetBlockId;
+            }
+            // 합계 이동
+            blockSums[targetBlockId] += blockSums[smallBlockId];
+            blockSums[smallBlockId] = 0;
+            // 카운트 업데이트
+            blockCellCounts[targetBlockId] =
+                (blockCellCounts[targetBlockId] ?? 0) + smallBlockCells.length;
+            blockCellCounts[smallBlockId] = 0;
+            merged = true;
+          }
+        }
+      }
     }
   }
 
