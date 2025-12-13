@@ -208,20 +208,26 @@ class NumberSumsGameState {
     return count;
   }
 
-  /// 현재 보드 기준 행의 합계 (남아있는 숫자만)
+  /// 현재 보드 기준 행의 합계 (올바른 수 중 아직 정답 처리 안 된 것만)
   int getCurrentRowSum(int row) {
     int sum = 0;
     for (int col = 1; col < gridSize; col++) {
-      sum += currentBoard[row][col];
+      // 올바른 수이고 아직 정답 처리 안 된 경우만 합산
+      if (!wrongCells[row][col] && !markedCorrectCells[row][col]) {
+        sum += currentBoard[row][col];
+      }
     }
     return sum;
   }
 
-  /// 현재 보드 기준 열의 합계 (남아있는 숫자만)
+  /// 현재 보드 기준 열의 합계 (올바른 수 중 아직 정답 처리 안 된 것만)
   int getCurrentColSum(int col) {
     int sum = 0;
     for (int row = 1; row < gridSize; row++) {
-      sum += currentBoard[row][col];
+      // 올바른 수이고 아직 정답 처리 안 된 경우만 합산
+      if (!wrongCells[row][col] && !markedCorrectCells[row][col]) {
+        sum += currentBoard[row][col];
+      }
     }
     return sum;
   }
