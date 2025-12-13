@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import '../models/game_state.dart';
 import '../models/samurai_game_state.dart';
 import '../models/killer_sudoku_generator.dart';
+import '../models/number_sums_generator.dart';
 import '../services/game_storage.dart';
 import 'game_screen.dart';
 import 'samurai_game_screen.dart';
 import 'killer_game_screen.dart';
+import 'number_sums_game_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,6 +20,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _hasRegularSavedGame = false;
   bool _hasSamuraiSavedGame = false;
   bool _hasKillerSavedGame = false;
+  bool _hasNumberSumsSavedGame = false;
 
   @override
   void initState() {
@@ -29,12 +32,14 @@ class _HomeScreenState extends State<HomeScreen> {
     final hasRegular = await GameStorage.hasRegularGame();
     final hasSamurai = await GameStorage.hasSamuraiGame();
     final hasKiller = await GameStorage.hasKillerGame();
+    final hasNumberSums = await GameStorage.hasNumberSumsGame();
 
     if (mounted) {
       setState(() {
         _hasRegularSavedGame = hasRegular;
         _hasSamuraiSavedGame = hasSamurai;
         _hasKillerSavedGame = hasKiller;
+        _hasNumberSumsSavedGame = hasNumberSums;
       });
     }
   }
@@ -77,6 +82,20 @@ class _HomeScreenState extends State<HomeScreen> {
         context,
         MaterialPageRoute(
           builder: (context) => KillerGameScreen(savedGameState: savedGame),
+        ),
+      );
+      _checkSavedGames();
+    }
+  }
+
+  /// 저장된 넘버 썸즈 이어하기
+  void _continueNumberSumsGame() async {
+    final savedGame = await GameStorage.loadNumberSumsGame();
+    if (savedGame != null && mounted) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => NumberSumsGameScreen(savedGameState: savedGame),
         ),
       );
       _checkSavedGames();
@@ -208,9 +227,43 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _showNumberSumsDifficultyDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('난이도 선택'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildNumberSumsDifficultyTile('쉬움 (6x6)', NumberSumsDifficulty.easy),
+            _buildNumberSumsDifficultyTile('보통 (8x8)', NumberSumsDifficulty.medium),
+            _buildNumberSumsDifficultyTile('어려움 (10x10)', NumberSumsDifficulty.hard),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNumberSumsDifficultyTile(String label, NumberSumsDifficulty difficulty) {
+    return ListTile(
+      title: Text(label),
+      leading: const Icon(Icons.play_arrow, color: Colors.deepOrange),
+      onTap: () async {
+        Navigator.pop(context);
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => NumberSumsGameScreen(initialDifficulty: difficulty),
+          ),
+        );
+        _checkSavedGames();
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final hasSavedGame = _hasRegularSavedGame || _hasSamuraiSavedGame || _hasKillerSavedGame;
+    final hasSavedGame = _hasRegularSavedGame || _hasSamuraiSavedGame || _hasKillerSavedGame || _hasNumberSumsSavedGame;
 
     return Scaffold(
       body: Container(
@@ -287,6 +340,15 @@ class _HomeScreenState extends State<HomeScreen> {
                               color: Colors.teal,
                               onTap: _continueKillerGame,
                             ),
+                          if (_hasKillerSavedGame && _hasNumberSumsSavedGame)
+                            const SizedBox(height: 12),
+                          if (_hasNumberSumsSavedGame)
+                            _buildContinueButton(
+                              title: '넘버 썸즈',
+                              icon: Icons.add_box,
+                              color: Colors.deepOrange,
+                              onTap: _continueNumberSumsGame,
+                            ),
                         ],
                       ),
                     ),
@@ -336,6 +398,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     icon: Icons.calculate,
                     color: Colors.teal,
                     onTap: _showKillerDifficultyDialog,
+                  ),
+                  const SizedBox(height: 20),
+                  _buildGameButton(
+                    title: '넘버 썸즈',
+                    subtitle: '합계 힌트로 숫자 채우기',
+                    icon: Icons.add_box,
+                    color: Colors.deepOrange,
+                    onTap: _showNumberSumsDifficultyDialog,
                   ),
                   const SizedBox(height: 40),
                 ],
