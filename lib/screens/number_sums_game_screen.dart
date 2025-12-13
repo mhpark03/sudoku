@@ -378,31 +378,190 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
               ),
             )
           : SafeArea(
-              child: Column(
-                children: [
-                  _buildStatusBar(),
-                  const SizedBox(height: 8),
-                  _buildHelpText(),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Center(
-                        child: _isPaused
-                            ? _buildPausedOverlay()
-                            : NumberSumsBoard(
-                                gameState: _gameState,
-                                onCellTap: _onCellTap,
-                                errorRow: _errorRow,
-                                errorCol: _errorCol,
-                              ),
-                      ),
-                    ),
-                  ),
-                  _buildToolBar(),
-                  const SizedBox(height: 16),
-                ],
+              child: OrientationBuilder(
+                builder: (context, orientation) {
+                  if (orientation == Orientation.landscape) {
+                    return _buildLandscapeLayout();
+                  }
+                  return _buildPortraitLayout();
+                },
               ),
             ),
+    );
+  }
+
+  Widget _buildPortraitLayout() {
+    return Column(
+      children: [
+        _buildStatusBar(),
+        const SizedBox(height: 8),
+        _buildHelpText(),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Center(
+              child: _isPaused
+                  ? _buildPausedOverlay()
+                  : NumberSumsBoard(
+                      gameState: _gameState,
+                      onCellTap: _onCellTap,
+                      errorRow: _errorRow,
+                      errorCol: _errorCol,
+                    ),
+            ),
+          ),
+        ),
+        _buildToolBar(),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _buildLandscapeLayout() {
+    return Row(
+      children: [
+        // 왼쪽: 게임 보드
+        Expanded(
+          flex: 3,
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Center(
+              child: _isPaused
+                  ? _buildPausedOverlay()
+                  : NumberSumsBoard(
+                      gameState: _gameState,
+                      onCellTap: _onCellTap,
+                      errorRow: _errorRow,
+                      errorCol: _errorCol,
+                    ),
+            ),
+          ),
+        ),
+        // 오른쪽: 정보 및 도구 모음
+        Expanded(
+          flex: 2,
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Color(0xFF16213E),
+            ),
+            child: Column(
+              children: [
+                _buildLandscapeStatusBar(),
+                const SizedBox(height: 16),
+                _buildHelpText(),
+                const Spacer(),
+                _buildLandscapeToolBar(),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLandscapeStatusBar() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // Timer
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.timer_outlined, size: 24, color: Colors.white70),
+              const SizedBox(width: 8),
+              Text(
+                _formatTime(_elapsedSeconds),
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 16),
+              IconButton(
+                onPressed: _togglePause,
+                icon: Icon(
+                  _isPaused ? Icons.play_arrow : Icons.pause,
+                  color: Colors.white,
+                ),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.white.withValues(alpha: 0.1),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Difficulty
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.deepOrange.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  _getDifficultyLabel(),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.deepOrange,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Failure count
+              Row(
+                children: [
+                  Icon(Icons.close, size: 20, color: Colors.red.shade300),
+                  const SizedBox(width: 4),
+                  Text(
+                    '$_failureCount',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.red.shade300,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLandscapeToolBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        children: [
+          _buildModeButton(
+            icon: Icons.check_circle_outline,
+            label: '선택',
+            isSelected: _gameMode == NumberSumsGameMode.select,
+            onTap: () => _setGameMode(NumberSumsGameMode.select),
+          ),
+          const SizedBox(height: 8),
+          _buildModeButton(
+            icon: Icons.remove_circle_outline,
+            label: '제거',
+            isSelected: _gameMode == NumberSumsGameMode.remove,
+            onTap: () => _setGameMode(NumberSumsGameMode.remove),
+          ),
+          const SizedBox(height: 8),
+          _buildModeButton(
+            icon: Icons.lightbulb_outline,
+            label: '힌트',
+            isSelected: _gameMode == NumberSumsGameMode.hint,
+            onTap: () => _setGameMode(NumberSumsGameMode.hint),
+          ),
+        ],
+      ),
     );
   }
 
