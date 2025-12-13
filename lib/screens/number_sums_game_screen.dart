@@ -164,7 +164,6 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
       bool isComplete = NumberSumsGenerator.isBoardComplete(
         newBoard,
         _gameState.solution,
-        _gameState.cellTypes,
         _gameState.gridSize,
       );
 
