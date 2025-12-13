@@ -242,8 +242,9 @@ class NumberSumsGameState {
     int sum = 0;
     for (int col = 1; col < gridSize; col++) {
       // 올바른 수이고 아직 정답 처리 안 된 경우만 합산
+      // solution 값을 사용하여 정확한 정답 값만 계산
       if (!wrongCells[row][col] && !markedCorrectCells[row][col]) {
-        sum += currentBoard[row][col];
+        sum += solution[row][col];
       }
     }
     return sum;
@@ -254,8 +255,9 @@ class NumberSumsGameState {
     int sum = 0;
     for (int row = 1; row < gridSize; row++) {
       // 올바른 수이고 아직 정답 처리 안 된 경우만 합산
+      // solution 값을 사용하여 정확한 정답 값만 계산
       if (!wrongCells[row][col] && !markedCorrectCells[row][col]) {
-        sum += currentBoard[row][col];
+        sum += solution[row][col];
       }
     }
     return sum;
@@ -276,10 +278,12 @@ class NumberSumsGameState {
     int sum = 0;
     for (int row = 1; row < gridSize; row++) {
       for (int col = 1; col < gridSize; col++) {
+        // 블록에 속하고, 올바른 수이고, 아직 마킹되지 않은 경우만
+        // solution 값을 사용하여 정확한 정답 값만 계산
         if (blockIds[row][col] == blockId &&
             !wrongCells[row][col] &&
             !markedCorrectCells[row][col]) {
-          sum += currentBoard[row][col];
+          sum += solution[row][col];
         }
       }
     }
