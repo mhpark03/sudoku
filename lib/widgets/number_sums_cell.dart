@@ -56,17 +56,17 @@ class NumberSumsInputCell extends StatelessWidget {
         ),
         child: Stack(
           children: [
-            // 블록 합계 (왼쪽 상단에 작게 표시)
+            // 블록 합계 (왼쪽 상단에 표시)
             if (blockSum != null && blockSum! > 0)
               Positioned(
-                top: 1,
-                left: 2,
+                top: 2,
+                left: 3,
                 child: Text(
                   '$blockSum',
                   style: const TextStyle(
-                    fontSize: 9,
+                    fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF666666),
+                    color: Color(0xFF444444),
                   ),
                 ),
               ),
