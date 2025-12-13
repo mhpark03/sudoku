@@ -343,6 +343,8 @@ class GameStorage {
       'markedCorrectCells': state.markedCorrectCells.map((row) => row.map((v) => v ? 1 : 0).toList()).toList(),
       'rowSums': state.rowSums,
       'colSums': state.colSums,
+      'blockIds': state.blockIds,
+      'blockSums': state.blockSums,
       'gridSize': state.gridSize,
       'gameSize': state.gameSize,
       'difficulty': state.difficulty.index,
@@ -382,6 +384,13 @@ class GameStorage {
         : List.generate(gridSize, (_) => List.filled(gridSize, false));
     final rowSums = List<int>.from((json['rowSums'] as List?) ?? List.filled(gridSize, 0));
     final colSums = List<int>.from((json['colSums'] as List?) ?? List.filled(gridSize, 0));
+    final blockIdsData = json['blockIds'] as List?;
+    final blockIds = blockIdsData != null
+        ? (blockIdsData as List)
+            .map((row) => (row as List).map((e) => e as int).toList())
+            .toList()
+        : List.generate(gridSize, (_) => List.filled(gridSize, 0));
+    final blockSums = List<int>.from((json['blockSums'] as List?) ?? <int>[]);
 
     return NumberSumsGameState(
       solution: solution,
@@ -392,6 +401,8 @@ class GameStorage {
       markedCorrectCells: markedCorrectCells,
       rowSums: rowSums,
       colSums: colSums,
+      blockIds: blockIds,
+      blockSums: blockSums,
       gridSize: gridSize,
       gameSize: gameSize,
       difficulty: NumberSumsDifficulty.values[json['difficulty'] as int],

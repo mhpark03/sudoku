@@ -26,6 +26,20 @@ enum NumberSumsGameMode {
   hint, // 힌트 모드: 자동으로 정답 처리
 }
 
+// 블록 색상 정의
+const List<int> blockColors = [
+  0xFFFFCDD2, // red 100
+  0xFFC8E6C9, // green 100
+  0xFFBBDEFB, // blue 100
+  0xFFFFF9C4, // yellow 100
+  0xFFE1BEE7, // purple 100
+  0xFFFFE0B2, // orange 100
+  0xFFB2EBF2, // cyan 100
+  0xFFF8BBD9, // pink 100
+  0xFFD7CCC8, // brown 100
+  0xFFCFD8DC, // blueGrey 100
+];
+
 class NumberSumsGameState {
   final List<List<int>> solution;
   final List<List<int>> puzzle;
@@ -35,6 +49,8 @@ class NumberSumsGameState {
   final List<List<bool>> markedCorrectCells; // 올바른 수로 표시된 셀
   final List<int> rowSums; // 각 행의 정답 합계
   final List<int> colSums; // 각 열의 정답 합계
+  final List<List<int>> blockIds; // 각 셀의 블록 ID
+  final List<int> blockSums; // 각 블록의 원래 정답 합계
   final int gridSize; // 전체 그리드 크기 (헤더 포함)
   final int gameSize; // 실제 게임 그리드 크기
   final NumberSumsDifficulty difficulty;
@@ -56,6 +72,8 @@ class NumberSumsGameState {
     required this.markedCorrectCells,
     required this.rowSums,
     required this.colSums,
+    required this.blockIds,
+    required this.blockSums,
     required this.gridSize,
     required this.gameSize,
     required this.difficulty,
@@ -90,6 +108,11 @@ class NumberSumsGameState {
     final rowSums = List<int>.from(data['rowSums'] as List);
     final colSums = List<int>.from(data['colSums'] as List);
 
+    final blockIds = (data['blockIds'] as List)
+        .map((row) => List<int>.from(row as List))
+        .toList();
+    final blockSums = List<int>.from(data['blockSums'] as List);
+
     final currentBoard = puzzle.map((row) => List<int>.from(row)).toList();
 
     // 정답 표시 셀 초기화
@@ -107,6 +130,8 @@ class NumberSumsGameState {
       markedCorrectCells: markedCorrectCells,
       rowSums: rowSums,
       colSums: colSums,
+      blockIds: blockIds,
+      blockSums: blockSums,
       gridSize: gridSize,
       gameSize: gameSize,
       difficulty: difficulty,
@@ -122,6 +147,8 @@ class NumberSumsGameState {
     List<List<bool>>? markedCorrectCells,
     List<int>? rowSums,
     List<int>? colSums,
+    List<List<int>>? blockIds,
+    List<int>? blockSums,
     int? gridSize,
     int? gameSize,
     NumberSumsDifficulty? difficulty,
@@ -142,6 +169,8 @@ class NumberSumsGameState {
       markedCorrectCells: markedCorrectCells ?? this.markedCorrectCells,
       rowSums: rowSums ?? this.rowSums,
       colSums: colSums ?? this.colSums,
+      blockIds: blockIds ?? this.blockIds,
+      blockSums: blockSums ?? this.blockSums,
       gridSize: gridSize ?? this.gridSize,
       gameSize: gameSize ?? this.gameSize,
       difficulty: difficulty ?? this.difficulty,
@@ -230,6 +259,63 @@ class NumberSumsGameState {
       }
     }
     return sum;
+  }
+
+  /// 셀의 블록 ID 가져오기
+  int getBlockId(int row, int col) {
+    if (row < 1 || row >= gridSize || col < 1 || col >= gridSize) {
+      return -1;
+    }
+    return blockIds[row][col];
+  }
+
+  /// 블록의 현재 합계 (올바른 수 중 아직 정답 처리 안 된 것만)
+  int getCurrentBlockSum(int blockId) {
+    if (blockId < 0 || blockId >= blockSums.length) return 0;
+
+    int sum = 0;
+    for (int row = 1; row < gridSize; row++) {
+      for (int col = 1; col < gridSize; col++) {
+        if (blockIds[row][col] == blockId &&
+            !wrongCells[row][col] &&
+            !markedCorrectCells[row][col]) {
+          sum += currentBoard[row][col];
+        }
+      }
+    }
+    return sum;
+  }
+
+  /// 블록이 완료되었는지 확인 (모든 올바른 수가 정답 처리됨)
+  bool isBlockComplete(int blockId) {
+    return getCurrentBlockSum(blockId) == 0;
+  }
+
+  /// 셀의 블록 색상 가져오기 (완료된 블록은 흰색)
+  int? getBlockColor(int row, int col) {
+    final blockId = getBlockId(row, col);
+    if (blockId < 0) return null;
+
+    // 블록이 완료되면 흰색 (null 반환)
+    if (isBlockComplete(blockId)) return null;
+
+    return blockColors[blockId % blockColors.length];
+  }
+
+  /// 블록의 첫 번째 셀인지 확인 (합계 표시용)
+  bool isBlockFirstCell(int row, int col) {
+    final blockId = getBlockId(row, col);
+    if (blockId < 0) return false;
+
+    // 블록에서 가장 위-왼쪽 셀 찾기
+    for (int r = 1; r < gridSize; r++) {
+      for (int c = 1; c < gridSize; c++) {
+        if (blockIds[r][c] == blockId) {
+          return r == row && c == col;
+        }
+      }
+    }
+    return false;
   }
 
   /// 보드가 완성되었는지 확인

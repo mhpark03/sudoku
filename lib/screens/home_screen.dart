@@ -235,9 +235,9 @@ class _HomeScreenState extends State<HomeScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildNumberSumsDifficultyTile('쉬움 (6x6)', NumberSumsDifficulty.easy),
-            _buildNumberSumsDifficultyTile('보통 (8x8)', NumberSumsDifficulty.medium),
-            _buildNumberSumsDifficultyTile('어려움 (10x10)', NumberSumsDifficulty.hard),
+            _buildNumberSumsDifficultyTile('쉬움 (5x5)', NumberSumsDifficulty.easy),
+            _buildNumberSumsDifficultyTile('보통 (6x6)', NumberSumsDifficulty.medium),
+            _buildNumberSumsDifficultyTile('어려움 (7x7)', NumberSumsDifficulty.hard),
           ],
         ),
       ),
