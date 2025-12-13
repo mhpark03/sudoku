@@ -263,6 +263,38 @@ class NumberSumsGameState {
     return sum;
   }
 
+  /// 행의 모든 셀이 결정되었는지 확인
+  bool isRowComplete(int row) {
+    for (int col = 1; col < gridSize; col++) {
+      bool isCorrectCell = !wrongCells[row][col];
+      bool isWrongCell = wrongCells[row][col];
+
+      if (isCorrectCell && !markedCorrectCells[row][col]) {
+        return false;
+      }
+      if (isWrongCell && currentBoard[row][col] != 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /// 열의 모든 셀이 결정되었는지 확인
+  bool isColComplete(int col) {
+    for (int row = 1; row < gridSize; row++) {
+      bool isCorrectCell = !wrongCells[row][col];
+      bool isWrongCell = wrongCells[row][col];
+
+      if (isCorrectCell && !markedCorrectCells[row][col]) {
+        return false;
+      }
+      if (isWrongCell && currentBoard[row][col] != 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   /// 셀의 블록 ID 가져오기
   int getBlockId(int row, int col) {
     if (row < 1 || row >= gridSize || col < 1 || col >= gridSize) {
