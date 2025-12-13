@@ -46,23 +46,27 @@ class NumberSumsGenerator {
 
   Map<String, dynamic> generatePuzzle(NumberSumsDifficulty difficulty) {
     int gridSize;
+    double wrongRatio;
 
     switch (difficulty) {
       case NumberSumsDifficulty.easy:
         gridSize = 6;
+        wrongRatio = 0.25;
         break;
       case NumberSumsDifficulty.medium:
         gridSize = 8;
+        wrongRatio = 0.30;
         break;
       case NumberSumsDifficulty.hard:
         gridSize = 10;
+        wrongRatio = 0.35;
         break;
     }
 
-    return _generateKakuroPuzzle(gridSize, difficulty);
+    return _generateEliminationPuzzle(gridSize, difficulty, wrongRatio);
   }
 
-  Map<String, dynamic> _generateKakuroPuzzle(int size, NumberSumsDifficulty difficulty) {
+  Map<String, dynamic> _generateEliminationPuzzle(int size, NumberSumsDifficulty difficulty, double wrongRatio) {
     // cellTypes: 0 = clue/blocked, 1 = input
     List<List<int>> cellTypes = List.generate(size, (_) => List.filled(size, 0));
     List<List<int>> solution = List.generate(size, (_) => List.filled(size, 0));
@@ -77,16 +81,50 @@ class NumberSumsGenerator {
     // Generate clues based on the solution
     clues = _generateClues(cellTypes, solution, size);
 
-    // Create empty puzzle
-    List<List<int>> puzzle = List.generate(size, (r) =>
-      List.generate(size, (c) => 0)
-    );
+    // Create puzzle with wrong numbers (틀린 숫자가 섞인 퍼즐)
+    final inputCells = <(int, int)>[];
+    for (int row = 0; row < size; row++) {
+      for (int col = 0; col < size; col++) {
+        if (cellTypes[row][col] == 1) {
+          inputCells.add((row, col));
+        }
+      }
+    }
+
+    // 틀린 숫자 셀 결정
+    int wrongCount = (inputCells.length * wrongRatio).round();
+    wrongCount = max(wrongCount, 2);
+
+    inputCells.shuffle(_random);
+    List<List<bool>> wrongCells = List.generate(size, (_) => List.filled(size, false));
+
+    // 퍼즐 보드 = 정답 복사 후 틀린 숫자 삽입
+    List<List<int>> puzzle = solution.map((row) => List<int>.from(row)).toList();
+
+    int addedWrong = 0;
+    for (final (row, col) in inputCells) {
+      if (addedWrong >= wrongCount) break;
+
+      int correctValue = solution[row][col];
+
+      // 다른 숫자로 교체
+      List<int> wrongOptions = [];
+      for (int n = 1; n <= 9; n++) {
+        if (n != correctValue) wrongOptions.add(n);
+      }
+      wrongOptions.shuffle(_random);
+
+      puzzle[row][col] = wrongOptions.first;
+      wrongCells[row][col] = true;
+      addedWrong++;
+    }
 
     return {
       'solution': solution,
       'puzzle': puzzle,
       'cellTypes': cellTypes,
       'clues': clues.map((c) => c.toJson()).toList(),
+      'wrongCells': wrongCells.map((row) => row.map((v) => v ? 1 : 0).toList()).toList(),
       'gridSize': size,
       'difficulty': difficulty.index,
     };
@@ -336,79 +374,35 @@ class NumberSumsGenerator {
     return clueMap.values.toList();
   }
 
+  /// 보드가 완성되었는지 확인 (모든 틀린 숫자 제거됨)
+  static bool isBoardComplete(
+    List<List<int>> currentBoard,
+    List<List<int>> solution,
+    List<List<int>> cellTypes,
+    int gridSize,
+  ) {
+    for (int row = 0; row < gridSize; row++) {
+      for (int col = 0; col < gridSize; col++) {
+        if (cellTypes[row][col] == 1) {
+          if (currentBoard[row][col] != solution[row][col]) {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
+  }
+
+  /// 구버전 호환용
   static bool isValidMove(
     List<List<int>> board,
     List<List<int>> cellTypes,
     List<NumberSumsClue> clues,
     int row,
     int col,
-    int num,
+    int number,
     int gridSize,
   ) {
-    if (num == 0) return true;
-    if (cellTypes[row][col] != 1) return false;
-
-    // Check horizontal run for duplicates
-    int hStart = col;
-    while (hStart > 0 && cellTypes[row][hStart - 1] == 1) hStart--;
-    int hEnd = col;
-    while (hEnd < gridSize - 1 && cellTypes[row][hEnd + 1] == 1) hEnd++;
-
-    for (int c = hStart; c <= hEnd; c++) {
-      if (c != col && board[row][c] == num) return false;
-    }
-
-    // Check vertical run for duplicates
-    int vStart = row;
-    while (vStart > 0 && cellTypes[vStart - 1][col] == 1) vStart--;
-    int vEnd = row;
-    while (vEnd < gridSize - 1 && cellTypes[vEnd + 1][col] == 1) vEnd++;
-
-    for (int r = vStart; r <= vEnd; r++) {
-      if (r != row && board[r][col] == num) return false;
-    }
-
-    return true;
-  }
-
-  static bool isBoardComplete(
-    List<List<int>> board,
-    List<List<int>> cellTypes,
-    List<NumberSumsClue> clues,
-    int gridSize,
-  ) {
-    // Check all input cells are filled
-    for (int row = 0; row < gridSize; row++) {
-      for (int col = 0; col < gridSize; col++) {
-        if (cellTypes[row][col] == 1 && board[row][col] == 0) {
-          return false;
-        }
-      }
-    }
-
-    // Check all clue sums
-    for (var clue in clues) {
-      if (clue.rightSum != null) {
-        int sum = 0;
-        int col = clue.col + 1;
-        while (col < gridSize && cellTypes[clue.row][col] == 1) {
-          sum += board[clue.row][col];
-          col++;
-        }
-        if (sum != clue.rightSum) return false;
-      }
-
-      if (clue.downSum != null) {
-        int sum = 0;
-        int row = clue.row + 1;
-        while (row < gridSize && cellTypes[row][clue.col] == 1) {
-          sum += board[row][clue.col];
-          row++;
-        }
-        if (sum != clue.downSum) return false;
-      }
-    }
-
     return true;
   }
 }
