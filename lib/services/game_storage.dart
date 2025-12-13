@@ -339,9 +339,7 @@ class GameStorage {
       'puzzle': state.puzzle,
       'currentBoard': state.currentBoard,
       'cellTypes': state.cellTypes,
-      'notes': state.notes
-          .map((row) => row.map((set) => set.toList()).toList())
-          .toList(),
+      'wrongCells': state.wrongCells.map((row) => row.map((v) => v ? 1 : 0).toList()).toList(),
       'clues': state.clues.map((c) => c.toJson()).toList(),
       'gridSize': state.gridSize,
       'difficulty': state.difficulty.index,
@@ -366,11 +364,12 @@ class GameStorage {
     final cellTypes = (json['cellTypes'] as List)
         .map((row) => (row as List).map((e) => e as int).toList())
         .toList();
-    final notes = (json['notes'] as List)
-        .map((row) => (row as List)
-            .map((set) => (set as List).map((e) => e as int).toSet())
-            .toList())
-        .toList();
+    final wrongCellsData = json['wrongCells'] as List?;
+    final wrongCells = wrongCellsData != null
+        ? (wrongCellsData as List)
+            .map((row) => (row as List).map((v) => v == 1).toList())
+            .toList()
+        : List.generate(gridSize, (_) => List.filled(gridSize, false));
     final clues = (json['clues'] as List)
         .map((c) => NumberSumsClue.fromJson(c as Map<String, dynamic>))
         .toList();
@@ -380,7 +379,7 @@ class GameStorage {
       puzzle: puzzle,
       currentBoard: currentBoard,
       cellTypes: cellTypes,
-      notes: notes,
+      wrongCells: wrongCells,
       clues: clues,
       gridSize: gridSize,
       difficulty: NumberSumsDifficulty.values[json['difficulty'] as int],

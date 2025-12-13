@@ -25,7 +25,6 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
   late NumberSumsGameState _gameState;
   late NumberSumsDifficulty _selectedDifficulty;
   bool _isLoading = true;
-  bool _isNotesMode = false;
 
   Timer? _timer;
   int _elapsedSeconds = 0;
@@ -110,7 +109,6 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
         _elapsedSeconds = 0;
         _failureCount = 0;
         _isPaused = false;
-        _isNotesMode = false;
       });
       _startTimer();
       _saveGame();
@@ -130,72 +128,11 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
   void _onCellTap(int row, int col) {
     if (_isPaused) return;
     if (_gameState.cellTypes[row][col] != 1) return;
+    if (_gameState.currentBoard[row][col] == 0) return; // 이미 제거된 셀
 
     setState(() {
       _gameState = _gameState.copyWith(selectedRow: row, selectedCol: col);
     });
-  }
-
-  void _inputNumber(int number) {
-    if (_isPaused) return;
-    if (!_gameState.hasSelection) return;
-
-    int row = _gameState.selectedRow!;
-    int col = _gameState.selectedCol!;
-
-    if (_gameState.isFixed(row, col)) return;
-
-    if (_isNotesMode) {
-      // Notes mode
-      setState(() {
-        _gameState.toggleNote(row, col, number);
-      });
-    } else {
-      // Normal input mode
-      setState(() {
-        int correctValue = _gameState.solution[row][col];
-        if (number != correctValue) {
-          _failureCount++;
-        }
-
-        _gameState.saveToUndoHistory(row, col, numberToInput: number);
-
-        List<List<int>> newBoard =
-            _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
-        newBoard[row][col] = number;
-
-        if (NumberSumsGenerator.isValidMove(
-          newBoard,
-          _gameState.cellTypes,
-          _gameState.clues,
-          row,
-          col,
-          number,
-          _gameState.gridSize,
-        )) {
-          _gameState.removeNumberFromRelatedNotes(row, col, number);
-          _gameState.clearNotes(row, col);
-        }
-
-        bool isComplete = NumberSumsGenerator.isBoardComplete(
-          newBoard,
-          _gameState.cellTypes,
-          _gameState.clues,
-          _gameState.gridSize,
-        );
-
-        _gameState = _gameState.copyWith(
-          currentBoard: newBoard,
-          isCompleted: isComplete,
-        );
-
-        if (isComplete) {
-          _timer?.cancel();
-          _showCompletionDialog();
-        }
-      });
-    }
-    _saveGame();
   }
 
   void _onErase() {
@@ -205,21 +142,41 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
     int row = _gameState.selectedRow!;
     int col = _gameState.selectedCol!;
 
-    if (_gameState.isFixed(row, col)) return;
+    if (_gameState.currentBoard[row][col] == 0) return; // 이미 비어있음
 
     setState(() {
-      if (_isNotesMode) {
-        // Clear all notes
-        _gameState.clearNotes(row, col);
-      } else {
-        // Clear number
-        if (_gameState.currentBoard[row][col] != 0) {
-          _gameState.saveToUndoHistory(row, col);
-          List<List<int>> newBoard =
-              _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
-          newBoard[row][col] = 0;
-          _gameState = _gameState.copyWith(currentBoard: newBoard);
-        }
+      // Undo 저장
+      _gameState.saveToUndoHistory(row, col);
+
+      // 올바른 숫자를 지웠는지 확인
+      bool isWrong = _gameState.isWrongCell(row, col);
+      if (!isWrong) {
+        // 올바른 숫자를 지움 -> 실패!
+        _failureCount++;
+      }
+
+      // 숫자 제거
+      List<List<int>> newBoard =
+          _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
+      newBoard[row][col] = 0;
+
+      // 완성 체크
+      bool isComplete = NumberSumsGenerator.isBoardComplete(
+        newBoard,
+        _gameState.solution,
+        _gameState.cellTypes,
+        _gameState.gridSize,
+      );
+
+      _gameState = _gameState.copyWith(
+        currentBoard: newBoard,
+        isCompleted: isComplete,
+        clearSelection: true,
+      );
+
+      if (isComplete) {
+        _timer?.cancel();
+        _showCompletionDialog();
       }
     });
     _saveGame();
@@ -231,11 +188,7 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
     final undoItem = _gameState.popFromUndoHistory();
     if (undoItem != null) {
       setState(() {
-        List<List<int>> newBoard =
-            _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
-        newBoard[undoItem.row][undoItem.col] = undoItem.previousValue;
         _gameState = _gameState.copyWith(
-          currentBoard: newBoard,
           selectedRow: undoItem.row,
           selectedCol: undoItem.col,
         );
@@ -263,7 +216,7 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('넘버 썸즈를 완성했습니다!'),
+            const Text('모든 틀린 숫자를 제거했습니다!'),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -398,6 +351,8 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
               child: Column(
                 children: [
                   _buildStatusBar(),
+                  const SizedBox(height: 8),
+                  _buildHelpText(),
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.all(12.0),
@@ -412,8 +367,7 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
                     ),
                   ),
                   _buildToolBar(),
-                  _buildNumberPad(),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
@@ -491,6 +445,21 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
     );
   }
 
+  Widget _buildHelpText() {
+    final remainingWrong = _gameState.remainingWrongCount;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Text(
+        '틀린 숫자를 찾아서 지우세요! (남은 개수: $remainingWrong)',
+        style: TextStyle(
+          fontSize: 14,
+          color: Colors.white.withValues(alpha: 0.7),
+        ),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+
   String _getDifficultyLabel() {
     switch (_selectedDifficulty) {
       case NumberSumsDifficulty.easy:
@@ -517,16 +486,7 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
             icon: Icons.backspace_outlined,
             label: '지우기',
             onTap: _onErase,
-          ),
-          _buildToolButton(
-            icon: Icons.edit_note,
-            label: '메모',
-            isActive: _isNotesMode,
-            onTap: () {
-              setState(() {
-                _isNotesMode = !_isNotesMode;
-              });
-            },
+            isHighlighted: _gameState.hasSelection,
           ),
         ],
       ),
@@ -537,88 +497,38 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
     required IconData icon,
     required String label,
     required VoidCallback onTap,
-    bool isActive = false,
+    bool isHighlighted = false,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
         decoration: BoxDecoration(
-          color: isActive
+          color: isHighlighted
               ? Colors.deepOrange.withValues(alpha: 0.3)
               : Colors.white.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(10),
-          border: isActive
-              ? Border.all(color: Colors.deepOrange, width: 1.5)
+          borderRadius: BorderRadius.circular(12),
+          border: isHighlighted
+              ? Border.all(color: Colors.deepOrange, width: 2)
               : null,
         ),
         child: Row(
           children: [
             Icon(
               icon,
-              color: isActive ? Colors.deepOrange : Colors.white70,
-              size: 20,
+              color: isHighlighted ? Colors.deepOrange : Colors.white70,
+              size: 24,
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 8),
             Text(
               label,
               style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: isActive ? Colors.deepOrange : Colors.white70,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: isHighlighted ? Colors.deepOrange : Colors.white70,
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNumberPad() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: List.generate(9, (index) {
-          final number = index + 1;
-          return _buildNumberKey(number);
-        }),
-      ),
-    );
-  }
-
-  Widget _buildNumberKey(int number) {
-    final bool isSelected = _gameState.hasSelection &&
-        _gameState.currentBoard[_gameState.selectedRow!]
-                [_gameState.selectedCol!] ==
-            number;
-
-    return GestureDetector(
-      onTap: () => _inputNumber(number),
-      child: Container(
-        width: 38,
-        height: 50,
-        decoration: BoxDecoration(
-          color: isSelected
-              ? Colors.deepOrange
-              : Colors.white.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isSelected
-                ? Colors.deepOrange.shade300
-                : Colors.white.withValues(alpha: 0.2),
-            width: 1,
-          ),
-        ),
-        child: Center(
-          child: Text(
-            '$number',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.9),
-            ),
-          ),
         ),
       ),
     );

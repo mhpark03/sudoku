@@ -61,13 +61,11 @@ class NumberSumsBoard extends StatelessWidget {
 
     // Check if this is an input cell
     if (gameState.cellTypes[row][col] == 1) {
+      final value = gameState.currentBoard[row][col];
       return NumberSumsInputCell(
-        value: gameState.currentBoard[row][col],
+        value: value,
         isSelected: gameState.isSelected(row, col),
-        isHighlighted: gameState.isSameRun(row, col),
-        isSameValue: gameState.isSameValue(row, col),
-        hasError: gameState.hasError(row, col),
-        notes: gameState.notes[row][col],
+        isEmpty: value == 0,
         onTap: () => onCellTap(row, col),
       );
     }
