@@ -3,18 +3,21 @@ import 'dart:math';
 enum NumberSumsDifficulty { easy, medium, hard }
 
 /// Represents a clue cell in the Number Sums puzzle
-/// A clue cell has a down sum (for the column below) and/or right sum (for the row to the right)
 class NumberSumsClue {
   final int row;
   final int col;
-  final int? downSum;  // Sum for cells below this clue
-  final int? rightSum; // Sum for cells to the right of this clue
+  final int? downSum;
+  final int? rightSum;
+  final int? downLength;
+  final int? rightLength;
 
   NumberSumsClue({
     required this.row,
     required this.col,
     this.downSum,
     this.rightSum,
+    this.downLength,
+    this.rightLength,
   });
 
   Map<String, dynamic> toJson() => {
@@ -22,6 +25,8 @@ class NumberSumsClue {
     'col': col,
     'downSum': downSum,
     'rightSum': rightSum,
+    'downLength': downLength,
+    'rightLength': rightLength,
   };
 
   factory NumberSumsClue.fromJson(Map<String, dynamic> json) {
@@ -30,227 +35,51 @@ class NumberSumsClue {
       col: json['col'] as int,
       downSum: json['downSum'] as int?,
       rightSum: json['rightSum'] as int?,
+      downLength: json['downLength'] as int?,
+      rightLength: json['rightLength'] as int?,
     );
   }
-}
-
-/// Cell type in Number Sums puzzle
-enum CellType {
-  blocked,  // Black cell (no input)
-  clue,     // Clue cell with sums
-  input,    // White cell for user input
 }
 
 class NumberSumsGenerator {
   final Random _random = Random();
 
-  /// Generate a Number Sums puzzle
   Map<String, dynamic> generatePuzzle(NumberSumsDifficulty difficulty) {
     int gridSize;
-    int minRunLength, maxRunLength;
 
     switch (difficulty) {
       case NumberSumsDifficulty.easy:
         gridSize = 6;
-        minRunLength = 2;
-        maxRunLength = 3;
         break;
       case NumberSumsDifficulty.medium:
         gridSize = 8;
-        minRunLength = 2;
-        maxRunLength = 4;
         break;
       case NumberSumsDifficulty.hard:
         gridSize = 10;
-        minRunLength = 2;
-        maxRunLength = 5;
         break;
     }
 
-    // Generate a valid puzzle
-    return _generateValidPuzzle(gridSize, minRunLength, maxRunLength, difficulty);
+    return _generateKakuroPuzzle(gridSize, difficulty);
   }
 
-  Map<String, dynamic> _generateValidPuzzle(
-    int size,
-    int minRunLength,
-    int maxRunLength,
-    NumberSumsDifficulty difficulty,
-  ) {
-    // Cell types: 0 = blocked, 1 = input
+  Map<String, dynamic> _generateKakuroPuzzle(int size, NumberSumsDifficulty difficulty) {
+    // cellTypes: 0 = clue/blocked, 1 = input
     List<List<int>> cellTypes = List.generate(size, (_) => List.filled(size, 0));
     List<List<int>> solution = List.generate(size, (_) => List.filled(size, 0));
     List<NumberSumsClue> clues = [];
 
-    // First row and column are always blocked/clue cells
-    for (int i = 0; i < size; i++) {
-      cellTypes[0][i] = 0;
-      cellTypes[i][0] = 0;
-    }
+    // Create a pattern of white cells
+    _createPattern(cellTypes, size, difficulty);
 
-    // Generate horizontal runs with solutions
-    List<_Run> horizontalRuns = [];
-    for (int row = 1; row < size; row++) {
-      int col = 1;
-      while (col < size) {
-        // Decide run length
-        int remainingCols = size - col;
-        if (remainingCols < minRunLength) {
-          col = size;
-          continue;
-        }
+    // Fill solution with valid numbers
+    _fillSolution(cellTypes, solution, size);
 
-        int maxLen = min(maxRunLength, min(9, remainingCols));
-        int runLength = minRunLength + _random.nextInt(maxLen - minRunLength + 1);
-        runLength = min(runLength, remainingCols);
+    // Generate clues based on the solution
+    clues = _generateClues(cellTypes, solution, size);
 
-        // Generate unique digits for this run
-        List<int> digits = _generateUniqueDigits(runLength);
-
-        // Place the run
-        _Run run = _Run(row: row, startCol: col, length: runLength, isHorizontal: true);
-        horizontalRuns.add(run);
-
-        for (int i = 0; i < runLength; i++) {
-          cellTypes[row][col + i] = 1;
-          solution[row][col + i] = digits[i];
-        }
-
-        col += runLength;
-
-        // Add a gap (blocked cell) before next run if there's space
-        if (col < size) {
-          cellTypes[row][col] = 0;
-          col++;
-        }
-      }
-    }
-
-    // Now we need to create vertical consistency
-    // For each column, identify vertical runs and ensure they have valid sums
-    List<_Run> verticalRuns = [];
-    for (int col = 1; col < size; col++) {
-      int row = 1;
-      while (row < size) {
-        if (cellTypes[row][col] == 1) {
-          // Start of a vertical run
-          int startRow = row;
-          while (row < size && cellTypes[row][col] == 1) {
-            row++;
-          }
-          int length = row - startRow;
-
-          if (length >= minRunLength) {
-            // Check if values in this column are unique
-            Set<int> values = {};
-            bool hasDuplicate = false;
-            for (int r = startRow; r < startRow + length; r++) {
-              if (values.contains(solution[r][col])) {
-                hasDuplicate = true;
-                break;
-              }
-              values.add(solution[r][col]);
-            }
-
-            if (hasDuplicate) {
-              // Regenerate values for this vertical run
-              List<int> newDigits = _generateUniqueDigits(length);
-              for (int i = 0; i < length; i++) {
-                solution[startRow + i][col] = newDigits[i];
-              }
-            }
-
-            verticalRuns.add(_Run(row: startRow, startCol: col, length: length, isHorizontal: false));
-          }
-        } else {
-          row++;
-        }
-      }
-    }
-
-    // Validate and fix horizontal runs after vertical adjustments
-    for (var run in horizontalRuns) {
-      Set<int> values = {};
-      bool hasDuplicate = false;
-      for (int i = 0; i < run.length; i++) {
-        int val = solution[run.row][run.startCol + i];
-        if (values.contains(val)) {
-          hasDuplicate = true;
-          break;
-        }
-        values.add(val);
-      }
-
-      if (hasDuplicate) {
-        List<int> newDigits = _generateUniqueDigits(run.length);
-        for (int i = 0; i < run.length; i++) {
-          solution[run.row][run.startCol + i] = newDigits[i];
-        }
-      }
-    }
-
-    // Create clue cells
-    // For each horizontal run, add clue to the left
-    for (var run in horizontalRuns) {
-      int sum = 0;
-      for (int i = 0; i < run.length; i++) {
-        sum += solution[run.row][run.startCol + i];
-      }
-
-      // Find or create clue cell
-      int clueCol = run.startCol - 1;
-      int existingIdx = clues.indexWhere((c) => c.row == run.row && c.col == clueCol);
-
-      if (existingIdx >= 0) {
-        // Update existing clue with right sum
-        var existing = clues[existingIdx];
-        clues[existingIdx] = NumberSumsClue(
-          row: existing.row,
-          col: existing.col,
-          downSum: existing.downSum,
-          rightSum: sum,
-        );
-      } else {
-        clues.add(NumberSumsClue(
-          row: run.row,
-          col: clueCol,
-          rightSum: sum,
-        ));
-      }
-    }
-
-    // For each vertical run, add clue above
-    for (var run in verticalRuns) {
-      int sum = 0;
-      for (int i = 0; i < run.length; i++) {
-        sum += solution[run.row + i][run.startCol];
-      }
-
-      // Find or create clue cell
-      int clueRow = run.row - 1;
-      int existingIdx = clues.indexWhere((c) => c.row == clueRow && c.col == run.startCol);
-
-      if (existingIdx >= 0) {
-        // Update existing clue with down sum
-        var existing = clues[existingIdx];
-        clues[existingIdx] = NumberSumsClue(
-          row: existing.row,
-          col: existing.col,
-          downSum: sum,
-          rightSum: existing.rightSum,
-        );
-      } else {
-        clues.add(NumberSumsClue(
-          row: clueRow,
-          col: run.startCol,
-          downSum: sum,
-        ));
-      }
-    }
-
-    // Create puzzle (empty input cells)
+    // Create empty puzzle
     List<List<int>> puzzle = List.generate(size, (r) =>
-      List.generate(size, (c) => cellTypes[r][c] == 1 ? 0 : solution[r][c])
+      List.generate(size, (c) => 0)
     );
 
     return {
@@ -263,14 +92,250 @@ class NumberSumsGenerator {
     };
   }
 
-  /// Generate unique random digits 1-9
-  List<int> _generateUniqueDigits(int count) {
-    if (count > 9) count = 9;
-    List<int> digits = List.generate(9, (i) => i + 1)..shuffle(_random);
-    return digits.sublist(0, count);
+  void _createPattern(List<List<int>> cellTypes, int size, NumberSumsDifficulty difficulty) {
+    // First row and column are always clue cells
+    for (int i = 0; i < size; i++) {
+      cellTypes[0][i] = 0;
+      cellTypes[i][0] = 0;
+    }
+
+    int minRun = 2;
+    int maxRun;
+
+    switch (difficulty) {
+      case NumberSumsDifficulty.easy:
+        maxRun = 4;
+        break;
+      case NumberSumsDifficulty.medium:
+        maxRun = 5;
+        break;
+      case NumberSumsDifficulty.hard:
+        maxRun = 6;
+        break;
+    }
+
+    // Create horizontal runs
+    for (int row = 1; row < size; row++) {
+      int col = 1;
+      while (col < size) {
+        int remaining = size - col;
+        if (remaining < minRun) {
+          col = size;
+          continue;
+        }
+
+        int runLength = minRun + _random.nextInt(min(maxRun - minRun + 1, remaining - minRun + 1));
+        runLength = min(runLength, min(9, remaining));
+
+        // Mark cells as input
+        for (int i = 0; i < runLength; i++) {
+          cellTypes[row][col + i] = 1;
+        }
+
+        col += runLength;
+
+        // Add gap if there's enough space for another run
+        if (col < size - minRun) {
+          cellTypes[row][col] = 0;
+          col++;
+        } else {
+          col = size;
+        }
+      }
+    }
+
+    // Ensure vertical runs are valid (at least minRun length)
+    for (int col = 1; col < size; col++) {
+      int runStart = -1;
+      for (int row = 1; row <= size; row++) {
+        if (row < size && cellTypes[row][col] == 1) {
+          if (runStart == -1) runStart = row;
+        } else {
+          if (runStart != -1) {
+            int runLength = row - runStart;
+            if (runLength == 1) {
+              // Single cell run - try to extend or remove
+              if (runStart > 1 && cellTypes[runStart - 1][col] == 0) {
+                // Check if we can extend up
+                bool canExtend = false;
+                if (runStart > 1) {
+                  int checkRow = runStart - 1;
+                  if (cellTypes[checkRow][col] == 0) {
+                    // Check horizontal context
+                    bool hasHorizontalRun = false;
+                    for (int c = col - 1; c >= 0; c--) {
+                      if (cellTypes[checkRow][c] == 1) {
+                        hasHorizontalRun = true;
+                        break;
+                      }
+                      if (cellTypes[checkRow][c] == 0) break;
+                    }
+                    if (!hasHorizontalRun) canExtend = true;
+                  }
+                }
+                if (!canExtend) {
+                  cellTypes[runStart][col] = 0;
+                }
+              } else {
+                cellTypes[runStart][col] = 0;
+              }
+            }
+            runStart = -1;
+          }
+        }
+      }
+    }
   }
 
-  /// Check if a move is valid (no duplicates in the same run)
+  void _fillSolution(List<List<int>> cellTypes, List<List<int>> solution, int size) {
+    // Use backtracking to fill valid numbers
+    _backtrackFill(cellTypes, solution, size, 1, 1);
+  }
+
+  bool _backtrackFill(List<List<int>> cellTypes, List<List<int>> solution, int size, int row, int col) {
+    if (row >= size) return true;
+
+    int nextRow = col + 1 >= size ? row + 1 : row;
+    int nextCol = col + 1 >= size ? 1 : col + 1;
+
+    if (cellTypes[row][col] != 1) {
+      return _backtrackFill(cellTypes, solution, size, nextRow, nextCol);
+    }
+
+    List<int> candidates = _getCandidates(cellTypes, solution, size, row, col);
+    candidates.shuffle(_random);
+
+    for (int num in candidates) {
+      solution[row][col] = num;
+      if (_backtrackFill(cellTypes, solution, size, nextRow, nextCol)) {
+        return true;
+      }
+      solution[row][col] = 0;
+    }
+
+    return false;
+  }
+
+  List<int> _getCandidates(List<List<int>> cellTypes, List<List<int>> solution, int size, int row, int col) {
+    Set<int> used = {};
+
+    // Check horizontal run
+    int hStart = col;
+    while (hStart > 0 && cellTypes[row][hStart - 1] == 1) hStart--;
+    int hEnd = col;
+    while (hEnd < size - 1 && cellTypes[row][hEnd + 1] == 1) hEnd++;
+
+    for (int c = hStart; c <= hEnd; c++) {
+      if (solution[row][c] != 0) used.add(solution[row][c]);
+    }
+
+    // Check vertical run
+    int vStart = row;
+    while (vStart > 0 && cellTypes[vStart - 1][col] == 1) vStart--;
+    int vEnd = row;
+    while (vEnd < size - 1 && cellTypes[vEnd + 1][col] == 1) vEnd++;
+
+    for (int r = vStart; r <= vEnd; r++) {
+      if (solution[r][col] != 0) used.add(solution[r][col]);
+    }
+
+    return [1, 2, 3, 4, 5, 6, 7, 8, 9].where((n) => !used.contains(n)).toList();
+  }
+
+  List<NumberSumsClue> _generateClues(List<List<int>> cellTypes, List<List<int>> solution, int size) {
+    Map<String, NumberSumsClue> clueMap = {};
+
+    // Generate horizontal clues
+    for (int row = 1; row < size; row++) {
+      int col = 1;
+      while (col < size) {
+        if (cellTypes[row][col] == 1) {
+          int startCol = col;
+          int sum = 0;
+          int length = 0;
+
+          while (col < size && cellTypes[row][col] == 1) {
+            sum += solution[row][col];
+            length++;
+            col++;
+          }
+
+          if (length >= 2) {
+            int clueCol = startCol - 1;
+            String key = '${row}_$clueCol';
+
+            if (clueMap.containsKey(key)) {
+              var existing = clueMap[key]!;
+              clueMap[key] = NumberSumsClue(
+                row: row,
+                col: clueCol,
+                downSum: existing.downSum,
+                rightSum: sum,
+                downLength: existing.downLength,
+                rightLength: length,
+              );
+            } else {
+              clueMap[key] = NumberSumsClue(
+                row: row,
+                col: clueCol,
+                rightSum: sum,
+                rightLength: length,
+              );
+            }
+          }
+        } else {
+          col++;
+        }
+      }
+    }
+
+    // Generate vertical clues
+    for (int col = 1; col < size; col++) {
+      int row = 1;
+      while (row < size) {
+        if (cellTypes[row][col] == 1) {
+          int startRow = row;
+          int sum = 0;
+          int length = 0;
+
+          while (row < size && cellTypes[row][col] == 1) {
+            sum += solution[row][col];
+            length++;
+            row++;
+          }
+
+          if (length >= 2) {
+            int clueRow = startRow - 1;
+            String key = '${clueRow}_$col';
+
+            if (clueMap.containsKey(key)) {
+              var existing = clueMap[key]!;
+              clueMap[key] = NumberSumsClue(
+                row: clueRow,
+                col: col,
+                downSum: sum,
+                rightSum: existing.rightSum,
+                downLength: length,
+                rightLength: existing.rightLength,
+              );
+            } else {
+              clueMap[key] = NumberSumsClue(
+                row: clueRow,
+                col: col,
+                downSum: sum,
+                downLength: length,
+              );
+            }
+          }
+        } else {
+          row++;
+        }
+      }
+    }
+
+    return clueMap.values.toList();
+  }
+
   static bool isValidMove(
     List<List<int>> board,
     List<List<int>> cellTypes,
@@ -283,38 +348,29 @@ class NumberSumsGenerator {
     if (num == 0) return true;
     if (cellTypes[row][col] != 1) return false;
 
-    // Check horizontal run
-    int startCol = col;
-    while (startCol > 0 && cellTypes[row][startCol - 1] == 1) {
-      startCol--;
-    }
-    int endCol = col;
-    while (endCol < gridSize - 1 && cellTypes[row][endCol + 1] == 1) {
-      endCol++;
-    }
+    // Check horizontal run for duplicates
+    int hStart = col;
+    while (hStart > 0 && cellTypes[row][hStart - 1] == 1) hStart--;
+    int hEnd = col;
+    while (hEnd < gridSize - 1 && cellTypes[row][hEnd + 1] == 1) hEnd++;
 
-    for (int c = startCol; c <= endCol; c++) {
+    for (int c = hStart; c <= hEnd; c++) {
       if (c != col && board[row][c] == num) return false;
     }
 
-    // Check vertical run
-    int startRow = row;
-    while (startRow > 0 && cellTypes[startRow - 1][col] == 1) {
-      startRow--;
-    }
-    int endRow = row;
-    while (endRow < gridSize - 1 && cellTypes[endRow + 1][col] == 1) {
-      endRow++;
-    }
+    // Check vertical run for duplicates
+    int vStart = row;
+    while (vStart > 0 && cellTypes[vStart - 1][col] == 1) vStart--;
+    int vEnd = row;
+    while (vEnd < gridSize - 1 && cellTypes[vEnd + 1][col] == 1) vEnd++;
 
-    for (int r = startRow; r <= endRow; r++) {
+    for (int r = vStart; r <= vEnd; r++) {
       if (r != row && board[r][col] == num) return false;
     }
 
     return true;
   }
 
-  /// Check if the board is complete and valid
   static bool isBoardComplete(
     List<List<int>> board,
     List<List<int>> cellTypes,
@@ -332,7 +388,6 @@ class NumberSumsGenerator {
 
     // Check all clue sums
     for (var clue in clues) {
-      // Check right sum
       if (clue.rightSum != null) {
         int sum = 0;
         int col = clue.col + 1;
@@ -343,7 +398,6 @@ class NumberSumsGenerator {
         if (sum != clue.rightSum) return false;
       }
 
-      // Check down sum
       if (clue.downSum != null) {
         int sum = 0;
         int row = clue.row + 1;
@@ -357,18 +411,4 @@ class NumberSumsGenerator {
 
     return true;
   }
-}
-
-class _Run {
-  final int row;
-  final int startCol;
-  final int length;
-  final bool isHorizontal;
-
-  _Run({
-    required this.row,
-    required this.startCol,
-    required this.length,
-    required this.isHorizontal,
-  });
 }

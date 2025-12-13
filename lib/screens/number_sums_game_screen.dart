@@ -25,8 +25,8 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
   late NumberSumsGameState _gameState;
   late NumberSumsDifficulty _selectedDifficulty;
   bool _isLoading = true;
+  bool _isNotesMode = false;
 
-  // 게임 타이머 및 통계
   Timer? _timer;
   int _elapsedSeconds = 0;
   int _failureCount = 0;
@@ -45,7 +45,8 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
       _isLoading = false;
       _startTimer();
     } else {
-      _selectedDifficulty = widget.initialDifficulty ?? NumberSumsDifficulty.medium;
+      _selectedDifficulty =
+          widget.initialDifficulty ?? NumberSumsDifficulty.medium;
       _startNewGame();
     }
   }
@@ -109,6 +110,7 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
         _elapsedSeconds = 0;
         _failureCount = 0;
         _isPaused = false;
+        _isNotesMode = false;
       });
       _startTimer();
       _saveGame();
@@ -127,169 +129,119 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
 
   void _onCellTap(int row, int col) {
     if (_isPaused) return;
-
-    // Only allow tapping input cells
     if (_gameState.cellTypes[row][col] != 1) return;
 
     setState(() {
-      // 같은 셀을 다시 탭하면 숫자 선택 다이얼로그 표시
-      if (_gameState.selectedRow == row && _gameState.selectedCol == col) {
-        _showNumberPicker(row, col);
-      } else {
-        // 다른 셀 선택
-        _gameState = _gameState.copyWith(selectedRow: row, selectedCol: col);
-      }
+      _gameState = _gameState.copyWith(selectedRow: row, selectedCol: col);
     });
   }
 
-  void _showNumberPicker(int row, int col) {
+  void _inputNumber(int number) {
+    if (_isPaused) return;
+    if (!_gameState.hasSelection) return;
+
+    int row = _gameState.selectedRow!;
+    int col = _gameState.selectedCol!;
+
     if (_gameState.isFixed(row, col)) return;
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              '숫자 선택',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              alignment: WrapAlignment.center,
-              children: List.generate(9, (index) {
-                final number = index + 1;
-                return _buildNumberButton(number, row, col);
-              }),
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-  }
+    if (_isNotesMode) {
+      // Notes mode
+      setState(() {
+        _gameState.toggleNote(row, col, number);
+      });
+    } else {
+      // Normal input mode
+      setState(() {
+        int correctValue = _gameState.solution[row][col];
+        if (number != correctValue) {
+          _failureCount++;
+        }
 
-  Widget _buildNumberButton(int number, int row, int col) {
-    final isCurrentValue = _gameState.currentBoard[row][col] == number;
+        _gameState.saveToUndoHistory(row, col, numberToInput: number);
 
-    return GestureDetector(
-      onTap: () {
-        Navigator.pop(context);
-        _inputNumber(row, col, number);
-      },
-      child: Container(
-        width: 50,
-        height: 50,
-        decoration: BoxDecoration(
-          color: isCurrentValue ? Colors.deepOrange.shade100 : Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isCurrentValue ? Colors.deepOrange : Colors.grey.shade300,
-            width: isCurrentValue ? 2 : 1,
-          ),
-        ),
-        child: Center(
-          child: Text(
-            '$number',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: isCurrentValue ? Colors.deepOrange : Colors.black87,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+        List<List<int>> newBoard =
+            _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
+        newBoard[row][col] = number;
 
-  void _inputNumber(int row, int col, int number) {
-    setState(() {
-      int correctValue = _gameState.solution[row][col];
-      if (number != correctValue) {
-        _failureCount++;
-      }
+        if (NumberSumsGenerator.isValidMove(
+          newBoard,
+          _gameState.cellTypes,
+          _gameState.clues,
+          row,
+          col,
+          number,
+          _gameState.gridSize,
+        )) {
+          _gameState.removeNumberFromRelatedNotes(row, col, number);
+          _gameState.clearNotes(row, col);
+        }
 
-      _gameState.saveToUndoHistory(row, col, numberToInput: number);
+        bool isComplete = NumberSumsGenerator.isBoardComplete(
+          newBoard,
+          _gameState.cellTypes,
+          _gameState.clues,
+          _gameState.gridSize,
+        );
 
-      List<List<int>> newBoard =
-          _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
-      newBoard[row][col] = number;
+        _gameState = _gameState.copyWith(
+          currentBoard: newBoard,
+          isCompleted: isComplete,
+        );
 
-      if (NumberSumsGenerator.isValidMove(
-        newBoard,
-        _gameState.cellTypes,
-        _gameState.clues,
-        row,
-        col,
-        number,
-        _gameState.gridSize,
-      )) {
-        _gameState.removeNumberFromRelatedNotes(row, col, number);
-        _gameState.clearNotes(row, col);
-      }
-
-      bool isComplete = NumberSumsGenerator.isBoardComplete(
-        newBoard,
-        _gameState.cellTypes,
-        _gameState.clues,
-        _gameState.gridSize,
-      );
-
-      _gameState = _gameState.copyWith(
-        currentBoard: newBoard,
-        isCompleted: isComplete,
-      );
-
-      if (isComplete) {
-        _timer?.cancel();
-        _showCompletionDialog();
-      }
-    });
+        if (isComplete) {
+          _timer?.cancel();
+          _showCompletionDialog();
+        }
+      });
+    }
     _saveGame();
   }
 
   void _onErase() {
     if (_isPaused) return;
-
-    if (!_gameState.hasSelection) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('셀을 먼저 선택하세요')),
-      );
-      return;
-    }
+    if (!_gameState.hasSelection) return;
 
     int row = _gameState.selectedRow!;
     int col = _gameState.selectedCol!;
 
-    if (_gameState.isFixed(row, col)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('초기 값은 지울 수 없습니다')),
-      );
-      return;
-    }
-
-    if (_gameState.currentBoard[row][col] == 0) return;
+    if (_gameState.isFixed(row, col)) return;
 
     setState(() {
-      _gameState.saveToUndoHistory(row, col);
-      List<List<int>> newBoard =
-          _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
-      newBoard[row][col] = 0;
-      _gameState = _gameState.copyWith(currentBoard: newBoard);
+      if (_isNotesMode) {
+        // Clear all notes
+        _gameState.clearNotes(row, col);
+      } else {
+        // Clear number
+        if (_gameState.currentBoard[row][col] != 0) {
+          _gameState.saveToUndoHistory(row, col);
+          List<List<int>> newBoard =
+              _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
+          newBoard[row][col] = 0;
+          _gameState = _gameState.copyWith(currentBoard: newBoard);
+        }
+      }
     });
     _saveGame();
+  }
+
+  void _onUndo() {
+    if (_isPaused) return;
+
+    final undoItem = _gameState.popFromUndoHistory();
+    if (undoItem != null) {
+      setState(() {
+        List<List<int>> newBoard =
+            _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
+        newBoard[undoItem.row][undoItem.col] = undoItem.previousValue;
+        _gameState = _gameState.copyWith(
+          currentBoard: newBoard,
+          selectedRow: undoItem.row,
+          selectedCol: undoItem.col,
+        );
+      });
+      _saveGame();
+    }
   }
 
   void _showCompletionDialog() {
@@ -300,23 +252,53 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('축하합니다!'),
+        title: const Row(
+          children: [
+            Icon(Icons.celebration, color: Colors.amber, size: 28),
+            SizedBox(width: 8),
+            Text('축하합니다!'),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('넘버 썸즈를 완성했습니다!'),
             const SizedBox(height: 16),
-            Text('소요 시간: $timeStr'),
-            Text('실패 횟수: $_failureCount회'),
+            Row(
+              children: [
+                const Icon(Icons.timer_outlined, size: 18),
+                const SizedBox(width: 8),
+                Text('소요 시간: $timeStr'),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.close, size: 18, color: Colors.red.shade400),
+                const SizedBox(width: 8),
+                Text('실패 횟수: $_failureCount회'),
+              ],
+            ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.pop(context);
+              _showDifficultyDialog();
+            },
+            child: const Text('새 게임'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
               Navigator.pop(context);
             },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.deepOrange,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('확인'),
           ),
         ],
@@ -381,20 +363,20 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: const Color(0xFF1A1A2E),
       appBar: AppBar(
-        title: const Text('넘버 썸즈'),
-        backgroundColor: Colors.deepOrange,
+        title: const Text(
+          '넘버 썸즈',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: const Color(0xFF16213E),
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
-          TextButton.icon(
+          IconButton(
             onPressed: _showDifficultyDialog,
-            icon: const Icon(Icons.refresh, color: Colors.white, size: 20),
-            label: const Text(
-              '새 게임',
-              style: TextStyle(color: Colors.white),
-            ),
+            icon: const Icon(Icons.refresh),
+            tooltip: '새 게임',
           ),
         ],
       ),
@@ -405,19 +387,20 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
                 children: [
                   CircularProgressIndicator(color: Colors.deepOrange),
                   SizedBox(height: 16),
-                  Text('퍼즐 생성 중...'),
+                  Text(
+                    '퍼즐 생성 중...',
+                    style: TextStyle(color: Colors.white70),
+                  ),
                 ],
               ),
             )
           : SafeArea(
               child: Column(
                 children: [
-                  // 상태 바
                   _buildStatusBar(),
-                  // 게임 보드
                   Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.all(16.0),
+                      padding: const EdgeInsets.all(12.0),
                       child: Center(
                         child: _isPaused
                             ? _buildPausedOverlay()
@@ -428,9 +411,9 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
                       ),
                     ),
                   ),
-                  // 간단한 컨트롤 버튼
-                  _buildSimpleControls(),
-                  const SizedBox(height: 16),
+                  _buildToolBar(),
+                  _buildNumberPad(),
+                  const SizedBox(height: 8),
                 ],
               ),
             ),
@@ -439,58 +422,68 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
 
   Widget _buildStatusBar() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      decoration: const BoxDecoration(
+        color: Color(0xFF16213E),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // 타이머
+          // Timer
           Row(
             children: [
-              Icon(Icons.timer_outlined, size: 20, color: Colors.grey.shade600),
+              const Icon(Icons.timer_outlined, size: 20, color: Colors.white70),
               const SizedBox(width: 6),
               Text(
                 _formatTime(_elapsedSeconds),
                 style: const TextStyle(
                   fontSize: 16,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
                 ),
               ),
             ],
           ),
-          // 실패 횟수
+          // Difficulty
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.deepOrange.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              _getDifficultyLabel(),
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.deepOrange,
+              ),
+            ),
+          ),
+          // Failure count
           Row(
             children: [
-              Icon(Icons.close, size: 20, color: Colors.red.shade400),
+              Icon(Icons.close, size: 20, color: Colors.red.shade300),
               const SizedBox(width: 4),
               Text(
                 '$_failureCount',
                 style: TextStyle(
                   fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.red.shade400,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.red.shade300,
                 ),
               ),
             ],
           ),
-          // 일시정지 버튼
+          // Pause button
           IconButton(
             onPressed: _togglePause,
             icon: Icon(
               _isPaused ? Icons.play_arrow : Icons.pause,
-              color: Colors.deepOrange,
+              color: Colors.white,
             ),
             style: IconButton.styleFrom(
-              backgroundColor: Colors.deepOrange.shade50,
+              backgroundColor: Colors.white.withValues(alpha: 0.1),
             ),
           ),
         ],
@@ -498,109 +491,175 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
     );
   }
 
-  Widget _buildSimpleControls() {
+  String _getDifficultyLabel() {
+    switch (_selectedDifficulty) {
+      case NumberSumsDifficulty.easy:
+        return '쉬움';
+      case NumberSumsDifficulty.medium:
+        return '보통';
+      case NumberSumsDifficulty.hard:
+        return '어려움';
+    }
+  }
+
+  Widget _buildToolBar() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 40),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          // 선택 버튼 (숫자 입력)
-          _buildControlButton(
-            icon: Icons.edit_outlined,
-            label: '선택',
-            onTap: () {
-              if (_gameState.hasSelection) {
-                _showNumberPicker(_gameState.selectedRow!, _gameState.selectedCol!);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('셀을 먼저 선택하세요')),
-                );
-              }
-            },
+          _buildToolButton(
+            icon: Icons.undo,
+            label: '되돌리기',
+            onTap: _onUndo,
           ),
-          // 제거 버튼
-          _buildControlButton(
+          _buildToolButton(
             icon: Icons.backspace_outlined,
-            label: '제거',
+            label: '지우기',
             onTap: _onErase,
+          ),
+          _buildToolButton(
+            icon: Icons.edit_note,
+            label: '메모',
+            isActive: _isNotesMode,
+            onTap: () {
+              setState(() {
+                _isNotesMode = !_isNotesMode;
+              });
+            },
           ),
         ],
       ),
     );
   }
 
-  Widget _buildControlButton({
+  Widget _buildToolButton({
     required IconData icon,
     required String label,
     required VoidCallback onTap,
+    bool isActive = false,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade300),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          color: isActive
+              ? Colors.deepOrange.withValues(alpha: 0.3)
+              : Colors.white.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(10),
+          border: isActive
+              ? Border.all(color: Colors.deepOrange, width: 1.5)
+              : null,
         ),
         child: Row(
           children: [
-            Icon(icon, color: Colors.grey.shade700, size: 22),
-            const SizedBox(width: 8),
+            Icon(
+              icon,
+              color: isActive ? Colors.deepOrange : Colors.white70,
+              size: 20,
+            ),
+            const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
-                fontSize: 15,
+                fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: Colors.grey.shade700,
+                color: isActive ? Colors.deepOrange : Colors.white70,
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNumberPad() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: List.generate(9, (index) {
+          final number = index + 1;
+          return _buildNumberKey(number);
+        }),
+      ),
+    );
+  }
+
+  Widget _buildNumberKey(int number) {
+    final bool isSelected = _gameState.hasSelection &&
+        _gameState.currentBoard[_gameState.selectedRow!]
+                [_gameState.selectedCol!] ==
+            number;
+
+    return GestureDetector(
+      onTap: () => _inputNumber(number),
+      child: Container(
+        width: 38,
+        height: 50,
+        decoration: BoxDecoration(
+          color: isSelected
+              ? Colors.deepOrange
+              : Colors.white.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected
+                ? Colors.deepOrange.shade300
+                : Colors.white.withValues(alpha: 0.2),
+            width: 1,
+          ),
+        ),
+        child: Center(
+          child: Text(
+            '$number',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.9),
+            ),
+          ),
         ),
       ),
     );
   }
 
   Widget _buildPausedOverlay() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.pause_circle_outline,
-              size: 64,
-              color: Colors.grey.shade500,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '일시정지',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade600,
+    return AspectRatio(
+      aspectRatio: 1,
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF2D2D2D),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.pause_circle_outline,
+                size: 64,
+                color: Colors.white.withValues(alpha: 0.5),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '재개 버튼을 눌러 계속하세요',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade500,
+              const SizedBox(height: 16),
+              Text(
+                '일시정지',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white.withValues(alpha: 0.7),
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 8),
+              Text(
+                '재개 버튼을 눌러 계속하세요',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.white.withValues(alpha: 0.5),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
