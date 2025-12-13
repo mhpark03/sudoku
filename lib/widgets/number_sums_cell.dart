@@ -117,70 +117,60 @@ class NumberSumsClueCell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F0E6),
-        border: Border.all(color: Colors.grey.shade300, width: 0.5),
+        color: const Color(0xFFE8E0D5), // 좀 더 어두운 베이지색
+        border: Border.all(color: Colors.grey.shade400, width: 0.5),
       ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final width = constraints.maxWidth;
-          final height = constraints.maxHeight;
-          final fontSize = width * 0.30;
-
-          return Stack(
-            children: [
-              // Diagonal line from top-left to bottom-right
-              Positioned.fill(
-                child: CustomPaint(
-                  painter: _DiagonalLinePainter(),
+      child: Stack(
+        children: [
+          // Diagonal line from top-left to bottom-right
+          Positioned.fill(
+            child: CustomPaint(
+              painter: _DiagonalLinePainter(),
+            ),
+          ),
+          // Down sum (bottom-left) - 킬러 스도쿠 스타일 배지
+          if (downSum != null)
+            Positioned(
+              left: 2,
+              bottom: 2,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade100,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+                child: Text(
+                  '$downSum',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.brown.shade700,
+                  ),
                 ),
               ),
-              // Down sum (bottom-left triangle) - 아래쪽 셀들의 합
-              if (downSum != null)
-                Positioned(
-                  left: 2,
-                  top: height * 0.5,
-                  width: width * 0.5,
-                  height: height * 0.5 - 2,
-                  child: Align(
-                    alignment: Alignment.center,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        '$downSum',
-                        style: TextStyle(
-                          color: const Color(0xFF555555),
-                          fontSize: fontSize,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
+            ),
+          // Right sum (top-right) - 킬러 스도쿠 스타일 배지
+          if (rightSum != null)
+            Positioned(
+              right: 2,
+              top: 2,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade100,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+                child: Text(
+                  '$rightSum',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.brown.shade700,
                   ),
                 ),
-              // Right sum (top-right triangle) - 오른쪽 셀들의 합
-              if (rightSum != null)
-                Positioned(
-                  left: width * 0.5,
-                  top: 2,
-                  width: width * 0.5 - 2,
-                  height: height * 0.5,
-                  child: Align(
-                    alignment: Alignment.center,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        '$rightSum',
-                        style: TextStyle(
-                          color: const Color(0xFF555555),
-                          fontSize: fontSize,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          );
-        },
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -190,8 +180,8 @@ class _DiagonalLinePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFFCCCCCC)
-      ..strokeWidth = 1.0;
+      ..color = const Color(0xFFBBB0A0)
+      ..strokeWidth = 1.5;
 
     canvas.drawLine(
       const Offset(0, 0),
@@ -211,8 +201,8 @@ class NumberSumsBlockedCell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F0E6),
-        border: Border.all(color: Colors.grey.shade300, width: 0.5),
+        color: const Color(0xFFE8E0D5),
+        border: Border.all(color: Colors.grey.shade400, width: 0.5),
       ),
     );
   }
