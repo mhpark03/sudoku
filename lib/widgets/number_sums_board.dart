@@ -50,27 +50,34 @@ class NumberSumsBoard extends StatelessWidget {
   }
 
   Widget _buildCell(int row, int col) {
-    // Check if this is a clue cell
-    final clue = gameState.getClueAt(row, col);
-    if (clue != null) {
-      return NumberSumsClueCell(
-        downSum: clue.downSum,
-        rightSum: clue.rightSum,
+    // (0, 0) = 코너 셀 (빈 검정 셀)
+    if (row == 0 && col == 0) {
+      return const NumberSumsBlockedCell();
+    }
+
+    // 첫 번째 행 (열 합계 표시)
+    if (row == 0 && col > 0) {
+      return NumberSumsSumCell(
+        sum: gameState.colSums[col],
+        isColumnSum: true,
       );
     }
 
-    // Check if this is an input cell
-    if (gameState.cellTypes[row][col] == 1) {
-      final value = gameState.currentBoard[row][col];
-      return NumberSumsInputCell(
-        value: value,
-        isSelected: gameState.isSelected(row, col),
-        isEmpty: value == 0,
-        onTap: () => onCellTap(row, col),
+    // 첫 번째 열 (행 합계 표시)
+    if (col == 0 && row > 0) {
+      return NumberSumsSumCell(
+        sum: gameState.rowSums[row],
+        isColumnSum: false,
       );
     }
 
-    // Blocked cell
-    return const NumberSumsBlockedCell();
+    // 입력 셀
+    final value = gameState.currentBoard[row][col];
+    return NumberSumsInputCell(
+      value: value,
+      isSelected: gameState.isSelected(row, col),
+      isEmpty: value == 0,
+      onTap: () => onCellTap(row, col),
+    );
   }
 }

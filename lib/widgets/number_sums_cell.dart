@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 class NumberSumsInputCell extends StatelessWidget {
   final int value;
   final bool isSelected;
-  final bool isEmpty; // 제거된 셀
+  final bool isEmpty;
   final VoidCallback onTap;
 
   const NumberSumsInputCell({
@@ -21,8 +21,7 @@ class NumberSumsInputCell extends StatelessWidget {
     Color borderColor = const Color(0xFF4A4A4A);
 
     if (isEmpty) {
-      // 제거된 셀 - 빈 상태
-      backgroundColor = const Color(0xFFE0E0E0);
+      backgroundColor = const Color(0xFF3A3A3A);
     } else if (isSelected) {
       backgroundColor = const Color(0xFFFFEB3B);
       borderColor = const Color(0xFFFF9800);
@@ -46,7 +45,7 @@ class NumberSumsInputCell extends StatelessWidget {
                     child: Text(
                       '$value',
                       style: TextStyle(
-                        fontSize: 26,
+                        fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: isSelected
                             ? const Color(0xFF1A237E)
@@ -62,69 +61,76 @@ class NumberSumsInputCell extends StatelessWidget {
   }
 }
 
-/// 단서 셀 (합계 표시)
-class NumberSumsClueCell extends StatelessWidget {
-  final int? downSum;
-  final int? rightSum;
+/// 합계를 표시하는 헤더 셀
+class NumberSumsSumCell extends StatelessWidget {
+  final int sum;
+  final bool isColumnSum; // true = 열 합계(상단), false = 행 합계(좌측)
 
-  const NumberSumsClueCell({
+  const NumberSumsSumCell({
     super.key,
-    this.downSum,
-    this.rightSum,
+    required this.sum,
+    required this.isColumnSum,
   });
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final size = constraints.maxWidth;
-        final fontSize = (size * 0.28).clamp(8.0, 14.0);
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF2D2D2D),
+        border: Border.all(color: const Color(0xFF4A4A4A), width: 1),
+      ),
+      child: Stack(
+        children: [
+          // 대각선
+          Positioned.fill(
+            child: CustomPaint(
+              painter: _DiagonalLinePainter(),
+            ),
+          ),
+          // 합계 숫자
+          Positioned.fill(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final size = constraints.maxWidth;
+                final fontSize = (size * 0.35).clamp(10.0, 16.0);
 
-        return Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFF2D2D2D),
-            border: Border.all(color: const Color(0xFF4A4A4A), width: 1),
+                return Stack(
+                  children: [
+                    if (isColumnSum)
+                      // 열 합계는 아래 삼각형 (좌하단)
+                      Positioned(
+                        left: size * 0.1,
+                        bottom: size * 0.1,
+                        child: Text(
+                          '$sum',
+                          style: TextStyle(
+                            fontSize: fontSize,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      )
+                    else
+                      // 행 합계는 위 삼각형 (우상단)
+                      Positioned(
+                        right: size * 0.1,
+                        top: size * 0.1,
+                        child: Text(
+                          '$sum',
+                          style: TextStyle(
+                            fontSize: fontSize,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
           ),
-          child: Stack(
-            children: [
-              // Diagonal line
-              Positioned.fill(
-                child: CustomPaint(
-                  painter: _DiagonalLinePainter(),
-                ),
-              ),
-              // Down sum (bottom-left)
-              if (downSum != null)
-                Positioned(
-                  left: size * 0.08,
-                  bottom: size * 0.08,
-                  child: Text(
-                    '$downSum',
-                    style: TextStyle(
-                      fontSize: fontSize,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              // Right sum (top-right)
-              if (rightSum != null)
-                Positioned(
-                  right: size * 0.08,
-                  top: size * 0.08,
-                  child: Text(
-                    '$rightSum',
-                    style: TextStyle(
-                      fontSize: fontSize,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        );
-      },
+        ],
+      ),
     );
   }
 }
@@ -147,7 +153,7 @@ class _DiagonalLinePainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-/// 블록 셀 (빈 검은 셀)
+/// 블록 셀 (코너 등)
 class NumberSumsBlockedCell extends StatelessWidget {
   const NumberSumsBlockedCell({super.key});
 
