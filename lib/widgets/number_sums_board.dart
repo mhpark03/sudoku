@@ -55,14 +55,14 @@ class NumberSumsBoard extends StatelessWidget {
       return const NumberSumsCornerCell();
     }
 
-    // 첫 번째 행 (열 합계 표시)
+    // 첫 번째 행 (열 합계 표시) - 남아있는 숫자의 합
     if (row == 0 && col > 0) {
-      return NumberSumsSumCell(sum: gameState.colSums[col]);
+      return NumberSumsSumCell(sum: gameState.getCurrentColSum(col));
     }
 
-    // 첫 번째 열 (행 합계 표시)
+    // 첫 번째 열 (행 합계 표시) - 남아있는 숫자의 합
     if (col == 0 && row > 0) {
-      return NumberSumsSumCell(sum: gameState.rowSums[row]);
+      return NumberSumsSumCell(sum: gameState.getCurrentRowSum(row));
     }
 
     // 입력 셀
