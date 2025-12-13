@@ -444,15 +444,17 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
             decoration: const BoxDecoration(
               color: Color(0xFF16213E),
             ),
-            child: Column(
-              children: [
-                _buildLandscapeStatusBar(),
-                const SizedBox(height: 16),
-                _buildHelpText(),
-                const Spacer(),
-                _buildLandscapeToolBar(),
-                const SizedBox(height: 16),
-              ],
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildLandscapeStatusBar(),
+                  _buildHelpText(),
+                  const SizedBox(height: 8),
+                  _buildLandscapeToolBar(),
+                  const SizedBox(height: 8),
+                ],
+              ),
             ),
           ),
         ),
@@ -462,66 +464,68 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
 
   Widget _buildLandscapeStatusBar() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Column(
         children: [
           // Timer
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.timer_outlined, size: 24, color: Colors.white70),
-              const SizedBox(width: 8),
+              const Icon(Icons.timer_outlined, size: 20, color: Colors.white70),
+              const SizedBox(width: 6),
               Text(
                 _formatTime(_elapsedSeconds),
                 style: const TextStyle(
-                  fontSize: 24,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               IconButton(
                 onPressed: _togglePause,
                 icon: Icon(
                   _isPaused ? Icons.play_arrow : Icons.pause,
                   color: Colors.white,
+                  size: 20,
                 ),
                 style: IconButton.styleFrom(
                   backgroundColor: Colors.white.withValues(alpha: 0.1),
+                  padding: const EdgeInsets.all(8),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // Difficulty
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                 decoration: BoxDecoration(
                   color: Colors.deepOrange.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
                   _getDifficultyLabel(),
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.w600,
                     color: Colors.deepOrange,
                   ),
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               // Failure count
               Row(
                 children: [
-                  Icon(Icons.close, size: 20, color: Colors.red.shade300),
+                  Icon(Icons.close, size: 18, color: Colors.red.shade300),
                   const SizedBox(width: 4),
                   Text(
                     '$_failureCount',
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: Colors.red.shade300,
                     ),
@@ -537,30 +541,73 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
 
   Widget _buildLandscapeToolBar() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          _buildModeButton(
+          _buildCompactModeButton(
             icon: Icons.check_circle_outline,
             label: '선택',
             isSelected: _gameMode == NumberSumsGameMode.select,
             onTap: () => _setGameMode(NumberSumsGameMode.select),
           ),
-          const SizedBox(height: 8),
-          _buildModeButton(
+          const SizedBox(height: 6),
+          _buildCompactModeButton(
             icon: Icons.remove_circle_outline,
             label: '제거',
             isSelected: _gameMode == NumberSumsGameMode.remove,
             onTap: () => _setGameMode(NumberSumsGameMode.remove),
           ),
-          const SizedBox(height: 8),
-          _buildModeButton(
+          const SizedBox(height: 6),
+          _buildCompactModeButton(
             icon: Icons.lightbulb_outline,
             label: '힌트',
             isSelected: _gameMode == NumberSumsGameMode.hint,
             onTap: () => _setGameMode(NumberSumsGameMode.hint),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCompactModeButton({
+    required IconData icon,
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? Colors.deepOrange.withValues(alpha: 0.3)
+              : Colors.white.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(10),
+          border: isSelected
+              ? Border.all(color: Colors.deepOrange, width: 2)
+              : null,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? Colors.deepOrange : Colors.white70,
+              size: 20,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: isSelected ? Colors.deepOrange : Colors.white70,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
