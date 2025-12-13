@@ -5,6 +5,7 @@ class NumberSumsInputCell extends StatelessWidget {
   final int value;
   final bool isSelected;
   final bool isEmpty;
+  final bool isMarkedCorrect;
   final VoidCallback onTap;
 
   const NumberSumsInputCell({
@@ -12,6 +13,7 @@ class NumberSumsInputCell extends StatelessWidget {
     required this.value,
     required this.isSelected,
     required this.isEmpty,
+    this.isMarkedCorrect = false,
     required this.onTap,
   });
 
@@ -36,29 +38,60 @@ class NumberSumsInputCell extends StatelessWidget {
           color: backgroundColor,
           border: Border.all(color: borderColor, width: isSelected ? 2 : 1),
         ),
-        child: Center(
-          child: value != 0
-              ? FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Padding(
-                    padding: const EdgeInsets.all(2),
-                    child: Text(
-                      '$value',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: isSelected
-                            ? const Color(0xFF1A237E)
-                            : const Color(0xFF333333),
+        child: Stack(
+          children: [
+            // 정답 표시 동그라미
+            if (isMarkedCorrect && !isEmpty)
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _CirclePainter(),
+                ),
+              ),
+            // 숫자
+            Center(
+              child: value != 0
+                  ? FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Padding(
+                        padding: const EdgeInsets.all(2),
+                        child: Text(
+                          '$value',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: isSelected
+                                ? const Color(0xFF1A237E)
+                                : const Color(0xFF333333),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                )
-              : null,
+                    )
+                  : null,
+            ),
+          ],
         ),
       ),
     );
   }
+}
+
+/// 동그라미 그리기 Painter
+class _CirclePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.green
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3;
+
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.width < size.height ? size.width : size.height) / 2 - 4;
+
+    canvas.drawCircle(center, radius, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 /// 합계를 표시하는 헤더 셀
