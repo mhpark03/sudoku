@@ -32,6 +32,8 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
   bool _isPaused = false;
   bool _isBackgrounded = false;
   NumberSumsGameMode _gameMode = NumberSumsGameMode.select; // 현재 게임 모드
+  int? _errorRow; // 오류 발생한 셀
+  int? _errorCol;
 
   @override
   void initState() {
@@ -133,6 +135,10 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
     if (_gameState.isMarkedCorrect(row, col)) return; // 이미 정답으로 표시됨
 
     setState(() {
+      // 이전 오류 표시 초기화
+      _errorRow = null;
+      _errorCol = null;
+
       if (_gameMode == NumberSumsGameMode.select) {
         // 선택 모드: 올바른 수인지 확인
         bool isWrong = _gameState.isWrongCell(row, col);
@@ -145,6 +151,8 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
         } else {
           // 틀린 수를 올바른 수로 선택 -> 실패!
           _failureCount++;
+          _errorRow = row;
+          _errorCol = col;
         }
       } else if (_gameMode == NumberSumsGameMode.remove) {
         // 제거 모드: 틀린 수인지 확인
@@ -174,6 +182,8 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
         } else {
           // 올바른 수를 제거하려고 함 -> 실패!
           _failureCount++;
+          _errorRow = row;
+          _errorCol = col;
         }
       } else if (_gameMode == NumberSumsGameMode.hint) {
         // 힌트 모드: 자동으로 정답 처리
@@ -382,6 +392,8 @@ class _NumberSumsGameScreenState extends State<NumberSumsGameScreen>
                             : NumberSumsBoard(
                                 gameState: _gameState,
                                 onCellTap: _onCellTap,
+                                errorRow: _errorRow,
+                                errorCol: _errorCol,
                               ),
                       ),
                     ),
