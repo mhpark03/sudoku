@@ -367,6 +367,8 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen>
           failureCount: _failureCount,
           isPaused: _isPaused,
           onPauseToggle: _togglePause,
+          difficultyText: _getDifficultyText(),
+          themeColor: Colors.deepPurple,
         ),
         const SizedBox(height: 8),
         // 안내 텍스트
@@ -481,6 +483,8 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen>
               isPaused: _isPaused,
               onPauseToggle: _togglePause,
               isCompact: true,
+              difficultyText: _getDifficultyText(),
+              themeColor: Colors.deepPurple,
             ),
           ],
         ),
