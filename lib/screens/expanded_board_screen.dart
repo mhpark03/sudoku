@@ -511,9 +511,9 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
   void _checkCompletion() {
     // 현재 보드가 모두 채워졌는지 확인
     if (_isCurrentBoardFilled()) {
-      // 전체 게임이 완료되었는지 확인
+      // 전체 게임이 완료되었는지 확인 (solutions와 비교)
       bool isGameComplete = SamuraiSudokuGenerator.areAllBoardsComplete(
-          widget.gameState.currentBoards);
+          widget.gameState.currentBoards, widget.gameState.solutions);
 
       // 사무라이 화면으로 돌아가기
       Navigator.pop(context);

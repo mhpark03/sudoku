@@ -203,12 +203,13 @@ class SudokuGenerator {
     return true;
   }
 
-  /// 보드가 완성되었는지 검사
-  static bool isBoardComplete(List<List<int>> board) {
+  /// 보드가 완성되었는지 검사 (solution과 비교)
+  static bool isBoardComplete(List<List<int>> board, List<List<int>> solution) {
     for (int row = 0; row < 9; row++) {
       for (int col = 0; col < 9; col++) {
-        if (board[row][col] == 0) return false;
-        if (!isValidMove(board, row, col, board[row][col])) return false;
+        if (board[row][col] != solution[row][col]) {
+          return false;
+        }
       }
     }
     return true;

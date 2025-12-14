@@ -470,13 +470,15 @@ class SamuraiSudokuGenerator {
     return true;
   }
 
-  /// 모든 보드가 완성되었는지 검사
-  static bool areAllBoardsComplete(List<List<List<int>>> boards) {
-    for (var board in boards) {
+  /// 모든 보드가 완성되었는지 검사 (solutions와 비교)
+  static bool areAllBoardsComplete(
+      List<List<List<int>>> boards, List<List<List<int>>> solutions) {
+    for (int b = 0; b < 5; b++) {
       for (int row = 0; row < 9; row++) {
         for (int col = 0; col < 9; col++) {
-          if (board[row][col] == 0) return false;
-          if (!isValidMove(board, row, col, board[row][col])) return false;
+          if (boards[b][row][col] != solutions[b][row][col]) {
+            return false;
+          }
         }
       }
     }
