@@ -472,7 +472,7 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
 
   void _checkCompletion() {
     bool isComplete = SamuraiSudokuGenerator.areAllBoardsComplete(
-        widget.gameState.currentBoards);
+        widget.gameState.currentBoards, widget.gameState.solutions);
     if (isComplete) {
       Navigator.pop(context);
       widget.onComplete?.call();
