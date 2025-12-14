@@ -132,12 +132,12 @@ class _CirclePainter extends CustomPainter {
 /// 합계를 표시하는 헤더 셀
 class NumberSumsSumCell extends StatelessWidget {
   final int totalSum; // 전체 합
-  final int remainingSum; // 남은 합
+  final int selectedSum; // 선택한 올바른 수의 합
 
   const NumberSumsSumCell({
     super.key,
     required this.totalSum,
-    required this.remainingSum,
+    required this.selectedSum,
   });
 
   @override
@@ -167,13 +167,13 @@ class NumberSumsSumCell extends StatelessWidget {
                     ),
                   ),
                 ),
-                // 남은 합 (우하단에 작게, 아랫첨자 형태)
-                if (remainingSum > 0 && remainingSum != totalSum)
+                // 선택한 합 (우하단에 작게, 아랫첨자 형태) - 0일 때는 표시하지 않음
+                if (selectedSum > 0 && selectedSum != totalSum)
                   Positioned(
                     right: 2,
                     bottom: 1,
                     child: Text(
-                      '$remainingSum',
+                      '$selectedSum',
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
