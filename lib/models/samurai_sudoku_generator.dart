@@ -165,8 +165,8 @@ class SamuraiSudokuGenerator {
   /// 퍼즐 생성 - 논리적으로 풀 수 있는 퍼즐 보장
   List<List<List<int>>> generatePuzzles(
       List<List<List<int>>> solvedBoards, int difficulty) {
-    // 최대 재시도 횟수
-    for (int attempt = 0; attempt < 5; attempt++) {
+    // 최대 재시도 횟수 증가
+    for (int attempt = 0; attempt < 10; attempt++) {
       List<List<List<int>>>? puzzle =
           _tryGenerateLogicalPuzzle(solvedBoards, difficulty);
       if (puzzle != null) {
@@ -174,8 +174,8 @@ class SamuraiSudokuGenerator {
       }
     }
 
-    // 논리 풀이 가능한 퍼즐 생성 실패 시 폴백 (더 쉬운 난이도)
-    return _generateSimplePuzzle(solvedBoards, (difficulty * 0.7).round());
+    // 논리 풀이 가능한 퍼즐 생성 실패 시 폴백 (더 쉬운 난이도로 변경: 0.7 -> 0.5)
+    return _generateSimplePuzzle(solvedBoards, (difficulty * 0.5).round());
   }
 
   /// 논리적으로 풀 수 있는 퍼즐 생성 시도
@@ -209,8 +209,8 @@ class SamuraiSudokuGenerator {
     for (int pos in validPositions) {
       if (hidden >= cellsToHide) break;
 
-      // 너무 많이 스킵하면 이 시도 포기
-      if (skipped > 60) return null;
+      // 너무 많이 스킵하면 이 시도 포기 (60 -> 100으로 증가)
+      if (skipped > 100) return null;
 
       int gridRow = pos ~/ 21;
       int gridCol = pos % 21;

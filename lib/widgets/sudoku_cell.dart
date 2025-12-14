@@ -80,26 +80,40 @@ class SudokuCell extends StatelessWidget {
   }
 
   Widget _buildNotesGrid() {
-    return Padding(
-      padding: const EdgeInsets.all(1),
-      child: GridView.count(
-        crossAxisCount: 3,
-        physics: const NeverScrollableScrollPhysics(),
-        children: List.generate(9, (index) {
-          int num = index + 1;
-          bool hasNote = notes.contains(num);
-          return Center(
-            child: Text(
-              hasNote ? num.toString() : '',
-              style: TextStyle(
-                fontSize: 9,
-                color: Colors.grey.shade800,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          );
-        }),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 셀 크기에 비례해서 폰트 크기 결정
+        final cellSize = constraints.maxWidth;
+        final fontSize = (cellSize / 4.5).clamp(6.0, 12.0);
+
+        return Padding(
+          padding: const EdgeInsets.all(1),
+          child: Column(
+            children: List.generate(3, (rowIndex) {
+              return Expanded(
+                child: Row(
+                  children: List.generate(3, (colIndex) {
+                    int num = rowIndex * 3 + colIndex + 1;
+                    bool hasNote = notes.contains(num);
+                    return Expanded(
+                      child: Center(
+                        child: Text(
+                          hasNote ? num.toString() : '',
+                          style: TextStyle(
+                            fontSize: fontSize,
+                            color: Colors.grey.shade800,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+              );
+            }),
+          ),
+        );
+      },
     );
   }
 }

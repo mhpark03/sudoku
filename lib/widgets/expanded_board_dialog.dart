@@ -389,21 +389,15 @@ class _ExpandedBoardDialogState extends State<ExpandedBoardDialog> {
       // 빠른 입력 모드일 때
       if (isQuickInputMode && quickInputNumber != null) {
         if (!isFixed) {
-          final board = widget.gameState.currentBoards[widget.boardIndex];
-          final solution = widget.gameState.solutions[widget.boardIndex];
-
-          // 정답 확인
-          bool isCorrect = solution[row][col] == quickInputNumber;
-
-          if (isCorrect) {
-            // 정답: 숫자 입력
-            widget.onValueChanged(widget.boardIndex, row, col, quickInputNumber!);
-            _showFeedback(true);
+          // 일반 스도쿠와 동일하게 처리: 무조건 값 입력, 오류는 빨간색으로 표시
+          int currentValue = widget.gameState.currentBoards[widget.boardIndex][row][col];
+          if (currentValue == quickInputNumber) {
+            // 같은 숫자면 지우기
+            widget.onValueChanged(widget.boardIndex, row, col, 0);
           } else {
-            // 오답: 피드백만 표시
-            _showFeedback(false);
+            // 다른 숫자면 입력
+            widget.onValueChanged(widget.boardIndex, row, col, quickInputNumber!);
           }
-
           selectedRow = row;
           selectedCol = col;
         } else {
@@ -422,28 +416,6 @@ class _ExpandedBoardDialogState extends State<ExpandedBoardDialog> {
         }
       }
     });
-  }
-
-  void _showFeedback(bool isCorrect) {
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(
-              isCorrect ? Icons.check_circle : Icons.cancel,
-              color: Colors.white,
-            ),
-            const SizedBox(width: 8),
-            Text(isCorrect ? '정답입니다!' : '틀렸습니다!'),
-          ],
-        ),
-        backgroundColor: isCorrect ? Colors.green : Colors.red,
-        duration: const Duration(milliseconds: 800),
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-      ),
-    );
   }
 
   Widget _buildNotesGrid(Set<int> cellNotes) {

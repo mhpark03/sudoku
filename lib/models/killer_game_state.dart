@@ -1,47 +1,27 @@
-import 'sudoku_generator.dart';
-
-enum Difficulty { easy, medium, hard, expert }
+import 'killer_cage.dart';
+import 'killer_sudoku_generator.dart';
 
 /// Isolate에서 실행할 퍼즐 생성 함수 (top-level 함수)
-Map<String, dynamic> generatePuzzleInIsolate(Difficulty difficulty) {
-  final generator = SudokuGenerator();
-  final solution = generator.generateSolvedBoard();
-
-  int emptyCells;
-  switch (difficulty) {
-    case Difficulty.easy:
-      emptyCells = 30;
-      break;
-    case Difficulty.medium:
-      emptyCells = 45;
-      break;
-    case Difficulty.hard:
-      emptyCells = 60;
-      break;
-    case Difficulty.expert:
-      emptyCells = 70;
-      break;
-  }
-
-  final puzzle = generator.generatePuzzle(solution, emptyCells);
-
+Map<String, dynamic> generateKillerPuzzleInIsolate(KillerDifficulty difficulty) {
+  final generator = KillerSudokuGenerator();
+  final result = generator.generatePuzzle(difficulty);
   return {
-    'solution': solution,
-    'puzzle': puzzle,
+    'solution': result['solution'],
+    'puzzle': result['puzzle'],
+    'cages': (result['cages'] as List<KillerCage>).map((c) => c.toJson()).toList(),
     'difficulty': difficulty.index,
   };
 }
 
 /// Undo를 위한 동작 기록
-class UndoAction {
+class KillerUndoAction {
   final int row;
   final int col;
   final int previousValue;
   final Set<int> previousNotes;
-  // 영향받는 관련 셀들의 메모 상태 (행/열/박스 내 셀들)
   final Map<String, Set<int>> affectedCellsNotes;
 
-  UndoAction({
+  KillerUndoAction({
     required this.row,
     required this.col,
     required this.previousValue,
@@ -49,41 +29,39 @@ class UndoAction {
     this.affectedCellsNotes = const {},
   });
 
-  /// 셀 키 생성 (row_col 형식)
   static String cellKey(int row, int col) => '${row}_$col';
 
-  /// 셀 키에서 row, col 추출
   static (int, int) parseKey(String key) {
     final parts = key.split('_');
     return (int.parse(parts[0]), int.parse(parts[1]));
   }
 }
 
-class GameState {
+class KillerGameState {
   final List<List<int>> solution;
   final List<List<int>> puzzle;
   final List<List<int>> currentBoard;
   final List<List<bool>> isFixed;
-  final List<List<Set<int>>> notes; // 메모 기능
-  final Difficulty difficulty;
+  final List<List<Set<int>>> notes;
+  final List<KillerCage> cages;
+  final KillerDifficulty difficulty;
   int? selectedRow;
   int? selectedCol;
-  int? quickInputNumber; // 빠른 입력 모드에서 선택된 숫자
+  int? quickInputNumber;
   int mistakes;
   bool isCompleted;
-  // 게임 통계
   int elapsedSeconds;
   int failureCount;
-  // Undo 히스토리 (최대 10개)
-  final List<UndoAction> _undoHistory = [];
+  final List<KillerUndoAction> _undoHistory;
   static const int maxUndoCount = 10;
 
-  GameState({
+  KillerGameState({
     required this.solution,
     required this.puzzle,
     required this.currentBoard,
     required this.isFixed,
     required this.notes,
+    required this.cages,
     required this.difficulty,
     this.selectedRow,
     this.selectedCol,
@@ -92,51 +70,49 @@ class GameState {
     this.isCompleted = false,
     this.elapsedSeconds = 0,
     this.failureCount = 0,
-  });
+    List<KillerUndoAction>? undoHistory,
+  }) : _undoHistory = undoHistory ?? [];
 
-  /// 동기적으로 새 게임 생성 (메인 스레드에서 실행, UI 블로킹 가능)
-  factory GameState.newGame(Difficulty difficulty) {
-    final data = generatePuzzleInIsolate(difficulty);
-    return GameState.fromGeneratedData(data);
-  }
-
-  /// 생성된 데이터로부터 GameState 생성 (isolate에서 생성된 데이터 사용)
-  factory GameState.fromGeneratedData(Map<String, dynamic> data) {
+  /// 생성된 데이터로부터 GameState 생성
+  factory KillerGameState.fromGeneratedData(Map<String, dynamic> data) {
     final solution = (data['solution'] as List)
         .map((row) => List<int>.from(row as List))
         .toList();
     final puzzle = (data['puzzle'] as List)
         .map((row) => List<int>.from(row as List))
         .toList();
-    final difficulty = Difficulty.values[data['difficulty'] as int];
+    final cages = (data['cages'] as List)
+        .map((c) => KillerCage.fromJson(c as Map<String, dynamic>))
+        .toList();
+    final difficulty = KillerDifficulty.values[data['difficulty'] as int];
 
     final currentBoard = puzzle.map((row) => List<int>.from(row)).toList();
-    final isFixed = puzzle
-        .map((row) => row.map((cell) => cell != 0).toList())
-        .toList();
-    // 메모 초기화: 9x9 각각 빈 Set
+    final isFixed =
+        puzzle.map((row) => row.map((cell) => cell != 0).toList()).toList();
     final notes = List.generate(
       9,
       (_) => List.generate(9, (_) => <int>{}),
     );
 
-    return GameState(
+    return KillerGameState(
       solution: solution,
       puzzle: puzzle,
       currentBoard: currentBoard,
       isFixed: isFixed,
       notes: notes,
+      cages: cages,
       difficulty: difficulty,
     );
   }
 
-  GameState copyWith({
+  KillerGameState copyWith({
     List<List<int>>? solution,
     List<List<int>>? puzzle,
     List<List<int>>? currentBoard,
     List<List<bool>>? isFixed,
     List<List<Set<int>>>? notes,
-    Difficulty? difficulty,
+    List<KillerCage>? cages,
+    KillerDifficulty? difficulty,
     int? selectedRow,
     int? selectedCol,
     int? quickInputNumber,
@@ -147,21 +123,99 @@ class GameState {
     bool clearSelection = false,
     bool clearQuickInput = false,
   }) {
-    return GameState(
+    return KillerGameState(
       solution: solution ?? this.solution,
       puzzle: puzzle ?? this.puzzle,
       currentBoard: currentBoard ?? this.currentBoard,
       isFixed: isFixed ?? this.isFixed,
       notes: notes ?? this.notes,
+      cages: cages ?? this.cages,
       difficulty: difficulty ?? this.difficulty,
       selectedRow: clearSelection ? null : (selectedRow ?? this.selectedRow),
       selectedCol: clearSelection ? null : (selectedCol ?? this.selectedCol),
-      quickInputNumber: clearQuickInput ? null : (quickInputNumber ?? this.quickInputNumber),
+      quickInputNumber:
+          clearQuickInput ? null : (quickInputNumber ?? this.quickInputNumber),
       mistakes: mistakes ?? this.mistakes,
       isCompleted: isCompleted ?? this.isCompleted,
       elapsedSeconds: elapsedSeconds ?? this.elapsedSeconds,
       failureCount: failureCount ?? this.failureCount,
+      undoHistory: _undoHistory,
     );
+  }
+
+  /// Get cage containing a specific cell
+  KillerCage? getCageForCell(int row, int col) {
+    for (var cage in cages) {
+      if (cage.containsCell(row, col)) return cage;
+    }
+    return null;
+  }
+
+  /// Check if cage has error (duplicate or sum exceeded)
+  bool hasCageError(KillerCage cage) {
+    final values = <int>[];
+    int sum = 0;
+    bool hasEmpty = false;
+
+    for (var cell in cage.cells) {
+      int value = currentBoard[cell[0]][cell[1]];
+      if (value == 0) {
+        hasEmpty = true;
+      } else {
+        if (values.contains(value)) return true; // Duplicate in cage
+        values.add(value);
+        sum += value;
+      }
+    }
+
+    if (!hasEmpty && sum != cage.targetSum) return true; // Wrong sum
+    if (sum > cage.targetSum) return true; // Sum exceeded
+    return false;
+  }
+
+  /// Check if specific cell has cage-related error
+  bool hasCellCageError(int row, int col) {
+    final cage = getCageForCell(row, col);
+    if (cage == null) return false;
+    return hasCageError(cage);
+  }
+
+  /// Extended error check including standard Sudoku + cage rules + solution check
+  bool hasError(int row, int col) {
+    int value = currentBoard[row][col];
+    if (value == 0) return false;
+
+    // Check if value matches solution (wrong answer)
+    if (value != solution[row][col]) {
+      return true;
+    }
+
+    // Standard Sudoku validation
+    if (!KillerSudokuGenerator.isValidMove(currentBoard, row, col, value)) {
+      return true;
+    }
+
+    // Cage validation - check for duplicates within cage
+    final cage = getCageForCell(row, col);
+    if (cage != null) {
+      for (var cell in cage.cells) {
+        if (cell[0] != row || cell[1] != col) {
+          if (currentBoard[cell[0]][cell[1]] == value) {
+            return true; // Duplicate in cage
+          }
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /// Check if same cage as selected cell
+  bool isSameCage(int row, int col) {
+    if (selectedRow == null || selectedCol == null) return false;
+    final selectedCage = getCageForCell(selectedRow!, selectedCol!);
+    if (selectedCage == null) return false;
+    return selectedCage.containsCell(row, col);
   }
 
   /// 메모 토글
@@ -176,7 +230,7 @@ class GameState {
     }
   }
 
-  /// 같은 행/열/박스의 메모에서 해당 숫자 삭제
+  /// 같은 행/열/박스/케이지의 메모에서 해당 숫자 삭제
   void removeNumberFromRelatedNotes(int row, int col, int number) {
     // 같은 행의 메모에서 삭제
     for (int c = 0; c < 9; c++) {
@@ -204,6 +258,16 @@ class GameState {
         }
       }
     }
+
+    // 같은 케이지의 메모에서 삭제
+    final cage = getCageForCell(row, col);
+    if (cage != null) {
+      for (var cell in cage.cells) {
+        if (cell[0] != row || cell[1] != col) {
+          notes[cell[0]][cell[1]].remove(number);
+        }
+      }
+    }
   }
 
   /// 셀의 메모 지우기
@@ -211,23 +275,23 @@ class GameState {
     notes[row][col].clear();
   }
 
-  /// 현재 상태를 Undo 히스토리에 저장 (관련 셀 메모 포함)
+  /// 현재 상태를 Undo 히스토리에 저장
   void saveToUndoHistory(int row, int col, {int? numberToInput}) {
-    // 영향받는 관련 셀들의 메모 상태 저장
     Map<String, Set<int>> affectedNotes = {};
 
-    // numberToInput이 주어진 경우, 해당 숫자가 영향을 미칠 관련 셀들의 메모 저장
     if (numberToInput != null && numberToInput != 0) {
       // 같은 행
       for (int c = 0; c < 9; c++) {
         if (c != col && notes[row][c].contains(numberToInput)) {
-          affectedNotes[UndoAction.cellKey(row, c)] = Set<int>.from(notes[row][c]);
+          affectedNotes[KillerUndoAction.cellKey(row, c)] =
+              Set<int>.from(notes[row][c]);
         }
       }
       // 같은 열
       for (int r = 0; r < 9; r++) {
         if (r != row && notes[r][col].contains(numberToInput)) {
-          affectedNotes[UndoAction.cellKey(r, col)] = Set<int>.from(notes[r][col]);
+          affectedNotes[KillerUndoAction.cellKey(r, col)] =
+              Set<int>.from(notes[r][col]);
         }
       }
       // 같은 3x3 박스
@@ -236,13 +300,25 @@ class GameState {
       for (int r = boxRow; r < boxRow + 3; r++) {
         for (int c = boxCol; c < boxCol + 3; c++) {
           if ((r != row || c != col) && notes[r][c].contains(numberToInput)) {
-            affectedNotes[UndoAction.cellKey(r, c)] = Set<int>.from(notes[r][c]);
+            affectedNotes[KillerUndoAction.cellKey(r, c)] =
+                Set<int>.from(notes[r][c]);
+          }
+        }
+      }
+      // 같은 케이지
+      final cage = getCageForCell(row, col);
+      if (cage != null) {
+        for (var cell in cage.cells) {
+          if ((cell[0] != row || cell[1] != col) &&
+              notes[cell[0]][cell[1]].contains(numberToInput)) {
+            affectedNotes[KillerUndoAction.cellKey(cell[0], cell[1])] =
+                Set<int>.from(notes[cell[0]][cell[1]]);
           }
         }
       }
     }
 
-    final action = UndoAction(
+    final action = KillerUndoAction(
       row: row,
       col: col,
       previousValue: currentBoard[row][col],
@@ -250,13 +326,12 @@ class GameState {
       affectedCellsNotes: affectedNotes,
     );
     _undoHistory.add(action);
-    // 최대 개수 초과 시 가장 오래된 것 제거
     if (_undoHistory.length > maxUndoCount) {
       _undoHistory.removeAt(0);
     }
   }
 
-  /// Undo 실행 - 이전 상태로 복원
+  /// Undo 실행
   bool undo() {
     if (_undoHistory.isEmpty) return false;
 
@@ -264,47 +339,60 @@ class GameState {
     currentBoard[action.row][action.col] = action.previousValue;
     notes[action.row][action.col] = Set<int>.from(action.previousNotes);
 
-    // 영향받았던 관련 셀들의 메모도 복원
     for (final entry in action.affectedCellsNotes.entries) {
-      final (r, c) = UndoAction.parseKey(entry.key);
+      final (r, c) = KillerUndoAction.parseKey(entry.key);
       notes[r][c] = Set<int>.from(entry.value);
     }
     return true;
   }
 
-  /// Undo 가능 여부
   bool get canUndo => _undoHistory.isNotEmpty;
-
-  /// Undo 히스토리 개수
   int get undoCount => _undoHistory.length;
 
-  /// Undo 히스토리 초기화
   void clearUndoHistory() {
     _undoHistory.clear();
   }
 
-  /// 모든 빈 셀에 메모 자동 채우기
+  /// 모든 빈 셀에 메모 자동 채우기 (케이지 규칙 포함)
   void fillAllNotes() {
     for (int row = 0; row < 9; row++) {
       for (int col = 0; col < 9; col++) {
-        // 빈 셀(값이 0)에만 메모 적용
         if (currentBoard[row][col] == 0) {
-          // 새로운 Set 생성하여 유효한 숫자 추가
           final Set<int> newNotes = <int>{};
           for (int num = 1; num <= 9; num++) {
-            if (SudokuGenerator.isValidMove(currentBoard, row, col, num)) {
+            if (_isValidCandidate(row, col, num)) {
               newNotes.add(num);
             }
           }
-          // 무조건 새 Set으로 교체 (기존 메모 무시)
           notes[row][col] = newNotes;
         }
       }
     }
   }
 
-  bool get isQuickInputMode => quickInputNumber != null;
+  /// Check if a number is a valid candidate (Sudoku rules + cage rules)
+  bool _isValidCandidate(int row, int col, int num) {
+    // Standard Sudoku check
+    if (!KillerSudokuGenerator.isValidMove(currentBoard, row, col, num)) {
+      return false;
+    }
 
+    // Cage duplicate check
+    final cage = getCageForCell(row, col);
+    if (cage != null) {
+      for (var cell in cage.cells) {
+        if (cell[0] != row || cell[1] != col) {
+          if (currentBoard[cell[0]][cell[1]] == num) {
+            return false;
+          }
+        }
+      }
+    }
+
+    return true;
+  }
+
+  bool get isQuickInputMode => quickInputNumber != null;
   bool get hasSelection => selectedRow != null && selectedCol != null;
 
   int? get selectedValue {
@@ -334,12 +422,6 @@ class GameState {
     if (!hasSelection) return false;
     int cellValue = currentBoard[row][col];
     return cellValue != 0 && cellValue == selectedValue;
-  }
-
-  bool hasError(int row, int col) {
-    int value = currentBoard[row][col];
-    if (value == 0) return false;
-    return !SudokuGenerator.isValidMove(currentBoard, row, col, value);
   }
 
   /// 각 숫자가 보드에서 몇 번 사용되었는지 카운트

@@ -1,34 +1,35 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../models/game_state.dart';
-import '../models/sudoku_generator.dart';
+import '../models/killer_game_state.dart';
+import '../models/killer_sudoku_generator.dart';
 import '../services/game_storage.dart';
-import '../widgets/sudoku_board.dart';
+import '../widgets/killer_sudoku_board.dart';
 import '../widgets/game_control_panel.dart';
 import '../widgets/game_status_bar.dart';
 
-class GameScreen extends StatefulWidget {
-  final Difficulty? initialDifficulty;
-  final GameState? savedGameState;
+class KillerGameScreen extends StatefulWidget {
+  final KillerDifficulty? initialDifficulty;
+  final KillerGameState? savedGameState;
 
-  const GameScreen({
+  const KillerGameScreen({
     super.key,
     this.initialDifficulty,
     this.savedGameState,
   });
 
   @override
-  State<GameScreen> createState() => _GameScreenState();
+  State<KillerGameScreen> createState() => _KillerGameScreenState();
 }
 
-class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
-  late GameState _gameState;
-  late Difficulty _selectedDifficulty;
+class _KillerGameScreenState extends State<KillerGameScreen>
+    with WidgetsBindingObserver {
+  late KillerGameState _gameState;
+  late KillerDifficulty _selectedDifficulty;
   bool _isLoading = true;
   final GlobalKey<GameControlPanelState> _controlPanelKey = GlobalKey();
 
-  // 빠른 입력 모드 상태 (하이라이트용)
+  // 빠른 입력 모드 상태
   bool _isQuickInputMode = false;
   int? _quickInputNumber;
   bool _isEraseMode = false;
@@ -38,24 +39,21 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   int _elapsedSeconds = 0;
   int _failureCount = 0;
   bool _isPaused = false;
-  bool _isBackgrounded = false; // 백그라운드 상태 (타이머만 멈춤, 화면 표시 안함)
+  bool _isBackgrounded = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     if (widget.savedGameState != null) {
-      // 저장된 게임 불러오기
       _gameState = widget.savedGameState!;
       _selectedDifficulty = _gameState.difficulty;
-      // 저장된 게임 통계 복원
       _elapsedSeconds = _gameState.elapsedSeconds;
       _failureCount = _gameState.failureCount;
       _isLoading = false;
       _startTimer();
     } else {
-      // 새 게임 시작
-      _selectedDifficulty = widget.initialDifficulty ?? Difficulty.medium;
+      _selectedDifficulty = widget.initialDifficulty ?? KillerDifficulty.medium;
       _startNewGame();
     }
   }
@@ -69,7 +67,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // 앱이 백그라운드로 갈 때 타이머만 멈춤 (일시정지 화면 표시 안함)
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
       if (!_isLoading && !_gameState.isCompleted) {
@@ -78,7 +75,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         });
       }
     } else if (state == AppLifecycleState.resumed) {
-      // 앱이 포그라운드로 돌아오면 백그라운드 상태 해제
       setState(() {
         _isBackgrounded = false;
       });
@@ -103,22 +99,20 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _startNewGame() async {
-    // 새 게임 시작 시 모든 저장된 게임 삭제
     await GameStorage.deleteAllGames();
 
     setState(() {
       _isLoading = true;
     });
 
-    // 별도 isolate에서 퍼즐 생성 (메인 스레드 블로킹 방지)
     final data = await compute(
-      generatePuzzleInIsolate,
+      generateKillerPuzzleInIsolate,
       _selectedDifficulty,
     );
 
     if (mounted) {
       setState(() {
-        _gameState = GameState.fromGeneratedData(data);
+        _gameState = KillerGameState.fromGeneratedData(data);
         _isLoading = false;
         _elapsedSeconds = 0;
         _failureCount = 0;
@@ -129,33 +123,28 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
   }
 
-  /// 게임 상태 저장
   void _saveGame() {
     if (!_gameState.isCompleted) {
-      // 현재 게임 통계를 게임 상태에 업데이트
       _gameState.elapsedSeconds = _elapsedSeconds;
       _gameState.failureCount = _failureCount;
-      GameStorage.saveRegularGame(_gameState);
+      GameStorage.saveKillerGame(_gameState);
     } else {
-      // 게임 완료 시 저장된 게임 삭제
-      GameStorage.deleteRegularGame();
+      GameStorage.deleteKillerGame();
     }
   }
 
   void _onCellTap(int row, int col) {
-    if (_isPaused) return; // 일시정지 중에는 입력 불가
+    if (_isPaused) return;
 
     final controlState = _controlPanelKey.currentState;
     if (controlState == null) return;
 
     setState(() {
-      // 지우기 모드일 때
+      // 지우기 모드
       if (controlState.isEraseMode) {
         if (!_gameState.isFixed[row][col]) {
           if (_gameState.currentBoard[row][col] != 0) {
-            // Undo 히스토리에 저장
             _gameState.saveToUndoHistory(row, col);
-            // 값이 있으면 값 지우기
             List<List<int>> newBoard =
                 _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
             newBoard[row][col] = 0;
@@ -165,9 +154,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               selectedCol: col,
             );
           } else if (_gameState.notes[row][col].isNotEmpty) {
-            // Undo 히스토리에 저장
             _gameState.saveToUndoHistory(row, col);
-            // 값이 없으면 메모 지우기
             _gameState.clearNotes(row, col);
             _gameState = _gameState.copyWith(selectedRow: row, selectedCol: col);
           } else {
@@ -177,24 +164,37 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           _gameState = _gameState.copyWith(selectedRow: row, selectedCol: col);
         }
       }
-      // 빠른 입력 모드일 때
-      else if (controlState.isQuickInputMode && controlState.quickInputNumber != null) {
-        // 고정 셀이 아니면 빠른 입력 숫자로 입력
+      // 빠른 입력 모드
+      else if (controlState.isQuickInputMode &&
+          controlState.quickInputNumber != null) {
         if (!_gameState.isFixed[row][col]) {
-          // 빠른 입력 + 메모 모드: 메모로 입력
           if (controlState.isNoteMode) {
-            if (_gameState.currentBoard[row][col] == 0) {
-              // Undo 히스토리에 저장
+            int currentValue = _gameState.currentBoard[row][col];
+            bool hasError = currentValue != 0 && _gameState.hasError(row, col);
+
+            if (currentValue == 0 || hasError) {
               _gameState.saveToUndoHistory(row, col);
+
+              // 오류가 있는 셀이면 값을 먼저 삭제
+              if (hasError) {
+                List<List<int>> newBoard =
+                    _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
+                newBoard[row][col] = 0;
+                _gameState = _gameState.copyWith(
+                  currentBoard: newBoard,
+                  selectedRow: row,
+                  selectedCol: col,
+                );
+              }
+
               _gameState.toggleNote(row, col, controlState.quickInputNumber!);
-              _gameState = _gameState.copyWith(selectedRow: row, selectedCol: col);
+              _gameState =
+                  _gameState.copyWith(selectedRow: row, selectedCol: col);
             }
           } else {
-            // 빠른 입력 모드만: 일반 숫자 입력
             int number = controlState.quickInputNumber!;
             int correctValue = _gameState.solution[row][col];
 
-            // 정답 확인
             if (number != correctValue) {
               _failureCount++;
             }
@@ -202,24 +202,20 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             List<List<int>> newBoard =
                 _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
 
-            // 같은 숫자면 지우고, 다른 숫자면 입력
             if (newBoard[row][col] == controlState.quickInputNumber) {
-              // Undo 히스토리에 저장 (지우기이므로 numberToInput 없음)
               _gameState.saveToUndoHistory(row, col);
               newBoard[row][col] = 0;
             } else {
-              // Undo 히스토리에 저장 (숫자 입력이므로 numberToInput 전달)
               _gameState.saveToUndoHistory(row, col, numberToInput: number);
               newBoard[row][col] = number;
 
-              // 유효한 입력이면 같은 행/열/박스의 메모에서 해당 숫자 삭제
-              if (SudokuGenerator.isValidMove(newBoard, row, col, number)) {
+              if (KillerSudokuGenerator.isValidMove(newBoard, row, col, number)) {
                 _gameState.removeNumberFromRelatedNotes(row, col, number);
                 _gameState.clearNotes(row, col);
               }
             }
 
-            bool isComplete = SudokuGenerator.isBoardComplete(newBoard, _gameState.solution);
+            bool isComplete = KillerSudokuGenerator.isBoardComplete(newBoard);
 
             _gameState = _gameState.copyWith(
               currentBoard: newBoard,
@@ -234,11 +230,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             }
           }
         } else {
-          // 고정 셀을 탭하면 선택만
           _gameState = _gameState.copyWith(selectedRow: row, selectedCol: col);
         }
       } else {
-        // 일반 모드: 기존 로직
+        // 일반 모드
         if (_gameState.selectedRow == row && _gameState.selectedCol == col) {
           _gameState = _gameState.copyWith(clearSelection: true);
         } else {
@@ -250,10 +245,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   void _onNumberTap(int number, bool isNoteMode) {
-    if (_isPaused) return; // 일시정지 중에는 입력 불가
+    if (_isPaused) return;
 
     setState(() {
-      // 일반 모드: 기존 로직
       if (!_gameState.hasSelection) return;
 
       int row = _gameState.selectedRow!;
@@ -261,20 +255,28 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
       if (_gameState.isFixed[row][col]) return;
 
-      // 메모 모드일 때
       if (isNoteMode) {
-        if (_gameState.currentBoard[row][col] == 0) {
-          // Undo 히스토리에 저장
+        int currentValue = _gameState.currentBoard[row][col];
+        bool hasError = currentValue != 0 && _gameState.hasError(row, col);
+
+        if (currentValue == 0 || hasError) {
           _gameState.saveToUndoHistory(row, col);
+
+          // 오류가 있는 셀이면 값을 먼저 삭제
+          if (hasError) {
+            List<List<int>> newBoard =
+                _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
+            newBoard[row][col] = 0;
+            _gameState = _gameState.copyWith(currentBoard: newBoard);
+          }
+
           _gameState.toggleNote(row, col, number);
         }
         return;
       }
 
-      // Undo 히스토리에 저장 (숫자 입력이므로 numberToInput 전달)
       _gameState.saveToUndoHistory(row, col, numberToInput: number);
 
-      // 일반 입력 모드 - 정답 확인
       int correctValue = _gameState.solution[row][col];
       if (number != correctValue) {
         _failureCount++;
@@ -284,13 +286,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
       newBoard[row][col] = number;
 
-      // 유효한 입력이면 같은 행/열/박스의 메모에서 해당 숫자 삭제
-      if (SudokuGenerator.isValidMove(newBoard, row, col, number)) {
+      if (KillerSudokuGenerator.isValidMove(newBoard, row, col, number)) {
         _gameState.removeNumberFromRelatedNotes(row, col, number);
         _gameState.clearNotes(row, col);
       }
 
-      bool isComplete = SudokuGenerator.isBoardComplete(newBoard, _gameState.solution);
+      bool isComplete = KillerSudokuGenerator.isBoardComplete(newBoard);
 
       _gameState = _gameState.copyWith(
         currentBoard: newBoard,
@@ -306,7 +307,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   void _onErase() {
-    if (_isPaused) return; // 일시정지 중에는 입력 불가
+    if (_isPaused) return;
 
     if (!_gameState.hasSelection) return;
 
@@ -315,8 +316,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
     if (_gameState.isFixed[row][col]) return;
 
-    // 값이나 메모가 있을 때만 Undo 히스토리에 저장
-    if (_gameState.currentBoard[row][col] != 0 || _gameState.notes[row][col].isNotEmpty) {
+    if (_gameState.currentBoard[row][col] != 0 ||
+        _gameState.notes[row][col].isNotEmpty) {
       _gameState.saveToUndoHistory(row, col);
     }
 
@@ -331,7 +332,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   void _showHint() {
-    if (_isPaused) return; // 일시정지 중에는 입력 불가
+    if (_isPaused) return;
 
     if (!_gameState.hasSelection) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -357,11 +358,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           _gameState.currentBoard.map((r) => List<int>.from(r)).toList();
       newBoard[row][col] = correctValue;
 
-      // 같은 행/열/박스의 메모에서 해당 숫자 삭제
       _gameState.removeNumberFromRelatedNotes(row, col, correctValue);
       _gameState.clearNotes(row, col);
 
-      bool isComplete = SudokuGenerator.isBoardComplete(newBoard, _gameState.solution);
+      bool isComplete = KillerSudokuGenerator.isBoardComplete(newBoard);
 
       _gameState = _gameState.copyWith(
         currentBoard: newBoard,
@@ -378,8 +378,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   void _showCompletionDialog() {
     String timeStr = _formatTime(_elapsedSeconds);
-    // 완료된 게임 삭제
-    GameStorage.deleteRegularGame();
+    GameStorage.deleteKillerGame();
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -389,7 +388,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('스도쿠를 완성했습니다!'),
+            const Text('킬러 스도쿠를 완성했습니다!'),
             const SizedBox(height: 16),
             Text('소요 시간: $timeStr'),
             Text('실패 횟수: $_failureCount회'),
@@ -398,8 +397,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pop(context); // 팝업 닫기
-              Navigator.pop(context); // 홈 화면으로 이동
+              Navigator.pop(context);
+              Navigator.pop(context);
             },
             child: const Text('확인'),
           ),
@@ -419,6 +418,17 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
   }
 
+  String _getDifficultyText() {
+    switch (_selectedDifficulty) {
+      case KillerDifficulty.easy:
+        return '쉬움';
+      case KillerDifficulty.medium:
+        return '보통';
+      case KillerDifficulty.hard:
+        return '어려움';
+    }
+  }
+
   void _showDifficultyDialog() {
     showDialog(
       context: context,
@@ -426,20 +436,17 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         title: const Text('난이도 선택'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          children: Difficulty.values.map((difficulty) {
+          children: KillerDifficulty.values.map((difficulty) {
             String label;
             switch (difficulty) {
-              case Difficulty.easy:
+              case KillerDifficulty.easy:
                 label = '쉬움';
                 break;
-              case Difficulty.medium:
+              case KillerDifficulty.medium:
                 label = '보통';
                 break;
-              case Difficulty.hard:
+              case KillerDifficulty.hard:
                 label = '어려움';
-                break;
-              case Difficulty.expert:
-                label = '달인';
                 break;
             }
             return ListTile(
@@ -448,7 +455,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 _selectedDifficulty == difficulty
                     ? Icons.radio_button_checked
                     : Icons.radio_button_unchecked,
-                color: Colors.blue,
+                color: Colors.teal,
               ),
               onTap: () {
                 setState(() {
@@ -464,17 +471,21 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     );
   }
 
-  String _getDifficultyText() {
-    switch (_selectedDifficulty) {
-      case Difficulty.easy:
-        return '쉬움';
-      case Difficulty.medium:
-        return '보통';
-      case Difficulty.hard:
-        return '어려움';
-      case Difficulty.expert:
-        return '달인';
-    }
+  void _onUndo() {
+    if (_isPaused) return;
+
+    setState(() {
+      _gameState.undo();
+    });
+    _saveGame();
+  }
+
+  void _onFillAllNotes() {
+    if (_isPaused) return;
+
+    setState(() {
+      _gameState.fillAllNotes();
+    });
   }
 
   Widget _buildControls({required bool isLandscape}) {
@@ -490,7 +501,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         setState(() {
           _isQuickInputMode = isQuickInput;
           _quickInputNumber = number;
-          // 빠른 입력 모드에서 숫자 선택 시 셀 선택 초기화
           if (isQuickInput && number != null) {
             _gameState = _gameState.copyWith(clearSelection: true);
           }
@@ -506,23 +516,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     );
   }
 
-  void _onUndo() {
-    if (_isPaused) return;
-
-    setState(() {
-      _gameState.undo();
-    });
-    _saveGame();
-  }
-
-  void _onFillAllNotes() {
-    if (_isPaused) return; // 일시정지 중에는 입력 불가
-
-    setState(() {
-      _gameState.fillAllNotes();
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final isLandscape =
@@ -530,8 +523,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('스도쿠'),
-        backgroundColor: Colors.blue,
+        title: const Text('킬러 스도쿠'),
+        backgroundColor: Colors.teal,
         foregroundColor: Colors.white,
         toolbarHeight: isLandscape ? 45 : kToolbarHeight,
         actions: [
@@ -557,79 +550,81 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               ),
             )
           : SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(isLandscape ? 8.0 : 16.0),
-          child: isLandscape
-              ? Row(
-                  children: [
-                    Expanded(
-                      flex: 1,
-                      child: Column(
+              child: Padding(
+                padding: EdgeInsets.all(isLandscape ? 8.0 : 16.0),
+                child: isLandscape
+                    ? Row(
+                        children: [
+                          Expanded(
+                            flex: 1,
+                            child: Column(
+                              children: [
+                                GameStatusBar(
+                                  elapsedSeconds: _elapsedSeconds,
+                                  failureCount: _failureCount,
+                                  isPaused: _isPaused,
+                                  onPauseToggle: _togglePause,
+                                  isCompact: true,
+                                  difficultyText: _getDifficultyText(),
+                                  themeColor: Colors.teal,
+                                ),
+                                const SizedBox(height: 8),
+                                Expanded(
+                                  child: Center(
+                                    child: AspectRatio(
+                                      aspectRatio: 1,
+                                      child: _isPaused
+                                          ? _buildPausedOverlay()
+                                          : KillerSudokuBoard(
+                                              gameState: _gameState,
+                                              onCellTap: _onCellTap,
+                                              isQuickInputMode:
+                                                  _isQuickInputMode,
+                                              quickInputNumber:
+                                                  _quickInputNumber,
+                                            ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            flex: 1,
+                            child: _buildControls(isLandscape: true),
+                          ),
+                        ],
+                      )
+                    : Column(
                         children: [
                           GameStatusBar(
                             elapsedSeconds: _elapsedSeconds,
                             failureCount: _failureCount,
                             isPaused: _isPaused,
                             onPauseToggle: _togglePause,
-                            isCompact: true,
+                            isCompact: false,
                             difficultyText: _getDifficultyText(),
-                            themeColor: Colors.blue,
+                            themeColor: Colors.teal,
                           ),
-                          const SizedBox(height: 8),
-                          Expanded(
-                            child: Center(
-                              child: AspectRatio(
-                                aspectRatio: 1,
-                                child: _isPaused
-                                    ? _buildPausedOverlay()
-                                    : SudokuBoard(
-                                        gameState: _gameState,
-                                        onCellTap: _onCellTap,
-                                        isQuickInputMode: _isQuickInputMode,
-                                        quickInputNumber: _quickInputNumber,
-                                      ),
-                              ),
-                            ),
-                          ),
+                          const SizedBox(height: 12),
+                          _isPaused
+                              ? AspectRatio(
+                                  aspectRatio: 1,
+                                  child: _buildPausedOverlay(),
+                                )
+                              : KillerSudokuBoard(
+                                  gameState: _gameState,
+                                  onCellTap: _onCellTap,
+                                  isQuickInputMode: _isQuickInputMode,
+                                  quickInputNumber: _quickInputNumber,
+                                ),
+                          const SizedBox(height: 20),
+                          _buildControls(isLandscape: false),
                         ],
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      flex: 1,
-                      child: _buildControls(isLandscape: true),
-                    ),
-                  ],
-                )
-              : Column(
-                  children: [
-                    GameStatusBar(
-                      elapsedSeconds: _elapsedSeconds,
-                      failureCount: _failureCount,
-                      isPaused: _isPaused,
-                      onPauseToggle: _togglePause,
-                      isCompact: false,
-                      difficultyText: _getDifficultyText(),
-                      themeColor: Colors.blue,
-                    ),
-                    const SizedBox(height: 12),
-                    _isPaused
-                        ? AspectRatio(
-                            aspectRatio: 1,
-                            child: _buildPausedOverlay(),
-                          )
-                        : SudokuBoard(
-                            gameState: _gameState,
-                            onCellTap: _onCellTap,
-                            isQuickInputMode: _isQuickInputMode,
-                            quickInputNumber: _quickInputNumber,
-                          ),
-                    const SizedBox(height: 20),
-                    _buildControls(isLandscape: false),
-                  ],
-                ),
-        ),
-      ),
+              ),
+            ),
     );
   }
 

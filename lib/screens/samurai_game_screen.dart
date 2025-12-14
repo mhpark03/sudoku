@@ -33,6 +33,7 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen>
   int _elapsedSeconds = 0;
   int _failureCount = 0;
   bool _isPaused = false;
+  bool _isBackgrounded = false; // 백그라운드 상태 (타이머만 멈춤, 화면 표시 안함)
 
   @override
   void initState() {
@@ -63,21 +64,26 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // 앱이 백그라운드로 갈 때 자동 일시정지
+    // 앱이 백그라운드로 갈 때 타이머만 멈춤 (일시정지 화면 표시 안함)
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
-      if (!_isPaused && !_isLoading) {
+      if (!_isLoading && !_gameState.isCompleted) {
         setState(() {
-          _isPaused = true;
+          _isBackgrounded = true;
         });
       }
+    } else if (state == AppLifecycleState.resumed) {
+      // 앱이 포그라운드로 돌아오면 백그라운드 상태 해제
+      setState(() {
+        _isBackgrounded = false;
+      });
     }
   }
 
   void _startTimer() {
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!_isPaused && !_gameState.isCompleted) {
+      if (!_isPaused && !_isBackgrounded && !_gameState.isCompleted) {
         setState(() {
           _elapsedSeconds++;
         });
@@ -190,6 +196,7 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen>
           },
           onComplete: () {
             _timer?.cancel();
+            _gameState.isCompleted = true;
             _showCompletionDialog();
           },
         ),
@@ -211,8 +218,11 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen>
   }
 
   void _showCompletionDialog() {
+    // 완료된 게임 삭제
+    GameStorage.deleteSamuraiGame();
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: const Text('축하합니다! 🎉'),
         content: Column(
@@ -241,10 +251,10 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen>
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
-              _startNewGame();
+              Navigator.pop(context); // 팝업 닫기
+              Navigator.pop(context); // 홈 화면으로 이동
             },
-            child: const Text('새 게임'),
+            child: const Text('확인'),
           ),
         ],
       ),
@@ -269,9 +279,6 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen>
                 break;
               case SamuraiDifficulty.hard:
                 label = '어려움';
-                break;
-              case SamuraiDifficulty.expert:
-                label = '달인';
                 break;
             }
             return ListTile(
@@ -304,8 +311,6 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen>
         return '보통';
       case SamuraiDifficulty.hard:
         return '어려움';
-      case SamuraiDifficulty.expert:
-        return '달인';
     }
   }
 
@@ -362,6 +367,8 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen>
           failureCount: _failureCount,
           isPaused: _isPaused,
           onPauseToggle: _togglePause,
+          difficultyText: _getDifficultyText(),
+          themeColor: Colors.deepPurple,
         ),
         const SizedBox(height: 8),
         // 안내 텍스트
@@ -476,6 +483,8 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen>
               isPaused: _isPaused,
               onPauseToggle: _togglePause,
               isCompact: true,
+              difficultyText: _getDifficultyText(),
+              themeColor: Colors.deepPurple,
             ),
           ],
         ),

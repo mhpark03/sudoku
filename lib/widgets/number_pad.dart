@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 class NumberPad extends StatelessWidget {
   final Function(int) onNumberTap;
-  final VoidCallback onErase;
+  final VoidCallback onUndo; // 취소 버튼 콜백
+  final bool canUndo; // 취소 가능 여부
   final bool isCompact;
   final int? quickInputNumber; // 빠른 입력 모드에서 선택된 숫자
   final VoidCallback? onQuickInputToggle; // 빠른 입력 모드 토글
@@ -11,7 +12,8 @@ class NumberPad extends StatelessWidget {
   const NumberPad({
     super.key,
     required this.onNumberTap,
-    required this.onErase,
+    required this.onUndo,
+    this.canUndo = false,
     this.isCompact = false,
     this.quickInputNumber,
     this.onQuickInputToggle,
@@ -67,7 +69,7 @@ class NumberPad extends StatelessWidget {
           ),
           Padding(
             padding: EdgeInsets.all(spacing / 2),
-            child: _buildEraseButton(buttonSize * 2 + spacing, buttonSize, iconSize),
+            child: _buildUndoButton(buttonSize * 2 + spacing, buttonSize, iconSize),
           ),
         ],
       );
@@ -94,7 +96,7 @@ class NumberPad extends StatelessWidget {
               ...List.generate(4, (index) {
                 return _buildNumberButton(index + 6, buttonSize, fontSize);
               }),
-              _buildEraseButton(buttonSize, buttonSize, iconSize),
+              _buildUndoButton(buttonSize, buttonSize, iconSize),
             ],
           ),
         ],
@@ -188,21 +190,23 @@ class NumberPad extends StatelessWidget {
     );
   }
 
-  Widget _buildEraseButton(double width, double height, double iconSize) {
+  Widget _buildUndoButton(double width, double height, double iconSize) {
     return SizedBox(
       width: width,
       height: height,
       child: ElevatedButton(
-        onPressed: onErase,
+        onPressed: canUndo ? onUndo : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.red.shade50,
-          foregroundColor: Colors.red.shade700,
+          backgroundColor: canUndo ? Colors.grey.shade100 : Colors.grey.shade200,
+          foregroundColor: canUndo ? Colors.grey.shade700 : Colors.grey.shade400,
           padding: EdgeInsets.zero,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
+          disabledBackgroundColor: Colors.grey.shade200,
+          disabledForegroundColor: Colors.grey.shade400,
         ),
-        child: Icon(Icons.backspace, size: iconSize),
+        child: Icon(Icons.undo, size: iconSize),
       ),
     );
   }
