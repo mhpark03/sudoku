@@ -201,7 +201,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               }
             }
 
-            bool isComplete = SudokuGenerator.isBoardComplete(newBoard);
+            bool isComplete = SudokuGenerator.isBoardComplete(newBoard, _gameState.solution);
 
             _gameState = _gameState.copyWith(
               currentBoard: newBoard,
@@ -267,7 +267,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         _gameState.clearNotes(row, col);
       }
 
-      bool isComplete = SudokuGenerator.isBoardComplete(newBoard);
+      bool isComplete = SudokuGenerator.isBoardComplete(newBoard, _gameState.solution);
 
       _gameState = _gameState.copyWith(
         currentBoard: newBoard,
@@ -333,7 +333,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       _gameState.removeNumberFromRelatedNotes(row, col, correctValue);
       _gameState.clearNotes(row, col);
 
-      bool isComplete = SudokuGenerator.isBoardComplete(newBoard);
+      bool isComplete = SudokuGenerator.isBoardComplete(newBoard, _gameState.solution);
 
       _gameState = _gameState.copyWith(
         currentBoard: newBoard,
