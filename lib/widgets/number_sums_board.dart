@@ -61,21 +61,21 @@ class NumberSumsBoard extends StatelessWidget {
 
     // 첫 번째 행 (열 합계 표시) - 전체 합 + 선택한 합
     if (row == 0 && col > 0) {
-      // 열이 완료되면 합계 숨김
       final isComplete = gameState.isColComplete(col);
       return NumberSumsSumCell(
         totalSum: isComplete ? 0 : gameState.colSums[col],
         selectedSum: gameState.getCurrentColSum(col),
+        isComplete: isComplete,
       );
     }
 
     // 첫 번째 열 (행 합계 표시) - 전체 합 + 선택한 합
     if (col == 0 && row > 0) {
-      // 행이 완료되면 합계 숨김
       final isComplete = gameState.isRowComplete(row);
       return NumberSumsSumCell(
         totalSum: isComplete ? 0 : gameState.rowSums[row],
         selectedSum: gameState.getCurrentRowSum(row),
+        isComplete: isComplete,
       );
     }
 

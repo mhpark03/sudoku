@@ -133,11 +133,13 @@ class _CirclePainter extends CustomPainter {
 class NumberSumsSumCell extends StatelessWidget {
   final int totalSum; // 전체 합
   final int selectedSum; // 선택한 올바른 수의 합
+  final bool isComplete; // 모든 셀이 결정되었는지
 
   const NumberSumsSumCell({
     super.key,
     required this.totalSum,
     required this.selectedSum,
+    required this.isComplete,
   });
 
   @override
@@ -167,8 +169,9 @@ class NumberSumsSumCell extends StatelessWidget {
                     ),
                   ),
                 ),
-                // 선택한 합 (우하단에 작게, 아랫첨자 형태) - 0일 때는 표시하지 않음
-                if (selectedSum > 0 && selectedSum != totalSum)
+                // 선택한 합 (우하단에 작게, 아랫첨자 형태)
+                // 0일 때와 모든 셀이 결정되었을 때 숨김
+                if (selectedSum > 0 && !isComplete)
                   Positioned(
                     right: 2,
                     bottom: 1,
