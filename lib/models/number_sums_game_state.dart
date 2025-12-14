@@ -237,26 +237,26 @@ class NumberSumsGameState {
     return count;
   }
 
-  /// 현재 보드 기준 행의 합계 (올바른 수 중 아직 정답 처리 안 된 것만)
+  /// 현재 보드 기준 행의 합계 (선택한 올바른 수의 합)
   int getCurrentRowSum(int row) {
     int sum = 0;
     for (int col = 1; col < gridSize; col++) {
-      // 올바른 수이고 아직 정답 처리 안 된 경우만 합산
+      // 올바른 수이고 정답 처리된 경우만 합산
       // solution 값을 사용하여 정확한 정답 값만 계산
-      if (!wrongCells[row][col] && !markedCorrectCells[row][col]) {
+      if (!wrongCells[row][col] && markedCorrectCells[row][col]) {
         sum += solution[row][col];
       }
     }
     return sum;
   }
 
-  /// 현재 보드 기준 열의 합계 (올바른 수 중 아직 정답 처리 안 된 것만)
+  /// 현재 보드 기준 열의 합계 (선택한 올바른 수의 합)
   int getCurrentColSum(int col) {
     int sum = 0;
     for (int row = 1; row < gridSize; row++) {
-      // 올바른 수이고 아직 정답 처리 안 된 경우만 합산
+      // 올바른 수이고 정답 처리된 경우만 합산
       // solution 값을 사용하여 정확한 정답 값만 계산
-      if (!wrongCells[row][col] && !markedCorrectCells[row][col]) {
+      if (!wrongCells[row][col] && markedCorrectCells[row][col]) {
         sum += solution[row][col];
       }
     }
