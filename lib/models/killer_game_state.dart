@@ -1,48 +1,14 @@
+import 'killer_cage.dart';
 import 'killer_sudoku_generator.dart';
 
-enum KillerDifficulty { easy, medium, hard }
-
-/// 케이지 정보
-class Cage {
-  final int sum; // 케이지 내 숫자들의 합
-  final List<(int, int)> cells; // 케이지에 속한 셀 좌표들
-
-  const Cage({
-    required this.sum,
-    required this.cells,
-  });
-
-  /// 케이지에 특정 셀이 포함되어 있는지 확인
-  bool contains(int row, int col) {
-    return cells.any((cell) => cell.$1 == row && cell.$2 == col);
-  }
-
-  /// JSON 직렬화
-  Map<String, dynamic> toJson() => {
-        'sum': sum,
-        'cells': cells.map((c) => [c.$1, c.$2]).toList(),
-      };
-
-  /// JSON 역직렬화
-  factory Cage.fromJson(Map<String, dynamic> json) {
-    return Cage(
-      sum: json['sum'] as int,
-      cells: (json['cells'] as List)
-          .map((c) => ((c as List)[0] as int, c[1] as int))
-          .toList(),
-    );
-  }
-}
-
-/// Isolate에서 실행할 퍼즐 생성 함수
+/// Isolate에서 실행할 퍼즐 생성 함수 (top-level 함수)
 Map<String, dynamic> generateKillerPuzzleInIsolate(KillerDifficulty difficulty) {
   final generator = KillerSudokuGenerator();
   final result = generator.generatePuzzle(difficulty);
-
   return {
     'solution': result['solution'],
     'puzzle': result['puzzle'],
-    'cages': (result['cages'] as List<Cage>).map((c) => c.toJson()).toList(),
+    'cages': (result['cages'] as List<KillerCage>).map((c) => c.toJson()).toList(),
     'difficulty': difficulty.index,
   };
 }
@@ -77,7 +43,7 @@ class KillerGameState {
   final List<List<int>> currentBoard;
   final List<List<bool>> isFixed;
   final List<List<Set<int>>> notes;
-  final List<Cage> cages;
+  final List<KillerCage> cages;
   final KillerDifficulty difficulty;
   int? selectedRow;
   int? selectedCol;
@@ -86,7 +52,7 @@ class KillerGameState {
   bool isCompleted;
   int elapsedSeconds;
   int failureCount;
-  final List<KillerUndoAction> _undoHistory = [];
+  final List<KillerUndoAction> _undoHistory;
   static const int maxUndoCount = 10;
 
   KillerGameState({
@@ -104,7 +70,8 @@ class KillerGameState {
     this.isCompleted = false,
     this.elapsedSeconds = 0,
     this.failureCount = 0,
-  });
+    List<KillerUndoAction>? undoHistory,
+  }) : _undoHistory = undoHistory ?? [];
 
   /// 생성된 데이터로부터 GameState 생성
   factory KillerGameState.fromGeneratedData(Map<String, dynamic> data) {
@@ -115,14 +82,13 @@ class KillerGameState {
         .map((row) => List<int>.from(row as List))
         .toList();
     final cages = (data['cages'] as List)
-        .map((c) => Cage.fromJson(c as Map<String, dynamic>))
+        .map((c) => KillerCage.fromJson(c as Map<String, dynamic>))
         .toList();
     final difficulty = KillerDifficulty.values[data['difficulty'] as int];
 
     final currentBoard = puzzle.map((row) => List<int>.from(row)).toList();
-    final isFixed = puzzle
-        .map((row) => row.map((cell) => cell != 0).toList())
-        .toList();
+    final isFixed =
+        puzzle.map((row) => row.map((cell) => cell != 0).toList()).toList();
     final notes = List.generate(
       9,
       (_) => List.generate(9, (_) => <int>{}),
@@ -145,7 +111,7 @@ class KillerGameState {
     List<List<int>>? currentBoard,
     List<List<bool>>? isFixed,
     List<List<Set<int>>>? notes,
-    List<Cage>? cages,
+    List<KillerCage>? cages,
     KillerDifficulty? difficulty,
     int? selectedRow,
     int? selectedCol,
@@ -173,32 +139,83 @@ class KillerGameState {
       isCompleted: isCompleted ?? this.isCompleted,
       elapsedSeconds: elapsedSeconds ?? this.elapsedSeconds,
       failureCount: failureCount ?? this.failureCount,
+      undoHistory: _undoHistory,
     );
   }
 
-  /// 특정 셀이 속한 케이지 찾기
-  Cage? getCageForCell(int row, int col) {
-    for (final cage in cages) {
-      if (cage.contains(row, col)) {
-        return cage;
-      }
+  /// Get cage containing a specific cell
+  KillerCage? getCageForCell(int row, int col) {
+    for (var cage in cages) {
+      if (cage.containsCell(row, col)) return cage;
     }
     return null;
   }
 
-  /// 케이지의 좌상단 셀 확인 (합계 표시용)
-  bool isCageTopLeft(int row, int col) {
+  /// Check if cage has error (duplicate or sum exceeded)
+  bool hasCageError(KillerCage cage) {
+    final values = <int>[];
+    int sum = 0;
+    bool hasEmpty = false;
+
+    for (var cell in cage.cells) {
+      int value = currentBoard[cell[0]][cell[1]];
+      if (value == 0) {
+        hasEmpty = true;
+      } else {
+        if (values.contains(value)) return true; // Duplicate in cage
+        values.add(value);
+        sum += value;
+      }
+    }
+
+    if (!hasEmpty && sum != cage.targetSum) return true; // Wrong sum
+    if (sum > cage.targetSum) return true; // Sum exceeded
+    return false;
+  }
+
+  /// Check if specific cell has cage-related error
+  bool hasCellCageError(int row, int col) {
     final cage = getCageForCell(row, col);
     if (cage == null) return false;
+    return hasCageError(cage);
+  }
 
-    // 케이지의 셀들 중 가장 위에 있고, 같은 행에서 가장 왼쪽에 있는 셀
-    int minRow = cage.cells.map((c) => c.$1).reduce((a, b) => a < b ? a : b);
-    int minColInMinRow = cage.cells
-        .where((c) => c.$1 == minRow)
-        .map((c) => c.$2)
-        .reduce((a, b) => a < b ? a : b);
+  /// Extended error check including standard Sudoku + cage rules + solution check
+  bool hasError(int row, int col) {
+    int value = currentBoard[row][col];
+    if (value == 0) return false;
 
-    return row == minRow && col == minColInMinRow;
+    // Check if value matches solution (wrong answer)
+    if (value != solution[row][col]) {
+      return true;
+    }
+
+    // Standard Sudoku validation
+    if (!KillerSudokuGenerator.isValidMove(currentBoard, row, col, value)) {
+      return true;
+    }
+
+    // Cage validation - check for duplicates within cage
+    final cage = getCageForCell(row, col);
+    if (cage != null) {
+      for (var cell in cage.cells) {
+        if (cell[0] != row || cell[1] != col) {
+          if (currentBoard[cell[0]][cell[1]] == value) {
+            return true; // Duplicate in cage
+          }
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /// Check if same cage as selected cell
+  bool isSameCage(int row, int col) {
+    if (selectedRow == null || selectedCol == null) return false;
+    final selectedCage = getCageForCell(selectedRow!, selectedCol!);
+    if (selectedCage == null) return false;
+    return selectedCage.containsCell(row, col);
   }
 
   /// 메모 토글
@@ -215,21 +232,21 @@ class KillerGameState {
 
   /// 같은 행/열/박스/케이지의 메모에서 해당 숫자 삭제
   void removeNumberFromRelatedNotes(int row, int col, int number) {
-    // 같은 행
+    // 같은 행의 메모에서 삭제
     for (int c = 0; c < 9; c++) {
       if (c != col) {
         notes[row][c].remove(number);
       }
     }
 
-    // 같은 열
+    // 같은 열의 메모에서 삭제
     for (int r = 0; r < 9; r++) {
       if (r != row) {
         notes[r][col].remove(number);
       }
     }
 
-    // 같은 3x3 박스
+    // 같은 3x3 박스의 메모에서 삭제
     int boxRow = (row ~/ 3) * 3;
     int boxCol = (col ~/ 3) * 3;
     for (int r = 0; r < 3; r++) {
@@ -242,12 +259,12 @@ class KillerGameState {
       }
     }
 
-    // 같은 케이지
+    // 같은 케이지의 메모에서 삭제
     final cage = getCageForCell(row, col);
     if (cage != null) {
-      for (final cell in cage.cells) {
-        if (cell.$1 != row || cell.$2 != col) {
-          notes[cell.$1][cell.$2].remove(number);
+      for (var cell in cage.cells) {
+        if (cell[0] != row || cell[1] != col) {
+          notes[cell[0]][cell[1]].remove(number);
         }
       }
     }
@@ -291,11 +308,11 @@ class KillerGameState {
       // 같은 케이지
       final cage = getCageForCell(row, col);
       if (cage != null) {
-        for (final cell in cage.cells) {
-          if ((cell.$1 != row || cell.$2 != col) &&
-              notes[cell.$1][cell.$2].contains(numberToInput)) {
-            affectedNotes[KillerUndoAction.cellKey(cell.$1, cell.$2)] =
-                Set<int>.from(notes[cell.$1][cell.$2]);
+        for (var cell in cage.cells) {
+          if ((cell[0] != row || cell[1] != col) &&
+              notes[cell[0]][cell[1]].contains(numberToInput)) {
+            affectedNotes[KillerUndoAction.cellKey(cell[0], cell[1])] =
+                Set<int>.from(notes[cell[0]][cell[1]]);
           }
         }
       }
@@ -336,14 +353,14 @@ class KillerGameState {
     _undoHistory.clear();
   }
 
-  /// 모든 빈 셀에 메모 자동 채우기
+  /// 모든 빈 셀에 메모 자동 채우기 (케이지 규칙 포함)
   void fillAllNotes() {
     for (int row = 0; row < 9; row++) {
       for (int col = 0; col < 9; col++) {
         if (currentBoard[row][col] == 0) {
           final Set<int> newNotes = <int>{};
           for (int num = 1; num <= 9; num++) {
-            if (isValidMove(row, col, num)) {
+            if (_isValidCandidate(row, col, num)) {
               newNotes.add(num);
             }
           }
@@ -353,8 +370,29 @@ class KillerGameState {
     }
   }
 
-  bool get isQuickInputMode => quickInputNumber != null;
+  /// Check if a number is a valid candidate (Sudoku rules + cage rules)
+  bool _isValidCandidate(int row, int col, int num) {
+    // Standard Sudoku check
+    if (!KillerSudokuGenerator.isValidMove(currentBoard, row, col, num)) {
+      return false;
+    }
 
+    // Cage duplicate check
+    final cage = getCageForCell(row, col);
+    if (cage != null) {
+      for (var cell in cage.cells) {
+        if (cell[0] != row || cell[1] != col) {
+          if (currentBoard[cell[0]][cell[1]] == num) {
+            return false;
+          }
+        }
+      }
+    }
+
+    return true;
+  }
+
+  bool get isQuickInputMode => quickInputNumber != null;
   bool get hasSelection => selectedRow != null && selectedCol != null;
 
   int? get selectedValue {
@@ -384,107 +422,6 @@ class KillerGameState {
     if (!hasSelection) return false;
     int cellValue = currentBoard[row][col];
     return cellValue != 0 && cellValue == selectedValue;
-  }
-
-  /// 같은 케이지인지 확인
-  bool isSameCage(int row, int col) {
-    if (!hasSelection) return false;
-    final selectedCage = getCageForCell(selectedRow!, selectedCol!);
-    final cellCage = getCageForCell(row, col);
-    if (selectedCage == null || cellCage == null) return false;
-    return selectedCage == cellCage;
-  }
-
-  /// 유효한 입력인지 확인 (행/열/박스/케이지 중복 체크)
-  bool isValidMove(int row, int col, int num) {
-    if (num == 0) return true;
-
-    // 행 검사
-    for (int i = 0; i < 9; i++) {
-      if (i != col && currentBoard[row][i] == num) return false;
-    }
-
-    // 열 검사
-    for (int i = 0; i < 9; i++) {
-      if (i != row && currentBoard[i][col] == num) return false;
-    }
-
-    // 3x3 박스 검사
-    int boxRow = (row ~/ 3) * 3;
-    int boxCol = (col ~/ 3) * 3;
-    for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 3; j++) {
-        if ((boxRow + i != row || boxCol + j != col) &&
-            currentBoard[boxRow + i][boxCol + j] == num) {
-          return false;
-        }
-      }
-    }
-
-    // 케이지 검사 (같은 케이지 내 중복 금지)
-    final cage = getCageForCell(row, col);
-    if (cage != null) {
-      for (final cell in cage.cells) {
-        if ((cell.$1 != row || cell.$2 != col) &&
-            currentBoard[cell.$1][cell.$2] == num) {
-          return false;
-        }
-      }
-    }
-
-    return true;
-  }
-
-  /// 에러 여부 확인
-  bool hasError(int row, int col) {
-    int value = currentBoard[row][col];
-    if (value == 0) return false;
-    return !isValidMove(row, col, value);
-  }
-
-  /// 케이지 합계 에러 확인 (케이지가 완성되었을 때만)
-  bool hasCageSumError(int row, int col) {
-    final cage = getCageForCell(row, col);
-    if (cage == null) return false;
-
-    // 케이지 내 모든 셀이 채워졌는지 확인
-    bool allFilled = true;
-    int sum = 0;
-    for (final cell in cage.cells) {
-      if (currentBoard[cell.$1][cell.$2] == 0) {
-        allFilled = false;
-        break;
-      }
-      sum += currentBoard[cell.$1][cell.$2];
-    }
-
-    // 모두 채워졌으면 합계 확인
-    if (allFilled) {
-      return sum != cage.sum;
-    }
-
-    return false;
-  }
-
-  /// 보드가 완성되었는지 검사
-  bool isBoardComplete() {
-    for (int row = 0; row < 9; row++) {
-      for (int col = 0; col < 9; col++) {
-        if (currentBoard[row][col] == 0) return false;
-        if (!isValidMove(row, col, currentBoard[row][col])) return false;
-      }
-    }
-
-    // 모든 케이지 합계 확인
-    for (final cage in cages) {
-      int sum = 0;
-      for (final cell in cage.cells) {
-        sum += currentBoard[cell.$1][cell.$2];
-      }
-      if (sum != cage.sum) return false;
-    }
-
-    return true;
   }
 
   /// 각 숫자가 보드에서 몇 번 사용되었는지 카운트

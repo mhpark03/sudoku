@@ -572,6 +572,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                             isPaused: _isPaused,
                             onPauseToggle: _togglePause,
                             isCompact: true,
+                            difficultyText: _getDifficultyText(),
+                            themeColor: Colors.blue,
                           ),
                           const SizedBox(height: 8),
                           Expanded(
@@ -607,6 +609,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                       isPaused: _isPaused,
                       onPauseToggle: _togglePause,
                       isCompact: false,
+                      difficultyText: _getDifficultyText(),
+                      themeColor: Colors.blue,
                     ),
                     const SizedBox(height: 12),
                     _isPaused

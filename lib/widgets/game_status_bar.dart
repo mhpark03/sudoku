@@ -17,6 +17,12 @@ class GameStatusBar extends StatelessWidget {
   /// 컴팩트 모드 (가로 모드)
   final bool isCompact;
 
+  /// 난이도 텍스트 (선택)
+  final String? difficultyText;
+
+  /// 테마 색상 (기본: 파란색)
+  final Color themeColor;
+
   const GameStatusBar({
     super.key,
     required this.elapsedSeconds,
@@ -24,6 +30,8 @@ class GameStatusBar extends StatelessWidget {
     required this.isPaused,
     required this.onPauseToggle,
     this.isCompact = false,
+    this.difficultyText,
+    this.themeColor = Colors.blue,
   });
 
   String _formatTime(int seconds) {
@@ -41,103 +49,89 @@ class GameStatusBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: isCompact ? 8 : 12,
-        vertical: isCompact ? 4 : 8,
+        horizontal: isCompact ? 12 : 20,
+        vertical: isCompact ? 8 : 10,
       ),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color: const Color(0xFF16213E),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // 시간 표시
-          _buildStatusItem(
-            icon: Icons.timer_outlined,
-            label: _formatTime(elapsedSeconds),
-            color: Colors.blue,
+          Row(
+            children: [
+              Icon(
+                Icons.timer_outlined,
+                size: isCompact ? 18 : 20,
+                color: Colors.white70,
+              ),
+              SizedBox(width: isCompact ? 4 : 6),
+              Text(
+                _formatTime(elapsedSeconds),
+                style: TextStyle(
+                  fontSize: isCompact ? 14 : 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ],
           ),
-          // 구분선
-          Container(
-            width: 1,
-            height: isCompact ? 20 : 24,
-            color: Colors.grey.shade300,
-          ),
-          // 실패 횟수
-          _buildStatusItem(
-            icon: Icons.close,
-            label: '$failureCount',
-            color: Colors.red,
-          ),
-          // 구분선
-          Container(
-            width: 1,
-            height: isCompact ? 20 : 24,
-            color: Colors.grey.shade300,
-          ),
-          // 일시정지 버튼
-          InkWell(
-            onTap: onPauseToggle,
-            borderRadius: BorderRadius.circular(4),
-            child: Container(
+          // 난이도 (있는 경우)
+          if (difficultyText != null)
+            Container(
               padding: EdgeInsets.symmetric(
-                horizontal: isCompact ? 8 : 12,
-                vertical: isCompact ? 4 : 6,
+                horizontal: isCompact ? 10 : 12,
+                vertical: isCompact ? 3 : 4,
               ),
               decoration: BoxDecoration(
-                color: isPaused ? Colors.green.shade100 : Colors.orange.shade100,
-                borderRadius: BorderRadius.circular(4),
+                color: themeColor.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    isPaused ? Icons.play_arrow : Icons.pause,
-                    size: isCompact ? 16 : 20,
-                    color: isPaused ? Colors.green.shade700 : Colors.orange.shade700,
-                  ),
-                  SizedBox(width: isCompact ? 2 : 4),
-                  Text(
-                    isPaused ? '재개' : '정지',
-                    style: TextStyle(
-                      fontSize: isCompact ? 11 : 13,
-                      fontWeight: FontWeight.w500,
-                      color: isPaused ? Colors.green.shade700 : Colors.orange.shade700,
-                    ),
-                  ),
-                ],
+              child: Text(
+                difficultyText!,
+                style: TextStyle(
+                  fontSize: isCompact ? 11 : 12,
+                  fontWeight: FontWeight.w600,
+                  color: themeColor,
+                ),
               ),
+            ),
+          // 실패 횟수
+          Row(
+            children: [
+              Icon(
+                Icons.close,
+                size: isCompact ? 18 : 20,
+                color: Colors.red.shade300,
+              ),
+              SizedBox(width: isCompact ? 2 : 4),
+              Text(
+                '$failureCount',
+                style: TextStyle(
+                  fontSize: isCompact ? 14 : 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.red.shade300,
+                ),
+              ),
+            ],
+          ),
+          // 일시정지 버튼
+          IconButton(
+            onPressed: onPauseToggle,
+            icon: Icon(
+              isPaused ? Icons.play_arrow : Icons.pause,
+              color: Colors.white,
+              size: isCompact ? 20 : 24,
+            ),
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.white.withValues(alpha: 0.1),
+              padding: EdgeInsets.all(isCompact ? 6 : 8),
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildStatusItem({
-    required IconData icon,
-    required String label,
-    required Color color,
-  }) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          icon,
-          size: isCompact ? 16 : 20,
-          color: color,
-        ),
-        SizedBox(width: isCompact ? 4 : 6),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: isCompact ? 13 : 16,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-      ],
     );
   }
 }
