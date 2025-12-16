@@ -206,8 +206,8 @@ class SamuraiGameState {
   bool hasError(int board, int row, int col) {
     int value = currentBoards[board][row][col];
     if (value == 0) return false;
-    return !SamuraiSudokuGenerator.isValidMove(
-        currentBoards[board], row, col, value);
+    // solutions와 비교하여 오류 체크
+    return value != solutions[board][row][col];
   }
 
   /// 겹치는 영역인지 확인
