@@ -339,7 +339,8 @@ class GameState {
   bool hasError(int row, int col) {
     int value = currentBoard[row][col];
     if (value == 0) return false;
-    return !SudokuGenerator.isValidMove(currentBoard, row, col, value);
+    // solution과 비교하여 오류 체크
+    return value != solution[row][col];
   }
 
   /// 각 숫자가 보드에서 몇 번 사용되었는지 카운트
