@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'number_pad.dart';
 
 /// 일반 스도쿠와 사무라이 스도쿠에서 공통으로 사용하는 게임 컨트롤 패널
@@ -90,10 +91,15 @@ class GameControlPanelState extends State<GameControlPanel> {
         // 다음 활성화된 숫자 찾기
         int? nextNumber = _findNextActiveNumber(_quickInputNumber!);
         if (nextNumber != _quickInputNumber) {
-          setState(() {
-            _quickInputNumber = nextNumber;
+          // 빌드 완료 후 setState 호출
+          SchedulerBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _quickInputNumber = nextNumber;
+              });
+              widget.onQuickInputModeChanged?.call(_isQuickInputMode, _quickInputNumber);
+            }
           });
-          widget.onQuickInputModeChanged?.call(_isQuickInputMode, _quickInputNumber);
         }
       }
     }

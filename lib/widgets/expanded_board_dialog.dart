@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import '../models/samurai_game_state.dart';
 import '../models/samurai_sudoku_generator.dart';
 
@@ -52,8 +53,13 @@ class _ExpandedBoardDialogState extends State<ExpandedBoardDialog> {
         // 다음 활성화된 숫자 찾기
         int? nextNumber = _findNextActiveNumber(quickInputNumber!, completedNumbers);
         if (nextNumber != quickInputNumber) {
-          setState(() {
-            quickInputNumber = nextNumber;
+          // 빌드 완료 후 setState 호출
+          SchedulerBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                quickInputNumber = nextNumber;
+              });
+            }
           });
         }
       }
