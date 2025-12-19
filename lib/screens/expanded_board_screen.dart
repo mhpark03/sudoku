@@ -50,12 +50,12 @@ class ExpandedBoardScreen extends StatefulWidget {
 class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
   int? selectedRow;
   int? selectedCol;
-  final GlobalKey<GameControlPanelState> _controlPanelKey = GlobalKey();
 
   // 빠른 입력 모드 상태 (하이라이트용)
   bool _isQuickInputMode = false;
   int? _quickInputNumber;
   bool _isEraseMode = false;
+  bool _isNoteMode = false;
 
   // 로컬 타이머 (부모의 시간을 업데이트하기 위함)
   Timer? _timer;
@@ -187,7 +187,6 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
           const SizedBox(height: 16),
           // 공통 게임 컨트롤 패널
           GameControlPanel(
-            key: _controlPanelKey,
             onNumberTap: _onNumberTap,
             onErase: _onErase,
             onUndo: _onUndo,
@@ -208,6 +207,11 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
             onEraseModeChanged: (isErase) {
               setState(() {
                 _isEraseMode = isErase;
+              });
+            },
+            onNoteModeChanged: (isNote) {
+              setState(() {
+                _isNoteMode = isNote;
               });
             },
             disabledNumbers: widget.gameState.getCompletedNumbers(widget.boardIndex),
@@ -262,7 +266,6 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
                 // 공통 게임 컨트롤 패널
                 Expanded(
                   child: GameControlPanel(
-                    key: _controlPanelKey,
                     onNumberTap: _onNumberTap,
                     onErase: _onErase,
                     onUndo: _onUndo,
@@ -283,6 +286,11 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
                     onEraseModeChanged: (isErase) {
                       setState(() {
                         _isEraseMode = isErase;
+                      });
+                    },
+                    onNoteModeChanged: (isNote) {
+                      setState(() {
+                        _isNoteMode = isNote;
                       });
                     },
                     disabledNumbers: widget.gameState.getCompletedNumbers(widget.boardIndex),
@@ -419,11 +427,9 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
     // 일시정지 상태에서는 입력 차단
     if (widget.isPaused) return;
 
-    final controlState = _controlPanelKey.currentState;
-
     setState(() {
       // 지우기 모드일 때
-      if (controlState != null && controlState.isEraseMode) {
+      if (_isEraseMode) {
         if (!isFixed) {
           if (widget.gameState.currentBoards[widget.boardIndex][row][col] != 0) {
             // Undo 히스토리에 저장
@@ -441,20 +447,20 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
         selectedCol = col;
       }
       // 빠른 입력 모드일 때
-      else if (controlState != null && controlState.isQuickInputMode && controlState.quickInputNumber != null) {
+      else if (_isQuickInputMode && _quickInputNumber != null) {
         if (!isFixed) {
           // 빠른 입력 + 메모 모드: 메모로 입력
-          if (controlState.isNoteMode) {
+          if (_isNoteMode) {
             if (widget.gameState.currentBoards[widget.boardIndex][row][col] == 0) {
               // Undo 히스토리에 저장
               widget.gameState.saveToUndoHistory(widget.boardIndex, row, col);
-              widget.onNoteToggle(widget.boardIndex, row, col, controlState.quickInputNumber!);
+              widget.onNoteToggle(widget.boardIndex, row, col, _quickInputNumber!);
             }
             selectedRow = row;
             selectedCol = col;
           } else {
             // 빠른 입력 모드만: 일반 숫자 입력 (일반 스도쿠와 동일하게 처리)
-            int number = controlState.quickInputNumber!;
+            int number = _quickInputNumber!;
             int correctValue = widget.gameState.solutions[widget.boardIndex][row][col];
 
             // 오답이면 실패 횟수 증가
@@ -634,13 +640,6 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
   void _onErase() {
     // 일시정지 상태에서는 입력 차단
     if (widget.isPaused) return;
-
-    final controlState = _controlPanelKey.currentState;
-
-    if (controlState != null && controlState.isQuickInputMode) {
-      controlState.selectQuickInputNumber(null);
-      return;
-    }
 
     if (selectedRow == null || selectedCol == null) return;
     if (widget.gameState.isFixed[widget.boardIndex][selectedRow!][selectedCol!]) {
