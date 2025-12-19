@@ -81,6 +81,42 @@ class GameControlPanelState extends State<GameControlPanel> {
     _isNoteMode = widget.initialNoteMode;
   }
 
+  @override
+  void didUpdateWidget(GameControlPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 빠른 입력 모드에서 선택된 숫자가 비활성화되면 다음 활성화된 숫자 자동 선택
+    if (_isQuickInputMode && _quickInputNumber != null) {
+      if (widget.disabledNumbers.contains(_quickInputNumber)) {
+        // 다음 활성화된 숫자 찾기
+        int? nextNumber = _findNextActiveNumber(_quickInputNumber!);
+        if (nextNumber != _quickInputNumber) {
+          setState(() {
+            _quickInputNumber = nextNumber;
+          });
+          widget.onQuickInputModeChanged?.call(_isQuickInputMode, _quickInputNumber);
+        }
+      }
+    }
+  }
+
+  /// 다음 활성화된 숫자 찾기 (현재 숫자부터 순환)
+  int? _findNextActiveNumber(int currentNumber) {
+    // 현재 숫자 다음부터 9까지 확인
+    for (int i = currentNumber + 1; i <= 9; i++) {
+      if (!widget.disabledNumbers.contains(i)) {
+        return i;
+      }
+    }
+    // 1부터 현재 숫자 전까지 확인
+    for (int i = 1; i < currentNumber; i++) {
+      if (!widget.disabledNumbers.contains(i)) {
+        return i;
+      }
+    }
+    // 모든 숫자가 비활성화된 경우
+    return null;
+  }
+
   /// 빠른 입력 모드 토글
   void toggleQuickInputMode() {
     setState(() {
