@@ -43,6 +43,42 @@ class _ExpandedBoardDialogState extends State<ExpandedBoardDialog> {
   }
 
   @override
+  void didUpdateWidget(ExpandedBoardDialog oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 빠른 입력 모드에서 선택된 숫자가 비활성화되면 다음 활성화된 숫자 자동 선택
+    if (isQuickInputMode && quickInputNumber != null) {
+      final completedNumbers = widget.gameState.getCompletedNumbers(widget.boardIndex);
+      if (completedNumbers.contains(quickInputNumber)) {
+        // 다음 활성화된 숫자 찾기
+        int? nextNumber = _findNextActiveNumber(quickInputNumber!, completedNumbers);
+        if (nextNumber != quickInputNumber) {
+          setState(() {
+            quickInputNumber = nextNumber;
+          });
+        }
+      }
+    }
+  }
+
+  /// 다음 활성화된 숫자 찾기 (현재 숫자부터 순환)
+  int? _findNextActiveNumber(int currentNumber, Set<int> disabledNumbers) {
+    // 현재 숫자 다음부터 9까지 확인
+    for (int i = currentNumber + 1; i <= 9; i++) {
+      if (!disabledNumbers.contains(i)) {
+        return i;
+      }
+    }
+    // 1부터 현재 숫자 전까지 확인
+    for (int i = 1; i < currentNumber; i++) {
+      if (!disabledNumbers.contains(i)) {
+        return i;
+      }
+    }
+    // 모든 숫자가 비활성화된 경우
+    return null;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final board = widget.gameState.currentBoards[widget.boardIndex];
     final isFixed = widget.gameState.isFixed[widget.boardIndex];
