@@ -375,12 +375,23 @@ class NumberSumsGameState {
     return false;
   }
 
-  /// 보드가 완성되었는지 확인
+  /// 보드가 완성되었는지 확인 (모든 셀이 결정되어야 함)
   bool checkCompletion() {
-    return NumberSumsGenerator.isBoardComplete(
-      currentBoard,
-      solution,
-      gridSize,
-    );
+    for (int row = 1; row < gridSize; row++) {
+      for (int col = 1; col < gridSize; col++) {
+        bool isCorrectCell = !wrongCells[row][col];
+        bool isWrongCell = wrongCells[row][col];
+
+        // 정답 셀인데 아직 마킹되지 않음
+        if (isCorrectCell && !markedCorrectCells[row][col]) {
+          return false;
+        }
+        // 틀린 셀인데 아직 제거되지 않음
+        if (isWrongCell && currentBoard[row][col] != 0) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 }
