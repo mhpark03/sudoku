@@ -5,6 +5,19 @@ import '../models/samurai_sudoku_generator.dart';
 import '../widgets/game_control_panel.dart';
 import '../widgets/game_status_bar.dart';
 
+/// 확장 보드 화면에서 반환하는 빠른 입력 모드 상태
+class ExpandedBoardResult {
+  final bool isQuickInputMode;
+  final int? quickInputNumber;
+  final bool isNoteMode;
+
+  ExpandedBoardResult({
+    required this.isQuickInputMode,
+    this.quickInputNumber,
+    required this.isNoteMode,
+  });
+}
+
 class ExpandedBoardScreen extends StatefulWidget {
   final SamuraiGameState gameState;
   final int boardIndex;
@@ -24,6 +37,11 @@ class ExpandedBoardScreen extends StatefulWidget {
   final VoidCallback onFailure;
   final Function(int) onElapsedSecondsUpdate;
 
+  // 빠른 입력 모드 상태 (보드 간 이동 시 유지)
+  final bool initialQuickInputMode;
+  final int? initialQuickInputNumber;
+  final bool initialNoteMode;
+
   const ExpandedBoardScreen({
     super.key,
     required this.gameState,
@@ -41,6 +59,9 @@ class ExpandedBoardScreen extends StatefulWidget {
     required this.onPauseToggle,
     required this.onFailure,
     required this.onElapsedSecondsUpdate,
+    this.initialQuickInputMode = false,
+    this.initialQuickInputNumber,
+    this.initialNoteMode = false,
   });
 
   @override
@@ -71,6 +92,10 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
     _localElapsedSeconds = widget.elapsedSeconds;
     _localFailureCount = widget.failureCount;
     _localIsPaused = widget.isPaused;
+    // 빠른 입력 모드 상태 초기화
+    _isQuickInputMode = widget.initialQuickInputMode;
+    _quickInputNumber = widget.initialQuickInputNumber;
+    _isNoteMode = widget.initialNoteMode;
     _startTimer();
   }
 
@@ -138,6 +163,20 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
     );
   }
 
+  /// 현재 빠른 입력 모드 상태를 반환
+  ExpandedBoardResult _getResult() {
+    return ExpandedBoardResult(
+      isQuickInputMode: _isQuickInputMode,
+      quickInputNumber: _quickInputNumber,
+      isNoteMode: _isNoteMode,
+    );
+  }
+
+  /// 화면을 닫고 결과 반환
+  void _popWithResult() {
+    Navigator.pop(context, _getResult());
+  }
+
   @override
   Widget build(BuildContext context) {
     final board = widget.gameState.currentBoards[widget.boardIndex];
@@ -146,17 +185,29 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('보드 ${widget.boardIndex + 1}'),
-        backgroundColor: Colors.deepPurple,
-        foregroundColor: Colors.white,
-        toolbarHeight: isLandscape ? 45 : kToolbarHeight,
-      ),
-      body: SafeArea(
-        child: isLandscape
-            ? _buildLandscapeLayout(board, isFixed, notes)
-            : _buildPortraitLayout(board, isFixed, notes),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _popWithResult();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('보드 ${widget.boardIndex + 1}'),
+          backgroundColor: Colors.deepPurple,
+          foregroundColor: Colors.white,
+          toolbarHeight: isLandscape ? 45 : kToolbarHeight,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: _popWithResult,
+          ),
+        ),
+        body: SafeArea(
+          child: isLandscape
+              ? _buildLandscapeLayout(board, isFixed, notes)
+              : _buildPortraitLayout(board, isFixed, notes),
+        ),
       ),
     );
   }
@@ -538,7 +589,7 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
           widget.gameState.currentBoards, widget.gameState.solutions);
 
       // 사무라이 화면으로 돌아가기
-      Navigator.pop(context);
+      Navigator.pop(context, _getResult());
 
       // 전체 게임이 완료되었으면 완료 팝업 표시
       if (isGameComplete) {
