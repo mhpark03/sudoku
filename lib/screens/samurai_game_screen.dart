@@ -35,6 +35,11 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen>
   bool _isPaused = false;
   bool _isBackgrounded = false; // 백그라운드 상태 (타이머만 멈춤, 화면 표시 안함)
 
+  // 빠른 입력 모드 상태 (보드 간 이동 시 유지)
+  bool _isQuickInputMode = false;
+  int? _quickInputNumber;
+  bool _isNoteMode = false;
+
   @override
   void initState() {
     super.initState();
@@ -152,7 +157,7 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen>
   }
 
   void _showExpandedBoard(int board, int? row, int? col) async {
-    await Navigator.push(
+    final result = await Navigator.push<ExpandedBoardResult>(
       context,
       MaterialPageRoute(
         builder: (context) => ExpandedBoardScreen(
@@ -199,10 +204,20 @@ class _SamuraiGameScreenState extends State<SamuraiGameScreen>
             _gameState.isCompleted = true;
             _showCompletionDialog();
           },
+          // 빠른 입력 모드 상태 전달
+          initialQuickInputMode: _isQuickInputMode,
+          initialQuickInputNumber: _quickInputNumber,
+          initialNoteMode: _isNoteMode,
         ),
       ),
     );
-    // ExpandedBoardScreen에서 돌아온 후 상태 갱신 및 저장
+    // ExpandedBoardScreen에서 돌아온 후 빠른 입력 모드 상태 저장
+    if (result != null) {
+      _isQuickInputMode = result.isQuickInputMode;
+      _quickInputNumber = result.quickInputNumber;
+      _isNoteMode = result.isNoteMode;
+    }
+    // 상태 갱신 및 저장
     setState(() {});
     _saveGame();
   }
