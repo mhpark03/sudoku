@@ -601,12 +601,27 @@ class SamuraiGameState {
     return counts;
   }
 
-  /// 특정 보드에서 모두 채워진 숫자들 (9번 사용된 숫자)
+  /// 특정 보드에서 모두 올바르게 채워진 숫자들 (정답과 비교하여 9개 모두 맞은 숫자)
   Set<int> getCompletedNumbers(int boardIndex) {
-    final counts = getNumberCounts(boardIndex);
-    return counts.entries
-        .where((entry) => entry.value >= 9)
-        .map((entry) => entry.key)
-        .toSet();
+    Set<int> completed = {};
+    for (int num = 1; num <= 9; num++) {
+      bool allCorrect = true;
+      for (int row = 0; row < 9; row++) {
+        for (int col = 0; col < 9; col++) {
+          if (solutions[boardIndex][row][col] == num) {
+            // 이 위치에 정답이 num인데, 현재 보드에 num이 아니면 완료 아님
+            if (currentBoards[boardIndex][row][col] != num) {
+              allCorrect = false;
+              break;
+            }
+          }
+        }
+        if (!allCorrect) break;
+      }
+      if (allCorrect) {
+        completed.add(num);
+      }
+    }
+    return completed;
   }
 }
