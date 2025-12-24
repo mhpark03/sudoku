@@ -40,6 +40,9 @@ class GameControlPanel extends StatefulWidget {
   /// 외부에서 빠른 입력 모드 초기값 설정
   final bool initialQuickInputMode;
 
+  /// 외부에서 빠른 입력 숫자 초기값 설정
+  final int? initialQuickInputNumber;
+
   /// 외부에서 메모 모드 초기값 설정
   final bool initialNoteMode;
 
@@ -57,6 +60,7 @@ class GameControlPanel extends StatefulWidget {
     this.onEraseModeChanged,
     this.isCompact = false,
     this.initialQuickInputMode = false,
+    this.initialQuickInputNumber,
     this.initialNoteMode = false,
   });
 
@@ -79,6 +83,7 @@ class GameControlPanelState extends State<GameControlPanel> {
   void initState() {
     super.initState();
     _isQuickInputMode = widget.initialQuickInputMode;
+    _quickInputNumber = widget.initialQuickInputNumber;
     _isNoteMode = widget.initialNoteMode;
   }
 
