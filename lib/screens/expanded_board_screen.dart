@@ -61,6 +61,7 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
   Timer? _timer;
   late int _localElapsedSeconds;
   late int _localFailureCount;
+  late bool _localIsPaused;
 
   @override
   void initState() {
@@ -69,6 +70,7 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
     selectedCol = widget.initialCol;
     _localElapsedSeconds = widget.elapsedSeconds;
     _localFailureCount = widget.failureCount;
+    _localIsPaused = widget.isPaused;
     _startTimer();
   }
 
@@ -82,12 +84,20 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
 
   void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!widget.isPaused) {
+      if (!_localIsPaused) {
         setState(() {
           _localElapsedSeconds++;
         });
       }
     });
+  }
+
+  void _togglePause() {
+    setState(() {
+      _localIsPaused = !_localIsPaused;
+    });
+    // 부모에게도 상태 전달
+    widget.onPauseToggle();
   }
 
   Widget _buildPausedOverlay() {
@@ -164,8 +174,8 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
           GameStatusBar(
             elapsedSeconds: _localElapsedSeconds,
             failureCount: _localFailureCount,
-            isPaused: widget.isPaused,
-            onPauseToggle: widget.onPauseToggle,
+            isPaused: _localIsPaused,
+            onPauseToggle: _togglePause,
           ),
           const SizedBox(height: 12),
           // 9x9 보드 또는 일시정지 오버레이
@@ -173,7 +183,7 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
             child: Center(
               child: AspectRatio(
                 aspectRatio: 1,
-                child: widget.isPaused
+                child: _localIsPaused
                     ? _buildPausedOverlay()
                     : Container(
                         decoration: BoxDecoration(
@@ -240,7 +250,7 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
             child: Center(
               child: AspectRatio(
                 aspectRatio: 1,
-                child: widget.isPaused
+                child: _localIsPaused
                     ? _buildPausedOverlay()
                     : Container(
                         decoration: BoxDecoration(
@@ -261,8 +271,8 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
                 GameStatusBar(
                   elapsedSeconds: _localElapsedSeconds,
                   failureCount: _localFailureCount,
-                  isPaused: widget.isPaused,
-                  onPauseToggle: widget.onPauseToggle,
+                  isPaused: _localIsPaused,
+                  onPauseToggle: _togglePause,
                   isCompact: true,
                 ),
                 const SizedBox(height: 8),
@@ -431,7 +441,7 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
 
   void _onCellTap(int row, int col, bool isFixed) {
     // 일시정지 상태에서는 입력 차단
-    if (widget.isPaused) return;
+    if (_localIsPaused) return;
 
     setState(() {
       // 지우기 모드일 때
@@ -612,7 +622,7 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
 
   void _onNumberTap(int number, bool isNoteMode) {
     // 일시정지 상태에서는 입력 차단
-    if (widget.isPaused) return;
+    if (_localIsPaused) return;
 
     if (selectedRow == null || selectedCol == null) return;
     if (widget.gameState.isFixed[widget.boardIndex][selectedRow!][selectedCol!]) {
@@ -645,7 +655,7 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
 
   void _onErase() {
     // 일시정지 상태에서는 입력 차단
-    if (widget.isPaused) return;
+    if (_localIsPaused) return;
 
     if (selectedRow == null || selectedCol == null) return;
     if (widget.gameState.isFixed[widget.boardIndex][selectedRow!][selectedCol!]) {
@@ -669,7 +679,7 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
 
   void _onFillAllNotes() {
     // 일시정지 상태에서는 입력 차단
-    if (widget.isPaused) return;
+    if (_localIsPaused) return;
 
     setState(() {
       widget.gameState.fillAllNotes(widget.boardIndex);
@@ -678,7 +688,7 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
 
   void _onUndo() {
     // 일시정지 상태에서는 입력 차단
-    if (widget.isPaused) return;
+    if (_localIsPaused) return;
 
     setState(() {
       widget.gameState.undo();
@@ -687,7 +697,7 @@ class _ExpandedBoardScreenState extends State<ExpandedBoardScreen> {
 
   void _onHint() {
     // 일시정지 상태에서는 입력 차단
-    if (widget.isPaused) return;
+    if (_localIsPaused) return;
 
     if (selectedRow == null || selectedCol == null) {
       ScaffoldMessenger.of(context).showSnackBar(
